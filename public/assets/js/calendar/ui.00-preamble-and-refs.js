@@ -83,5 +83,3 @@
 
   if (todayLabel)     todayLabel.textContent     = longHeaderFmt.format(today).replace('.','');
   if (todayPanelDate) todayPanelDate.textContent = longHeaderFmt.format(today).replace('.','');
-
-  

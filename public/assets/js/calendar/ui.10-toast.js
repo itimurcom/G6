@@ -8,7 +8,7 @@
       t.setAttribute('aria-live','polite');
       t.style.cssText = [
         'position:fixed',
-        'bottom:max(12px, env(safe-area-inset-bottom))',
+        'bottom:16px',        
         'left:50%',
         'transform:translateX(-50%) translateY(8px)',
         'z-index:99999',
@@ -37,7 +37,7 @@
   function setToastAnchor(){
     var t = ensureSaveToast();
     var hasBottom = !!document.querySelector('.bottom-actions');
-    t.style.bottom = hasBottom ? '76px' : 'max(12px, env(safe-area-inset-bottom))';
+    t.style.bottom = '16px';
   }
   function setToastMode(mode){
     var t=ensureSaveToast(); var ico=$('saveToastIcon');

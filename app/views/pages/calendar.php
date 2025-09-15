@@ -107,7 +107,7 @@
           <input type="checkbox" id="inputDone"> Виконано
         </label>
       </div>
-      <button type="button" id="btnClose" class="event-del" aria-label="Закрити">×</button>
+      <button type="button" id="btnClose" class="event-btn" aria-label="Закрити">×</button>
     </header>
     <div class="content">
       <div class="row">
@@ -147,7 +147,10 @@
   <div class="modal" aria-labelledby="infoTitle">
     <header>
       <div id="infoTitle">Деталі події</div>
-      <button type="button" id="infoClose" class="event-del" aria-label="Закрити">×</button>
+      <div>
+        <button type="button" id="editEvBtn" class="event-btn" aria-label="Редагувати">&#128190;</button>
+        <button type="button" id="infoClose" class="event-btn" aria-label="Закрити">×</button>
+      </div>
     </header>
     <div class="content" id="infoContent"></div>
     <footer><span></span><div style="display:flex;gap:10px;"><button type="button" id="infoOk" class="btn" style="background:var(--accent);border-color:var(--accent);color:#fff">Закрити</button></div></footer>
@@ -161,7 +164,7 @@
   <div class="modal" style="width:min(700px,94vw)">
     <header>
       <div>Чат — приклад розшифровки «ВКЗ» за сьогодні</div>
-      <button type="button" id="chatClose" class="event-del" aria-label="Закрити">×</button>
+      <button type="button" id="chatClose" class="event-btn" aria-label="Закрити">×</button>
     </header>
     <div id="chatContent" class="content" style="padding-top:8px"></div>
     <footer><span></span><div style="display:flex;gap:10px;"><button id="chatOk" class="btn" style="background:var(--accent);border-color:var(--accent);color:#fff">Закрити</button></div></footer>

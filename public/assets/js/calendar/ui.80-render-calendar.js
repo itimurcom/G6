@@ -91,14 +91,14 @@
       title.appendChild(document.createTextNode(ev.title||''));
      
 
-      var del=document.createElement('button'); del.className='event-del'; del.type='button'; del.setAttribute('aria-label','Видалити'); del.textContent='×';
+      var del=document.createElement('button'); del.className='event-btn'; del.type='button'; del.setAttribute('aria-label','Видалити'); del.textContent='×';
       var owner=document.createElement('div'); owner.className='event-owner'; owner.textContent=Ev.labelForType(ev.type)+(ev.owner?(' • Відповідальний: '+ev.owner):'');
 
       del.addEventListener('click',function(e){
         e.stopPropagation(); var eid=e.currentTarget.parentElement.getAttribute('data-id');
         var arr=Data.getEventsFor(dateISO); var idx=Ev.findIndexById(arr,eid); if(idx>-1){ arr.splice(idx,1); Data.setEventsFor(dateISO,arr); renderCell(cell); renderTodayPanel(); }
       });
-      // item.addEventListener('click',function(e){ e.stopPropagation(); var eid=e.currentTarget.getAttribute('data-id'); openModalEdit(dateISO,eid); });
+      
       item.addEventListener('click',function(e){ e.stopPropagation(); var eid=e.currentTarget.getAttribute('data-id'); openInfo(dateISO,eid); });
 
       item.appendChild(bar);
