@@ -2,6 +2,7 @@
   var cells=[], quarterHas={}, hourHoverCount={}, earlyOpen=false, lateOpen=false;
 
   function renderCalendar(){
+    console.log('renderCalendar');
     if (!grid) return;
     var monthName=monthFmt.format(new Date(state.year,state.month,1));
     if (monthLabel) monthLabel.textContent = (monthName.charAt(0).toUpperCase()+monthName.slice(1))+' '+state.year;

@@ -34,11 +34,12 @@
       } return map;
     }
     var byQToday=buildByQuarter(allToday), byQNext=buildByQuarter(allNext);
-    var tlAll={}; tlAll[todayISO]=todayTimeline; tlAll[nextISO]=lateTimeline;
+    var tlAll={}; tlAll[todayISO]=earlyTimeline; tlAll[todayISO]=todayTimeline; tlAll[nextISO]=lateTimeline;
 
     function expandHour(dateISO,hour){
       ['15','30','45'].forEach(function(min){
-        var elq=(tlAll[dateISO]||document).querySelector('.slot.quarter[data-date="'+dateISO+'"][data-hour="'+hour+'"][data-min="'+min+'"]');
+        // var elq=(tlAll[dateISO]||document).querySelector('.slot.quarter[data-date="'+dateISO+'"][data-hour="'+hour+'"][data-min="'+min+'"]');
+        var elq=(document).querySelector('.slot.quarter[data-date="'+dateISO+'"][data-hour="'+hour+'"][data-min="'+min+'"]');
         if(elq) elq.style.display='grid';
       });
     }
@@ -130,7 +131,7 @@
     var byQNext =buildByQuarter(allNext);
 
     if(earlyOpen) renderGroup(earlyTimeline,todayISO,0,6);
-    renderGroup(todayTimeline,todayISO,7,24);
+    renderGroup(todayTimeline,todayISO,6,24);
     if(lateOpen)  renderGroup(lateTimeline,nextISO,0,6);
   }
 

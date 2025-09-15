@@ -8,98 +8,71 @@
     "2025-09-11": [],
     "2025-09-06": [],
     "2025-09-03": [],
-    "2025-09-13": [
-        {
-            "id": "cbfc93e4-bc78-4e95-b4e6-662c6b0a2beb",
-            "time": "03:00",
-            "title": "ВКЗ",
-            "owner": "Максим Юрійович",
-            "type": "evt",
-            "urgent": false,
-            "done": false,
-            "user_id": 0
-        }
-    ],
+    "2025-09-13": [],
     "2025-09-05": [],
     "2025-09-04": [],
-    "2025-09-12": [
-        {
-            "id": "6c412b5f-c988-4fce-a535-21800caafb7d",
-            "time": "06:15",
-            "title": "Такой ось подій ВКЗ",
-            "owner": "Максим Юрійович",
-            "type": "evt",
-            "urgent": false,
-            "done": true,
-            "user_id": 0
-        }
-    ],
-    "2025-09-14": [
-        {
-            "id": "e14197d2-8fe8-484e-bbd5-329dc2a3f04e",
-            "time": "06:00",
-            "title": "ВКЗ ВКЗ ВКЗ ВКЗ ВКЗ ВКЗ ВКЗ ВКЗ ВКЗ ВКЗ ВКЗ",
-            "owner": "Максим Юрійович",
-            "type": "mi",
-            "urgent": false,
-            "done": false,
-            "user_id": 0
-        },
-        {
-            "id": "e_32e9d3b94c0a91bb",
-            "time": "03:00",
-            "title": "Ще одне ЩОСЬ",
-            "owner": "Тімур",
-            "type": "other",
-            "urgent": false,
-            "done": true,
-            "user_id": 0
-        }
-    ],
-    "2025-09-16": [],
-    "2025-09-19": [
-        {
-            "id": "e_ca2eada6ed391ccc",
-            "time": "08:00",
-            "title": "еуіе",
-            "owner": "кцук",
-            "type": "mi",
-            "urgent": false,
-            "done": false,
-            "user_id": 0
-        }
-    ],
     "2025-09-15": [
         {
             "id": "ab5721b3-8778-4c69-a46e-b43983cd7b35",
-            "time": "11:15",
+            "time": "04:15",
             "title": "ВКЗ Відправка листа на КДШВ",
             "owner": "Максим Юрійович",
+            "type": "evt",
+            "urgent": true,
+            "user_id": 0,
+            "done": false
+        },
+        {
+            "id": "841291b6-3245-49aa-9587-3c63815270e5",
+            "time": "04:50",
+            "title": "ВКЗ ЖЕСТЬ",
+            "owner": "Тім",
             "type": "evt",
             "urgent": true,
             "done": false,
             "user_id": 0
         },
         {
-            "id": "745b5167-36e2-4c32-b214-7658d7fa7e59",
-            "time": "10:47",
-            "title": "Донесення щодо ВКЗ на КДШВ",
-            "owner": "Максим Юрійович",
-            "type": "other",
-            "urgent": false,
-            "done": false,
-            "user_id": 0
-        },
-        {
-            "id": "841291b6-3245-49aa-9587-3c63815270e5",
-            "time": "07:00",
-            "title": "ВКЗ ЖЕСТЬ",
-            "owner": "Максим Юрійович",
+            "id": "6c412b5f-c988-4fce-a535-21800caafb7d",
+            "time": "05:15",
+            "title": "Такой ось подій ВКЗ",
+            "owner": "Вася",
             "type": "evt",
             "urgent": false,
-            "done": true,
-            "user_id": 0
+            "user_id": 0,
+            "done": false
+        },
+        {
+            "id": "e14197d2-8fe8-484e-bbd5-329dc2a3f04e",
+            "time": "04:30",
+            "title": "ВКЗ",
+            "owner": "Максим",
+            "type": "mi",
+            "urgent": true,
+            "user_id": 0,
+            "done": false
+        },
+        {
+            "id": "cbfc93e4-bc78-4e95-b4e6-662c6b0a2beb",
+            "time": "12:00",
+            "title": "ВКЗ",
+            "owner": "вапвап",
+            "type": "evt",
+            "urgent": false,
+            "user_id": 0,
+            "done": false
         }
     ],
-    "2025-09-18": []
+    "2025-09-16": [
+        {
+            "id": "745b5167-36e2-4c32-b214-7658d7fa7e59",
+            "time": "01:00",
+            "title": "Донесення щодо ВКЗ на КДШВ",
+            "owner": "Вася",
+            "type": "nas",
+            "urgent": false,
+            "user_id": 0,
+            "done": false
+        }
+    ]
 }
