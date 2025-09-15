@@ -1,0 +1,39 @@
+.cell .events {
+  overflow-x: hidden;
+  overflow-y: auto;
+  max-height: 20em;
+  padding:12px auto;
+    --sb-size: 4px;                           /* товщина вертикального/горизонтального */
+    --sb-thumb: rgba(64,140,255,.6);           /* колір "повзунка" (з прозорістю) */
+    --sb-thumb-hover: rgba(64,140,255,.8);     /* колір при наведенні */
+    --sb-track: rgba(0,0,0,0);                 /* трек (може бути прозорий) */
+    --sb-radius: 8px;    
+}
+
+.cell .events::-webkit-scrollbar{
+  width: var(--sb-size);
+  height: var(--sb-size);
+}
+.cell .events::-webkit-scrollbar-track{
+  background: var(--sb-track);
+}
+.cell .events::-webkit-scrollbar-thumb{
+  background-color: var(--sb-thumb);
+  border-radius: var(--sb-radius);
+  /* "Внутрішній" відступ, щоб thumb не злипався зі стінками */
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+.cell .events::-webkit-scrollbar-thumb:hover{
+  background-color: var(--sb-thumb-hover);
+}
+/* (необов'язково) окремо під горизонтальний */
+.cell .events::-webkit-scrollbar:horizontal{ height: var(--sb-size); }
+
+/* Firefox */
+.cell .events{
+  /* товщина: auto | thin | none (точне значення задає тільки webkit-спосіб) */
+  scrollbar-width: thin;
+  /* thumb і track відповідно; можна використовувати rgba() для прозорості */
+  scrollbar-color: var(--sb-thumb) var(--sb-track);
+}

@@ -1,0 +1,90 @@
+
+/* Strikethrough for done items everywhere */
+.today-panel .items > div.done,
+.today-panel .items > div.done *,
+.planning-today__item.done,
+.planning-today__item.done *,
+.event.done,
+.event.done *{ text-decoration: line-through; }
+
+/* Remove previous 'red line' strikes if present */
+.event.done::after,
+.today-panel .items > div.done::after{ content:none !important; }
+
+/* Do not block clicks by top placeholder bar */
+.page-head{ pointer-events: none; }
+
+/* === Planning spacing v2 (merged) === */
+/* Consolidated planning styles */
+.planning-section {
+  margin-bottom: 18px;
+}
+
+.planning-section__title {
+  font-weight: 800;
+  margin: 8px 0 6px;
+  opacity: .9;
+}
+
+.planning-today__list {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  margin-top: 6px;
+}
+
+.planning-today__item {
+  display: grid;
+  grid-template-columns: 64px 1fr;
+  gap: 8px;
+  align-items: baseline;
+  padding: 6px 8px;
+  margin: 0;
+  border-left: 3px solid transparent;
+  border-radius: 8px;
+}
+
+.planning-today__time {
+  text-align: right;
+  min-width: 64px;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.2;
+}
+
+.planning-today__details {
+  display: grid;
+  grid-template-rows: auto auto;
+  gap: 2px;
+}
+
+.planning-today__title {
+  font-weight: 600;
+}
+
+.planning-today__owner {
+  font-size: 12px;
+  opacity: .75;
+}
+
+.planning-today__item.urgent {
+  border-left-color: color-mix(in oklab, #ef4444 70%, var(--border));
+}
+
+.planning-today__item.done {
+  opacity: .5;
+  filter: grayscale(1) contrast(.9) brightness(.95);
+}
+
+.planning-today__item.done,
+.planning-today__item.done * {
+  text-decoration: line-through;
+}
+
+.planning-empty {
+  opacity: .7;
+  font-style: italic;
+  padding: 8px 4px;
+}
+
+/* Grey color for date in section title */
+.planning-section__date { color: #6b7280; font-weight: 400;; } /* ~ gray-500 */
