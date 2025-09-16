@@ -15,7 +15,8 @@ class HomeController extends Controller
             ],
             'extra_js' => [
                 '/assets/js/calendar/calendar.data.js',
-                '/assets/js/calendar/ui.plan-today.js'
+                '/assets/js/calendar/ui.loader.js',
+                '/assets/js/calendar/ui.plan-today.js',              
             ]
         ]);
     }
