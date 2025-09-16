@@ -1,8 +1,18 @@
 /* @version ui v2.6-stable (без .burger і .sidebar) */
 :root{
   --bg:#0b0f16; --fg:#e5e7eb; --muted:#9ca3af; --accent:#60a5fa; --border:#1f2937;
-  --today:#fbbf24; --event-bg:#0f172a;
-  --type-mi:#3b82f6; --type-nas:#f97316; --type-evt:#22c55e; --type-other:#a855f7;
+  --today:#fbbf24;
+  --event-bg:#0f172a;
+  
+  --type-mi:#3b82f6;
+  /* --type-nas:#f97316; */
+  --type-nas:#f916b1;  
+  --type-evt:#22c55e;
+  --type-other:#a855f7;
+
+  --type-btn-op:46%;
+  --type-op:46%;
+
   --urgent:#ef4444;
   --fab-size:33px;
   --gap:12px;

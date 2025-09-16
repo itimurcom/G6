@@ -56,9 +56,17 @@
   grid-template-rows: auto auto;
   gap: 2px;
 }
+/* one-line row: chip (left) + title; owner переноситься вниз за потреби */
+.planning-today__details{
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  flex-wrap: wrap; /* дозволяє owner піти на наступний рядок на вузьких екранах */
+}
 
 .planning-today__title {
   font-weight: 600;
+   margin: 0; 
 }
 
 .planning-today__owner {
@@ -88,3 +96,13 @@
 
 /* Grey color for date in section title */
 .planning-section__date { color: #6b7280; font-weight: 400;; } /* ~ gray-500 */
+/* Title row: title left + type chip right */
+.planning-today__head{
+  display:flex;
+  align-items:center;
+  gap:.5rem;
+}
+.planning-today__head .chip{
+  margin-left:auto; /* push chip to the right edge */
+  white-space:nowrap;
+}

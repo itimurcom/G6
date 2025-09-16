@@ -46,7 +46,7 @@
     function collapseHour(dateISO,hour){
       if(quarterHas[dateISO] && quarterHas[dateISO][hour]) return;
       ['15','30','45'].forEach(function(min){
-        var elq=(tlAll[dateISO]||document).querySelector('.slot.quarter[data-date="'+dateISO+'"][data-hour="'+hour+'"][data-min="'+min+'"]');
+        var elq=(document).querySelector('.slot.quarter[data-date="'+dateISO+'"][data-hour="'+hour+'"][data-min="'+min+'"]');
         if(elq) elq.style.display='none';
       });
     }

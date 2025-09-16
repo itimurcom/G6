@@ -56,16 +56,17 @@
 .chip,
 .icon-btn,
 .chat-btn {
+  width:fit-content;
   border: 1px solid var(--border);
   background: var(--event-bg);
   color: var(--fg);
 }
 .btn { padding: 8px 12px; border-radius: 10px; font-weight: 700; cursor: pointer; }
 .tbtn { border-radius: 999px; padding: 6px 12px; font-weight: 800; cursor: pointer; }
-.tbtn.evt { background: color-mix(in oklab,var(--type-evt) 18%, var(--event-bg)); }
-.tbtn.mi { background: color-mix(in oklab,var(--type-mi) 18%, var(--event-bg)); }
-.tbtn.nas { background: color-mix(in oklab,var(--type-nas) 18%, var(--event-bg)); }
-.tbtn.other { background: color-mix(in oklab,var(--type-other) 18%, var(--event-bg)); }
+.tbtn.evt { background: color-mix(in oklab,var(--type-evt) var(--type-btn-op), var(--event-bg)); }
+.tbtn.mi { background: color-mix(in oklab,var(--type-mi) var(--type-btn-op), var(--event-bg)); }
+.tbtn.nas { background: color-mix(in oklab,var(--type-nas) var(--type-btn-op), var(--event-bg)); }
+.tbtn.other { background: color-mix(in oklab,var(--type-other) var(--type-btn-op), var(--event-bg)); }
 .tbtn.active { outline: 2px solid var(--accent); outline-offset: 1px; }
 .tbtn.reset-type {
   width: 36px; height: 36px; display: inline-grid; place-items: center;
@@ -132,10 +133,10 @@
   color: var(--muted); padding: 0 4px;
 }
 .event-btn:hover { color: var(--fg); }
-.type-mi { background: color-mix(in oklab,var(--type-mi) 20%, var(--event-bg)); }
-.type-nas { background: color-mix(in oklab,var(--type-nas) 20%, var(--event-bg)); }
-.type-evt { background: color-mix(in oklab,var(--type-evt) 20%, var(--event-bg)); }
-.type-other { background: color-mix(in oklab,var(--type-other) 20%, var(--event-bg)); }
+.type-mi { background: color-mix(in oklab,var(--type-mi) var(--type-op), var(--event-bg)); }
+.type-nas { background: color-mix(in oklab,var(--type-nas) var(--type-op), var(--event-bg)); }
+.type-evt { background: color-mix(in oklab,var(--type-evt) var(--type-op), var(--event-bg)); }
+.type-other { background: color-mix(in oklab,var(--type-other) var(--type-op), var(--event-bg)); }
 .type-mi .bar { background: var(--type-mi); }
 .type-nas .bar { background: var(--type-nas); }
 .type-evt .bar { background: var(--type-evt); }
@@ -211,7 +212,7 @@
 .dot.other { background: var(--type-other); }
 
 /* Slot variants */
-.slot.quarter { min-height: 22px; }
+.slot.quarter { min-height: 22px;}
 .slot.quarter .time { opacity: .55; }
 .slot.quarter .time::after {
   content: ''; display: block; height: 0; border-bottom: 1px dashed var(--border); margin-top: 9px;

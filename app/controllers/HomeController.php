@@ -10,6 +10,7 @@ class HomeController extends Controller
         return $this->render('pages/home', [
             'title' => 'Планування',
             'extra_css' => [
+                 '/assets/css/calendar.css',
                 '/assets/css/planning.css'
             ],
             'extra_js' => [
