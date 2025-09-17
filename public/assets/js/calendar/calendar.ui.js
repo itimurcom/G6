@@ -124,6 +124,7 @@
     var hasBottom = !!document.querySelector('.bottom-actions');
     t.style.bottom = '16px';
   }
+
   function setToastMode(mode){
     var t=ensureSaveToast(); var ico=$('saveToastIcon');
     t.style.borderColor = 'var(--border)';
@@ -132,6 +133,9 @@
     t.style.background  = 'var(--event-bg)';
     if (mode==='saving'){ ico.textContent='⏳'; }
     else if (mode==='ok'){
+      if (typeof global.refresh == 'function') {
+      global.refresh();
+      }
       t.style.background='var(--type-evt)'; t.style.borderColor='var(--type-evt)'; t.style.color='#fff'; t.style.boxShadow='0 8px 24px rgba(34,197,94,.28)'; ico.textContent='✅';
     } else if (mode==='err'){
       t.style.background='var(--urgent)'; t.style.borderColor='var(--urgent)'; t.style.color='#fff'; t.style.boxShadow='0 8px 24px rgba(239,68,68,.28)'; ico.textContent='⚠️';
@@ -588,7 +592,7 @@ if (window.CalendarApp && window.CalendarApp.ui) {
     renderAllCells(); renderTodayPanel();
   }
 
-  function renderAllCells(){     console.log('renderAllCells'); for(var i=0;i<cells.length;i++){ renderCell(cells[i]); } }
+  function renderAllCells(){ for(var i=0;i<cells.length;i++){ renderCell(cells[i]); } }
   function findCell(dateISO){ for(var i=0;i<cells.length;i++){ if(cells[i].dataset.date===dateISO) return cells[i]; } return null; }
 
   function renderCell(cell){

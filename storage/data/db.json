@@ -11,60 +11,62 @@
     "2025-09-13": [],
     "2025-09-05": [],
     "2025-09-04": [],
-    "2025-09-16": [],
+    "2025-09-16": [
+        {
+            "id": "e14197d2-8fe8-484e-bbd5-329dc2a3f04e",
+            "time": "08:30",
+            "title": "ВКЗ",
+            "owner": "Максим Юрійович",
+            "type": "mi",
+            "urgent": true,
+            "done": false,
+            "user_id": 0
+        }
+    ],
     "2025-09-17": [
         {
-            "id": "6c412b5f-c988-4fce-a535-21800caafb7d",
-            "time": "12:45",
-            "title": "Такой ось подій ВКЗ",
-            "owner": "Вася",
-            "type": "mi",
+            "id": "841291b6-3245-49aa-9587-3c63815270e5",
+            "time": "11:00",
+            "title": "ВКЗ ЖЕСТЬ",
+            "owner": "Тім",
+            "type": "evt",
+            "urgent": true,
+            "done": false,
+            "user_id": 0
+        },
+        {
+            "id": "745b5167-36e2-4c32-b214-7658d7fa7e59",
+            "time": "12:00",
+            "title": "Донесення щодо ВКЗ на КДШВ",
+            "owner": "Василь з Адмінки",
+            "type": "nas",
             "urgent": false,
             "done": false,
             "user_id": 0
         },
         {
-            "id": "841291b6-3245-49aa-9587-3c63815270e5",
-            "time": "11:30",
-            "title": "ВКЗ ЖЕСТЬ 222",
-            "owner": "Тім",
+            "id": "6c412b5f-c988-4fce-a535-21800caafb7d",
+            "time": "12:45",
+            "title": "Такой ось подій ВКЗ",
+            "owner": "Вася",
             "type": "evt",
-            "urgent": true,
-            "done": true,
+            "urgent": false,
+            "done": false,
             "user_id": 0
-        },
+        }
+    ],
+    "2025-09-18": [
         {
             "id": "ab5721b3-8778-4c69-a46e-b43983cd7b35",
-            "time": "12:15",
+            "time": "13:15",
             "title": "ВКЗ Відправка листа на КДШВ dddrr",
             "owner": "Максим Юрійович",
             "type": "evt",
             "urgent": false,
             "done": false,
             "user_id": 0
-        },
-        {
-            "id": "e14197d2-8fe8-484e-bbd5-329dc2a3f04e",
-            "time": "08:30",
-            "title": "ВКЗ",
-            "owner": "Максим",
-            "type": "mi",
-            "urgent": true,
-            "done": true,
-            "user_id": 0
-        },
-        {
-            "id": "745b5167-36e2-4c32-b214-7658d7fa7e59",
-            "time": "12:30",
-            "title": "Донесення щодо ВКЗ на КДШВ 33",
-            "owner": "Вася",
-            "type": "nas",
-            "urgent": false,
-            "done": false,
-            "user_id": 0
         }
     ],
-    "2025-09-18": [],
     "2025-09-12": [],
     "2025-09-19": [
         {
