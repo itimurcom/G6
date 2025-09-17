@@ -11,24 +11,25 @@
     "2025-09-13": [],
     "2025-09-05": [],
     "2025-09-04": [],
-    "2025-09-16": [
-        {
-            "id": "e14197d2-8fe8-484e-bbd5-329dc2a3f04e",
-            "time": "07:45",
-            "title": "ВКЗ",
-            "owner": "Максим",
-            "type": "mi",
-            "urgent": true,
-            "user_id": 0,
-            "done": false
-        },
+    "2025-09-16": [],
+    "2025-09-17": [
         {
             "id": "6c412b5f-c988-4fce-a535-21800caafb7d",
-            "time": "10:00",
+            "time": "12:45",
             "title": "Такой ось подій ВКЗ",
             "owner": "Вася",
             "type": "evt",
             "urgent": false,
+            "user_id": 0,
+            "done": false
+        },
+        {
+            "id": "841291b6-3245-49aa-9587-3c63815270e5",
+            "time": "12:30",
+            "title": "ВКЗ ЖЕСТЬ",
+            "owner": "Тім",
+            "type": "evt",
+            "urgent": true,
             "user_id": 0,
             "done": false
         },
@@ -43,18 +44,28 @@
             "done": false
         },
         {
-            "id": "841291b6-3245-49aa-9587-3c63815270e5",
-            "time": "10:00",
-            "title": "ВКЗ ЖЕСТЬ",
-            "owner": "Тім",
-            "type": "evt",
+            "id": "e14197d2-8fe8-484e-bbd5-329dc2a3f04e",
+            "time": "08:30",
+            "title": "ВКЗ",
+            "owner": "Максим",
+            "type": "mi",
             "urgent": true,
-            "user_id": 0,
-            "done": false
+            "done": false,
+            "user_id": 0
+        },
+        {
+            "id": "cbfc93e4-bc78-4e95-b4e6-662c6b0a2beb",
+            "time": "08:00",
+            "title": "ВКЗ",
+            "owner": "вапвап",
+            "type": "evt",
+            "urgent": false,
+            "done": true,
+            "user_id": 0
         },
         {
             "id": "745b5167-36e2-4c32-b214-7658d7fa7e59",
-            "time": "10:00",
+            "time": "12:30",
             "title": "Донесення щодо ВКЗ на КДШВ",
             "owner": "Вася",
             "type": "nas",
@@ -63,16 +74,6 @@
             "done": false
         }
     ],
-    "2025-09-17": [
-        {
-            "id": "cbfc93e4-bc78-4e95-b4e6-662c6b0a2beb",
-            "time": "08:00",
-            "title": "ВКЗ",
-            "owner": "вапвап",
-            "type": "evt",
-            "urgent": false,
-            "user_id": 0,
-            "done": false
-        }
-    ]
+    "2025-09-18": [],
+    "2025-09-12": []
 }

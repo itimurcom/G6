@@ -11,8 +11,13 @@ class CalendarController extends Controller
             'title' => 'Календар',
             'extra_css' => ['/assets/css/calendar.css'],
             'extra_js' => [
-                  '/assets/js/calendar/ui.loader.js',
+                '/assets/js/calendar/calendar.events.js',
+                '/assets/js/calendar/calendar.data.js',
+                '/assets/js/calendar/calendar.ui.js',
                 ],
+            'modules_js'   => [
+                // '/assets/js/calendar/main.js',
+            ]   ,
             ]);
     }
 }

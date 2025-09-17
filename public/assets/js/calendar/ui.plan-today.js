@@ -1,3 +1,207 @@
+// // // (function(global){
+// // //   "use strict";
+
+// // //   var Data = (global.CalendarApp && global.CalendarApp.data) || {};
+// // //   var MOUNT_ID = "planning-today";
+
+// // //   function parseDayKey(dk){
+// // //     var p = String(dk||"").split("-").map(function(x){ return parseInt(x,10)||0; });
+// // //     return new Date(p[0]||1970, (p[1]||1)-1, p[2]||1, 0, 0, 0, 0);
+// // //   }
+
+// // //   // Safe time parsing: supports "HH:MM" and ignores ISO date prefixes
+// // //   function parseHoursMinutes(s){
+// // //     var str = String(s||"");
+// // //     var m = str.match(/(\d{1,2}):(\d{2})/);
+// // //     var h = m ? parseInt(m[1],10) : 0;
+// // //     var min = m ? parseInt(m[2],10) : 0;
+// // //     if (!isFinite(h)) h = 0;
+// // //     if (!isFinite(min)) min = 0;
+// // //     return [h, min];
+// // //   }
+
+// // //   function toDate(dk, timeStr){
+// // //     var d = parseDayKey(dk);
+// // //     var hm = parseHoursMinutes(timeStr);
+// // //     d.setHours(hm[0], hm[1], 0, 0);
+// // //     return d;
+// // //   }
+
+// // //   function keyFromDateLocal(d){
+// // //     var y = d.getFullYear();
+// // //     var m = String(d.getMonth()+1).padStart(2,"0");
+// // //     var day = String(d.getDate()).padStart(2,"0");
+// // //     return y+"-"+m+"-"+day;
+// // //   }
+
+// // //   function formatTime(d){
+// // //     var h = String(d.getHours()).padStart(2,"0");
+// // //     var m = String(d.getMinutes()).padStart(2,"0");
+// // //     return h+":"+m;
+// // //   }
+
+// // //   function ensureStore(cb){
+// // //     try{
+// // //       var store = (typeof Data._getCache === "function") ? Data._getCache() : (Data.dayMap || null);
+// // //       if (store && typeof store === "object" && Object.keys(store).length){
+// // //         cb(store);
+// // //         return;
+// // //       }
+// // //       if (Data && typeof Data.serverLoadStore === "function"){
+// // //         Data.serverLoadStore().then(function(resp){
+// // //           var shaped = (typeof Data.ensureStoreShape === "function") ? Data.ensureStoreShape(resp) : (resp||{});
+// // //           if (typeof Data._setCache === "function") Data._setCache(shaped);
+// // //           cb(shaped||{});
+// // //         }).catch(function(){
+// // //           cb({});
+// // //         });
+// // //         return;
+// // //       }
+// // //     }catch(e){}
+// // //     cb({});
+// // //   }
+
+// // //   function collectForDay(store, dk){
+// // //     var arr = (store[dk]||[]), out = [];
+// // //     for (var i=0;i<arr.length;i++){
+// // //       var ev = arr[i] || {};
+// // //       var start = toDate(dk, ev.time || ev.start || "00:00");
+// // //       out.push({ start:start, ev:ev, dk:dk });
+// // //     }
+// // //     out.sort(function(a,b){ return a.start - b.start; });
+// // //     return out;
+// // //   }
+
+// // //   // Section builder with grey date span
+// // // function section(label, dateValue, items){
+// // //   var wrap = document.createElement("div");
+// // //   wrap.className = "planning-section";
+
+// // //   var h = document.createElement("div");
+// // //   h.className = "planning-section__title";
+
+// // //   var labelEl = document.createElement("span");
+// // //   labelEl.textContent = label + " ";
+
+// // //   var dateEl = document.createElement("span");
+// // //   dateEl.className = "planning-section__date";
+// // //   dateEl.textContent = toUADisplayDate(dateValue);
+
+// // //   h.appendChild(labelEl);
+// // //   h.appendChild(dateEl);
+// // //   wrap.appendChild(h);
+
+// // //   if (!items.length){
+// // //     var empty = document.createElement("div");
+// // //     empty.className = "planning-empty";
+// // //     empty.textContent = "Список пуст";
+// // //     wrap.appendChild(empty);
+// // //     return wrap;
+// // //   }
+
+// // //   var ul = document.createElement("ul");
+// // //   ul.className = "planning-today__list";
+
+// // //   for (var i=0;i<items.length;i++){
+// // //     var it = items[i];
+// // //     var li = document.createElement("li");
+// // //     li.className = "planning-today__item";
+// // //     if (it.ev.urgent) li.classList.add("urgent");
+// // //     if (it.ev.done) li.classList.add("done");
+
+// // //     var time = document.createElement("div");
+// // //     time.className = "planning-today__time";
+// // //     time.textContent = formatTime(it.start);
+
+// // //     var details = document.createElement("div");
+// // //     details.className = "planning-today__details";
+
+// // //     var titleEl = document.createElement("div");
+// // //     titleEl.className = "planning-today__title";
+// // //     titleEl.textContent = it.ev.title || "";
+
+// // //     var owner = document.createElement("div");
+// // //     owner.className = "planning-today__owner";
+// // //     owner.textContent = it.ev.owner ? String(it.ev.owner) : "";
+
+// // //     details.appendChild(titleEl);
+// // //     if (owner.textContent) details.appendChild(owner);
+
+// // //     li.appendChild(time);
+// // //     li.appendChild(details);
+// // //     ul.appendChild(li);
+// // //   }
+
+// // //   wrap.appendChild(ul);
+// // //   return wrap;
+// // // }
+
+
+// // //   function render(store){
+// // //     var mount = document.getElementById(MOUNT_ID);
+// // //     if (!mount) return;
+
+// // //     var now = new Date();
+// // //     var base = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+// // //     var dkY  = keyFromDateLocal(new Date(base.getFullYear(), base.getMonth(), base.getDate()-1));
+// // //     var dkT  = keyFromDateLocal(base);
+// // //     var dkZ  = keyFromDateLocal(new Date(base.getFullYear(), base.getMonth(), base.getDate()+1));
+// // //     var dkPz = keyFromDateLocal(new Date(base.getFullYear(), base.getMonth(), base.getDate()+2));
+
+// // //     var sY  = collectForDay(store, dkY);
+// // //     var sT  = collectForDay(store, dkT);
+// // //     var sZ  = collectForDay(store, dkZ);
+// // //     var sPz = collectForDay(store, dkPz);
+
+// // //     // Date objects for headings
+// // //     var dY  = parseDayKey(dkY);
+// // //     var dT  = parseDayKey(dkT);
+// // //     var dZ  = parseDayKey(dkZ);
+// // //     var dPz = parseDayKey(dkPz);
+
+// // //     var fmt = { dateStyle: 'long', timeZone: 'Europe/Kyiv' };
+
+// // //     var frag = document.createDocumentFragment();
+// // // frag.appendChild(section("Вчора",       dY,  sY));
+// // // frag.appendChild(section("Сьогодні",    dT,  sT));
+// // // frag.appendChild(section("Завтра",      dZ,  sZ));
+// // // frag.appendChild(section("Післязавтра", dPz, sPz));
+
+// // //     mount.innerHTML = "";
+// // //     mount.appendChild(frag);
+// // //   }
+
+// // //   function init(){ ensureStore(function(store){ render(store||{}); }); }
+// // //   if (document.readyState === "loading"){
+// // //     document.addEventListener("DOMContentLoaded", init);
+// // //   } else {
+// // //     init();
+// // //   }
+// // // })(window);
+
+
+// // // // --- Add once (helpers for UA date formatting) ---
+// // // function formatDateUA(d){
+// // //   var weekdays = ['Нд','Пн','Вт','Ср','Чт','Пт','Сб'];
+// // //   var monthsGen = [
+// // //     'січня','лютого','березня','квітня','травня','червня',
+// // //     'липня','серпня','вересня','жовтня','листопада','грудня'
+// // //   ];
+// // //   var dow = weekdays[d.getDay()];
+// // //   var dd  = String(d.getDate()).padStart(2,'0');
+// // //   var mon = monthsGen[d.getMonth()];
+// // //   var yyyy = d.getFullYear();
+// // //   return dow + ', ' + dd + ' ' + mon + ' ' + yyyy;
+// // // }
+
+// // // function toUADisplayDate(dateLike){
+// // //   if (dateLike instanceof Date && !isNaN(dateLike)) return formatDateUA(dateLike);
+// // //   var d = new Date(dateLike);
+// // //   return isNaN(d) ? String(dateLike || '') : formatDateUA(d);
+// // // }
+
+
 // // (function(global){
 // //   "use strict";
 
@@ -72,70 +276,89 @@
 // //     return out;
 // //   }
 
+// //   // --- use existing global helpers for event type (NO override) ---
+// //   var _typeToClass   = typeof global.typeToClass   === "function" ? global.typeToClass   : function(t){
+// //     return t==='mi'?'type-mi':t==='nas'?'type-nas':t==='evt'?'type-evt':'type-other';
+// //   };
+// //   var _labelForType  = typeof global.labelForType  === "function" ? global.labelForType  : function(t){
+// //     return t==='mi'?'ТЛГ: МИ':t==='nas'?'ТЛГ: НАС':t==='evt'?'Захід':'Інше';
+// //   };
+// //   // --- end type helpers ---
+
 // //   // Section builder with grey date span
-// // function section(label, dateValue, items){
-// //   var wrap = document.createElement("div");
-// //   wrap.className = "planning-section";
+// //   function section(label, dateValue, items){
+// //     var wrap = document.createElement("div");
+// //     wrap.className = "planning-section";
 
-// //   var h = document.createElement("div");
-// //   h.className = "planning-section__title";
+// //     var h = document.createElement("div");
+// //     h.className = "planning-section__title";
 
-// //   var labelEl = document.createElement("span");
-// //   labelEl.textContent = label + " ";
+// //     var labelEl = document.createElement("span");
+// //     labelEl.textContent = label + " ";
 
-// //   var dateEl = document.createElement("span");
-// //   dateEl.className = "planning-section__date";
-// //   dateEl.textContent = toUADisplayDate(dateValue);
+// //     var dateEl = document.createElement("span");
+// //     dateEl.className = "planning-section__date";
+// //     dateEl.textContent = toUADisplayDate(dateValue);
 
-// //   h.appendChild(labelEl);
-// //   h.appendChild(dateEl);
-// //   wrap.appendChild(h);
+// //     h.appendChild(labelEl);
+// //     h.appendChild(dateEl);
+// //     wrap.appendChild(h);
 
-// //   if (!items.length){
-// //     var empty = document.createElement("div");
-// //     empty.className = "planning-empty";
-// //     empty.textContent = "Список пуст";
-// //     wrap.appendChild(empty);
-// //     return wrap;
-// //   }
+// //     if (!items.length){
+// //       var empty = document.createElement("div");
+// //       empty.className = "planning-empty";
+// //       empty.textContent = "Список пуст";
+// //       wrap.appendChild(empty);
+// //       return wrap;
+// //     }
 
-// //   var ul = document.createElement("ul");
-// //   ul.className = "planning-today__list";
+// //     var ul = document.createElement("ul");
+// //     ul.className = "planning-today__list";
 
-// //   for (var i=0;i<items.length;i++){
-// //     var it = items[i];
-// //     var li = document.createElement("li");
-// //     li.className = "planning-today__item";
-// //     if (it.ev.urgent) li.classList.add("urgent");
-// //     if (it.ev.done) li.classList.add("done");
+// //    for (var i=0;i<items.length;i++){
+// //   var it = items[i];
+// //   var li = document.createElement("li");
+// //   li.className = "planning-today__item";
+// //   if (it.ev.urgent) li.classList.add("urgent");
+// //   if (it.ev.done) li.classList.add("done");
 
-// //     var time = document.createElement("div");
-// //     time.className = "planning-today__time";
-// //     time.textContent = formatTime(it.start);
+// //   var time = document.createElement("div");
+// //   time.className = "planning-today__time";
+// //   time.textContent = formatTime(it.start);
 
-// //     var details = document.createElement("div");
-// //     details.className = "planning-today__details";
+// //   var details = document.createElement("div");
+// //   details.className = "planning-today__details";
 
-// //     var titleEl = document.createElement("div");
-// //     titleEl.className = "planning-today__title";
-// //     titleEl.textContent = it.ev.title || "";
+// //   // chip FIRST (uses your global helpers)
+// //   var tRaw = String(it.ev.type || "").toLowerCase();
+// //   var chip = document.createElement("span");
+// //   chip.className = "chip " + _typeToClass(tRaw);
+// //   chip.textContent = _labelForType(tRaw);
+// //   chip.title = "Тип: " + chip.textContent;
 
-// //     var owner = document.createElement("div");
-// //     owner.className = "planning-today__owner";
-// //     owner.textContent = it.ev.owner ? String(it.ev.owner) : "";
+// //   // title NEXT
+// //   var titleEl = document.createElement("div");
+// //   titleEl.className = "planning-today__title";
+// //   titleEl.textContent = it.ev.title || "";
 
-// //     details.appendChild(titleEl);
-// //     if (owner.textContent) details.appendChild(owner);
+// //   var owner = document.createElement("div");
+// //   owner.className = "planning-today__owner";
+// //   owner.textContent = it.ev.owner ? String(it.ev.owner) : "";
 
-// //     li.appendChild(time);
-// //     li.appendChild(details);
-// //     ul.appendChild(li);
-// //   }
+// //   // order: chip -> title (same row), owner (wraps if needed)
+// //   details.appendChild(chip);
+// //   details.appendChild(titleEl);
+// //   if (owner.textContent) details.appendChild(owner);
 
-// //   wrap.appendChild(ul);
-// //   return wrap;
+// //   li.appendChild(time);
+// //   li.appendChild(details);
+// //   ul.appendChild(li);
 // // }
 
+
+// //     wrap.appendChild(ul);
+// //     return wrap;
+// //   }
 
 // //   function render(store){
 // //     var mount = document.getElementById(MOUNT_ID);
@@ -160,13 +383,11 @@
 // //     var dZ  = parseDayKey(dkZ);
 // //     var dPz = parseDayKey(dkPz);
 
-// //     var fmt = { dateStyle: 'long', timeZone: 'Europe/Kyiv' };
-
 // //     var frag = document.createDocumentFragment();
-// // frag.appendChild(section("Вчора",       dY,  sY));
-// // frag.appendChild(section("Сьогодні",    dT,  sT));
-// // frag.appendChild(section("Завтра",      dZ,  sZ));
-// // frag.appendChild(section("Післязавтра", dPz, sPz));
+// //     frag.appendChild(section("Вчора",       dY,  sY));
+// //     frag.appendChild(section("Сьогодні",    dT,  sT));
+// //     frag.appendChild(section("Завтра",      dZ,  sZ));
+// //     frag.appendChild(section("Післязавтра", dPz, sPz));
 
 // //     mount.innerHTML = "";
 // //     mount.appendChild(frag);
@@ -202,12 +423,15 @@
 // // }
 
 
+// // ui.plan-today.js
 // (function(global){
 //   "use strict";
 
+//   // Data access
 //   var Data = (global.CalendarApp && global.CalendarApp.data) || {};
 //   var MOUNT_ID = "planning-today";
 
+//   // ---------- date/time helpers ----------
 //   function parseDayKey(dk){
 //     var p = String(dk||"").split("-").map(function(x){ return parseInt(x,10)||0; });
 //     return new Date(p[0]||1970, (p[1]||1)-1, p[2]||1, 0, 0, 0, 0);
@@ -244,6 +468,7 @@
 //     return h+":"+m;
 //   }
 
+//   // ---------- store helpers ----------
 //   function ensureStore(cb){
 //     try{
 //       var store = (typeof Data._getCache === "function") ? Data._getCache() : (Data.dayMap || null);
@@ -256,9 +481,7 @@
 //           var shaped = (typeof Data.ensureStoreShape === "function") ? Data.ensureStoreShape(resp) : (resp||{});
 //           if (typeof Data._setCache === "function") Data._setCache(shaped);
 //           cb(shaped||{});
-//         }).catch(function(){
-//           cb({});
-//         });
+//         }).catch(function(){ cb({}); });
 //         return;
 //       }
 //     }catch(e){}
@@ -276,16 +499,53 @@
 //     return out;
 //   }
 
-//   // --- use existing global helpers for event type (NO override) ---
-//   var _typeToClass   = typeof global.typeToClass   === "function" ? global.typeToClass   : function(t){
-//     return t==='mi'?'type-mi':t==='nas'?'type-nas':t==='evt'?'type-evt':'type-other';
-//   };
-//   var _labelForType  = typeof global.labelForType  === "function" ? global.labelForType  : function(t){
-//     return t==='mi'?'ТЛГ: МИ':t==='nas'?'ТЛГ: НАС':t==='evt'?'Захід':'Інше';
-//   };
-//   // --- end type helpers ---
+//   // ---------- type helpers (use existing globals; fallback safe) ----------
+//   var _typeToClass  = (typeof global.typeToClass  === "function")
+//     ? global.typeToClass
+//     : function(t){ return t==='mi'?'type-mi':t==='nas'?'type-nas':t==='evt'?'type-evt':'type-other'; };
 
-//   // Section builder with grey date span
+//   var _labelForType = (typeof global.labelForType === "function")
+//     ? global.labelForType
+//     : function(t){ return t==='mi'?'ТЛГ: МИ':t==='nas'?'ТЛГ: НАС':t==='evt'?'Захід':'Інше'; };
+
+//   // ---------- ensure event has stable id & persist ----------
+//   function ensureEventId(dateISO, ev){
+//     if (!ev) return "";
+//     if (ev.id && String(ev.id).trim()) return String(ev.id);
+
+//     var newId = (global.Ev && typeof global.Ev.genId === "function")
+//       ? global.Ev.genId()
+//       : ("e_" + Date.now().toString(36) + Math.random().toString(36).slice(2,8));
+
+//     ev.id = newId;
+
+//     try{
+//       if (typeof Data.getEventsFor === "function" && typeof Data.setEventsFor === "function"){
+//         var arr = Data.getEventsFor(dateISO) || [];
+//         var idx = arr.indexOf(ev);
+//         if (idx > -1){ arr[idx] = ev; } else { arr.push(ev); }
+//         Data.setEventsFor(dateISO, arr);
+//       }
+//     }catch(_e){ /* noop */ }
+
+//     return newId;
+//   }
+
+//   // ---------- safe API access (works with ui.loader.js eval scope) ----------
+//   function tryOpenInfo(dk, id){
+//     var ui = global.CalendarApp && global.CalendarApp.ui;
+//     if (ui && typeof ui.openInfo === "function") return ui.openInfo(dk, id);
+//     if (typeof global.openInfo === "function")   return global.openInfo(dk, id);
+//     console.warn("[plan-today] openInfo not available yet");
+//   }
+//   function tryOpenEdit(dk, id){
+//     var ui = global.CalendarApp && global.CalendarApp.ui;
+//     if (ui && typeof ui.openModalEdit === "function") return ui.openModalEdit(dk, id);
+//     if (typeof global.openModalEdit === "function")   return global.openModalEdit(dk, id);
+//     console.warn("[plan-today] openModalEdit not available yet");
+//   }
+
+//   // ---------- section builder ----------
 //   function section(label, dateValue, items){
 //     var wrap = document.createElement("div");
 //     wrap.className = "planning-section";
@@ -315,51 +575,84 @@
 //     var ul = document.createElement("ul");
 //     ul.className = "planning-today__list";
 
-//    for (var i=0;i<items.length;i++){
-//   var it = items[i];
-//   var li = document.createElement("li");
-//   li.className = "planning-today__item";
-//   if (it.ev.urgent) li.classList.add("urgent");
-//   if (it.ev.done) li.classList.add("done");
+//     for (var i=0;i<items.length;i++){
+//       var it = items[i];
 
-//   var time = document.createElement("div");
-//   time.className = "planning-today__time";
-//   time.textContent = formatTime(it.start);
+//       var li = document.createElement("li");
+//       li.className = "planning-today__item";
+//       if (it.ev.urgent) li.classList.add("urgent");
+//       if (it.ev.done)   li.classList.add("done");
 
-//   var details = document.createElement("div");
-//   details.className = "planning-today__details";
+//       var id = ensureEventId(it.dk, it.ev);
+//       li.setAttribute("data-date", it.dk);
+//       if (id) li.setAttribute("data-id", id);
 
-//   // chip FIRST (uses your global helpers)
-//   var tRaw = String(it.ev.type || "").toLowerCase();
-//   var chip = document.createElement("span");
-//   chip.className = "chip " + _typeToClass(tRaw);
-//   chip.textContent = _labelForType(tRaw);
-//   chip.title = "Тип: " + chip.textContent;
+//       var time = document.createElement("div");
+//       time.className = "planning-today__time";
+//       time.textContent = formatTime(it.start);
 
-//   // title NEXT
-//   var titleEl = document.createElement("div");
-//   titleEl.className = "planning-today__title";
-//   titleEl.textContent = it.ev.title || "";
+//       var details = document.createElement("div");
+//       details.className = "planning-today__details";
 
-//   var owner = document.createElement("div");
-//   owner.className = "planning-today__owner";
-//   owner.textContent = it.ev.owner ? String(it.ev.owner) : "";
+//       // chip (left) + title (right)
+//       var tRaw = String(it.ev.type || "").toLowerCase();
+//       var chip = document.createElement("span");
+//       chip.className = "chip " + _typeToClass(tRaw);
+//       chip.textContent = _labelForType(tRaw);
+//       chip.title = "Тип: " + chip.textContent;
+//       chip.tabIndex = 0;
 
-//   // order: chip -> title (same row), owner (wraps if needed)
-//   details.appendChild(chip);
-//   details.appendChild(titleEl);
-//   if (owner.textContent) details.appendChild(owner);
+//       var titleEl = document.createElement("div");
+//       titleEl.className = "planning-today__title";
+//       titleEl.textContent = it.ev.title || "";
+//       titleEl.tabIndex = 0;
 
-//   li.appendChild(time);
-//   li.appendChild(details);
-//   ul.appendChild(li);
-// }
+//       var owner = document.createElement("div");
+//       owner.className = "planning-today__owner";
+//       owner.textContent = it.ev.owner ? String(it.ev.owner) : "";
 
+//       li.setAttribute("data-type", tRaw || "other");
+
+//       details.appendChild(chip);
+//       details.appendChild(titleEl);
+//       if (owner.textContent) details.appendChild(owner);
+
+//       li.appendChild(time);
+//       li.appendChild(details);
+//       ul.appendChild(li);
+
+//       // interactions: use CalendarApp.ui first, then window.*
+//       chip.addEventListener("click", function(e){
+//         e.preventDefault(); e.stopPropagation();
+//         tryOpenInfo(li.getAttribute("data-date"), li.getAttribute("data-id"));
+//       });
+//       chip.addEventListener("dblclick", function(e){
+//         e.preventDefault(); e.stopPropagation();
+//         tryOpenEdit(li.getAttribute("data-date"), li.getAttribute("data-id"));
+//       });
+//       chip.addEventListener("keydown", function(e){
+//         if (e.key === "Enter" || e.key === " "){
+//           e.preventDefault();
+//           tryOpenEdit(li.getAttribute("data-date"), li.getAttribute("data-id"));
+//         }
+//       });
+
+//       titleEl.addEventListener("click", function(e){
+//         e.preventDefault(); e.stopPropagation();
+//         tryOpenEdit(li.getAttribute("data-date"), li.getAttribute("data-id"));
+//       });
+
+//       li.addEventListener("dblclick", function(e){
+//         e.preventDefault(); e.stopPropagation();
+//         tryOpenEdit(li.getAttribute("data-date"), li.getAttribute("data-id"));
+//       });
+//     }
 
 //     wrap.appendChild(ul);
 //     return wrap;
 //   }
 
+//   // ---------- page render ----------
 //   function render(store){
 //     var mount = document.getElementById(MOUNT_ID);
 //     if (!mount) return;
@@ -377,7 +670,6 @@
 //     var sZ  = collectForDay(store, dkZ);
 //     var sPz = collectForDay(store, dkPz);
 
-//     // Date objects for headings
 //     var dY  = parseDayKey(dkY);
 //     var dT  = parseDayKey(dkT);
 //     var dZ  = parseDayKey(dkZ);
@@ -393,6 +685,7 @@
 //     mount.appendChild(frag);
 //   }
 
+//   // ---------- init ----------
 //   function init(){ ensureStore(function(store){ render(store||{}); }); }
 //   if (document.readyState === "loading"){
 //     document.addEventListener("DOMContentLoaded", init);
@@ -401,8 +694,7 @@
 //   }
 // })(window);
 
-
-// // --- Add once (helpers for UA date formatting) ---
+// // ---------- UA date display helpers ----------
 // function formatDateUA(d){
 //   var weekdays = ['Нд','Пн','Вт','Ср','Чт','Пт','Сб'];
 //   var monthsGen = [
@@ -422,12 +714,47 @@
 //   return isNaN(d) ? String(dateLike || '') : formatDateUA(d);
 // }
 
-
 // ui.plan-today.js
 (function(global){
   "use strict";
 
-  // Data access
+  // ---------- wait for Calendar UI (exported by loader bundle) ----------
+  function waitForCalendarUI(){
+    return new Promise(function(resolve){
+      function ready(){
+        return global.CalendarApp && CalendarApp.ui
+          && typeof CalendarApp.ui.openInfo === 'function'
+          && typeof CalendarApp.ui.openModalEdit === 'function';
+      }
+      if (ready()) return resolve(CalendarApp.ui);
+
+      function onReady(){
+        if (ready()){
+          global.removeEventListener('calendar:ui-ready', onReady);
+          resolve(CalendarApp.ui);
+        }
+      }
+      global.addEventListener('calendar:ui-ready', onReady);
+
+      var id = setInterval(function(){ if (ready()){ clearInterval(id); resolve(CalendarApp.ui); } }, 80);
+      setTimeout(function(){ clearInterval(id); if (ready()) resolve(CalendarApp.ui); }, 8000);
+    });
+  }
+
+  function tryOpenInfo(dateISO, id){
+    var ui = global.CalendarApp && CalendarApp.ui;
+    if (ui && typeof ui.openInfo === 'function') return ui.openInfo(dateISO, id);
+    console.warn('[plan-today] openInfo not available yet');
+    waitForCalendarUI().then(function(ui){ ui.openInfo(dateISO, id); });
+  }
+
+  function tryOpenEdit(dateISO, id){
+    var ui = global.CalendarApp && CalendarApp.ui;
+    if (ui && typeof ui.openModalEdit === 'function') return ui.openModalEdit(dateISO, id);
+    waitForCalendarUI().then(function(ui){ ui.openModalEdit(dateISO, id); });
+  }
+
+  // ---------- Data access ----------
   var Data = (global.CalendarApp && global.CalendarApp.data) || {};
   var MOUNT_ID = "planning-today";
 
@@ -499,7 +826,7 @@
     return out;
   }
 
-  // ---------- type helpers (use existing globals; fallback safe) ----------
+  // ---------- type helpers (use existing globals; fallback) ----------
   var _typeToClass  = (typeof global.typeToClass  === "function")
     ? global.typeToClass
     : function(t){ return t==='mi'?'type-mi':t==='nas'?'type-nas':t==='evt'?'type-evt':'type-other'; };
@@ -508,7 +835,7 @@
     ? global.labelForType
     : function(t){ return t==='mi'?'ТЛГ: МИ':t==='nas'?'ТЛГ: НАС':t==='evt'?'Захід':'Інше'; };
 
-  // ---------- ensure event has stable id & persist ----------
+  // ---------- ensure stable id & persist ----------
   function ensureEventId(dateISO, ev){
     if (!ev) return "";
     if (ev.id && String(ev.id).trim()) return String(ev.id);
@@ -516,7 +843,6 @@
     var newId = (global.Ev && typeof global.Ev.genId === "function")
       ? global.Ev.genId()
       : ("e_" + Date.now().toString(36) + Math.random().toString(36).slice(2,8));
-
     ev.id = newId;
 
     try{
@@ -529,20 +855,6 @@
     }catch(_e){ /* noop */ }
 
     return newId;
-  }
-
-  // ---------- safe API access (works with ui.loader.js eval scope) ----------
-  function tryOpenInfo(dk, id){
-    var ui = global.CalendarApp && global.CalendarApp.ui;
-    if (ui && typeof ui.openInfo === "function") return ui.openInfo(dk, id);
-    if (typeof global.openInfo === "function")   return global.openInfo(dk, id);
-    console.warn("[plan-today] openInfo not available yet");
-  }
-  function tryOpenEdit(dk, id){
-    var ui = global.CalendarApp && global.CalendarApp.ui;
-    if (ui && typeof ui.openModalEdit === "function") return ui.openModalEdit(dk, id);
-    if (typeof global.openModalEdit === "function")   return global.openModalEdit(dk, id);
-    console.warn("[plan-today] openModalEdit not available yet");
   }
 
   // ---------- section builder ----------
@@ -578,14 +890,17 @@
     for (var i=0;i<items.length;i++){
       var it = items[i];
 
+      // Capture per-item constants to avoid closure over 'var'
+      var dk  = it.dk;
+      var ev  = it.ev;
+      var eid = ensureEventId(dk, ev);
+
       var li = document.createElement("li");
       li.className = "planning-today__item";
-      if (it.ev.urgent) li.classList.add("urgent");
-      if (it.ev.done)   li.classList.add("done");
-
-      var id = ensureEventId(it.dk, it.ev);
-      li.setAttribute("data-date", it.dk);
-      if (id) li.setAttribute("data-id", id);
+      if (ev.urgent) li.classList.add("urgent");
+      if (ev.done)   li.classList.add("done");
+      li.setAttribute("data-date", dk);
+      if (eid) li.setAttribute("data-id", eid);
 
       var time = document.createElement("div");
       time.className = "planning-today__time";
@@ -595,21 +910,23 @@
       details.className = "planning-today__details";
 
       // chip (left) + title (right)
-      var tRaw = String(it.ev.type || "").toLowerCase();
+      var tRaw = String(ev.type || "").toLowerCase();
       var chip = document.createElement("span");
       chip.className = "chip " + _typeToClass(tRaw);
       chip.textContent = _labelForType(tRaw);
       chip.title = "Тип: " + chip.textContent;
-      chip.tabIndex = 0;
+      chip.setAttribute("role","button");
+      chip.setAttribute("tabindex","0");
 
       var titleEl = document.createElement("div");
       titleEl.className = "planning-today__title";
-      titleEl.textContent = it.ev.title || "";
-      titleEl.tabIndex = 0;
+      titleEl.textContent = ev.title || "";
+      titleEl.setAttribute("role","button");
+      titleEl.setAttribute("tabindex","0");
 
       var owner = document.createElement("div");
       owner.className = "planning-today__owner";
-      owner.textContent = it.ev.owner ? String(it.ev.owner) : "";
+      owner.textContent = ev.owner ? String(ev.owner) : "";
 
       li.setAttribute("data-type", tRaw || "other");
 
@@ -621,30 +938,30 @@
       li.appendChild(details);
       ul.appendChild(li);
 
-      // interactions: use CalendarApp.ui first, then window.*
+      // ---- interactions (use captured dk/eid) ----
       chip.addEventListener("click", function(e){
         e.preventDefault(); e.stopPropagation();
-        tryOpenInfo(li.getAttribute("data-date"), li.getAttribute("data-id"));
+        tryOpenInfo(dk, eid);
       });
       chip.addEventListener("dblclick", function(e){
         e.preventDefault(); e.stopPropagation();
-        tryOpenEdit(li.getAttribute("data-date"), li.getAttribute("data-id"));
+        tryOpenEdit(dk, eid);
       });
       chip.addEventListener("keydown", function(e){
         if (e.key === "Enter" || e.key === " "){
           e.preventDefault();
-          tryOpenEdit(li.getAttribute("data-date"), li.getAttribute("data-id"));
+          tryOpenEdit(dk, eid);
         }
       });
 
       titleEl.addEventListener("click", function(e){
         e.preventDefault(); e.stopPropagation();
-        tryOpenEdit(li.getAttribute("data-date"), li.getAttribute("data-id"));
+        tryOpenEdit(dk, eid);
       });
 
       li.addEventListener("dblclick", function(e){
         e.preventDefault(); e.stopPropagation();
-        tryOpenEdit(li.getAttribute("data-date"), li.getAttribute("data-id"));
+        tryOpenEdit(dk, eid);
       });
     }
 
@@ -694,7 +1011,8 @@
   }
 })(window);
 
-// ---------- UA date display helpers ----------
+
+// ---------- UA date display helpers (single include) ----------
 function formatDateUA(d){
   var weekdays = ['Нд','Пн','Вт','Ср','Чт','Пт','Сб'];
   var monthsGen = [

@@ -10,13 +10,14 @@ class HomeController extends Controller
         return $this->render('pages/home', [
             'title' => 'Планування',
             'extra_css' => [
-                 '/assets/css/calendar.css',
+                '/assets/css/calendar.css',
                 '/assets/css/planning.css'
             ],
             'extra_js' => [
+                '/assets/js/calendar/calendar.events.js',
                 '/assets/js/calendar/calendar.data.js',
-                '/assets/js/calendar/ui.loader.js',
-                '/assets/js/calendar/ui.plan-today.js',              
+                '/assets/js/calendar/calendar.ui.js',
+                '/assets/js/calendar/ui.plan-today.js',          
             ]
         ]);
     }
@@ -25,11 +26,9 @@ class HomeController extends Controller
         return $this->render('pages/cabinet', [
             'title' => 'Мій кабінет',
             'extra_css' => [
-                '/assets/css/planning.css',
                 ],
             'extra_js' => [
-                '/assets/js/calendar/ui.loader.js',
-                '/assets/js/calendar/ui.plan-today.js',
+
                 ]
         ]);
     }
