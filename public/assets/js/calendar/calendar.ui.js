@@ -481,7 +481,6 @@ if (window.CalendarApp && window.CalendarApp.ui) {
       var el = document.querySelector('#editEvBtn');
       el.setAttribute('data-id',id);
       el.addEventListener('click',function(e){ closeInfo(); e.stopPropagation(); var eid=e.currentTarget.getAttribute('data-id'); openModalEdit(dateISO,eid); });
-
       // infoTitle
       // item.addEventListener('click',function(e){ e.stopPropagation(); var eid=e.currentTarget.getAttribute('data-id'); openModalEdit(dateISO,eid); });
     }
@@ -589,7 +588,7 @@ if (window.CalendarApp && window.CalendarApp.ui) {
     renderAllCells(); renderTodayPanel();
   }
 
-  function renderAllCells(){ for(var i=0;i<cells.length;i++){ renderCell(cells[i]); } }
+  function renderAllCells(){     console.log('renderAllCells'); for(var i=0;i<cells.length;i++){ renderCell(cells[i]); } }
   function findCell(dateISO){ for(var i=0;i<cells.length;i++){ if(cells[i].dataset.date===dateISO) return cells[i]; } return null; }
 
   function renderCell(cell){
@@ -804,6 +803,7 @@ if (window.CalendarApp && window.CalendarApp.ui) {
   global.CalendarApp.ui.init = init;
   global.CalendarApp.ui.openModalNew  = openModalNew;
   global.CalendarApp.ui.openModalEdit = openModalEdit;
+  global.CalendarApp.ui.openInfo = openInfo; 
 
   // Автостарт
   if (document.readyState === 'loading') {

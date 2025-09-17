@@ -95,7 +95,7 @@
 
 <input id="filePicker" type="file" accept="application/json,.json" style="display:none" />
 
-<div id="eventOverlay" class="overlay" aria-hidden="true" role="dialog" aria-modal="true">
+<!-- <div id="eventOverlay" class="overlay" aria-hidden="true" role="dialog" aria-modal="true">
   <form id="eventModal" class="modal" aria-labelledby="modalTitle">
     <header>
       <div class="left">
@@ -155,7 +155,8 @@
     <div class="content" id="infoContent"></div>
     <footer><span></span><div style="display:flex;gap:10px;"><button type="button" id="infoOk" class="btn" style="background:var(--accent);border-color:var(--accent);color:#fff">Закрити</button></div></footer>
   </div>
-</div>
+</div> -->
+<? include('/var/www/html/calendar.localhost/app/views/layouts/dialogues.php'); ?>
 
 <button id="btnChat" class="chat-btn" title="Чат-приклад" aria-label="Чат">
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a4 4 0 0 1-4 4H7l-4 4V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z"/></svg>

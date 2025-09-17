@@ -1,5 +1,4 @@
 <?php
-require_once __DIR__ . '/../../app/config.php';
 header('Content-Type: application/json; charset=UTF-8');
 try {
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
