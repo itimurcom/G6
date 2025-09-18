@@ -469,18 +469,19 @@ if (window.CalendarApp && window.CalendarApp.ui) {
     var arr=Data.getEventsFor(dateISO); var ev=arr.find(function(e){return e.id===id;}); if(!ev) return;
     var html=
             
-            '<div style="position:relative;width:fit-content;padding-right:1.62em;"><strong>Дата:</strong> '+Ev.formatISO(dateISO)+' ('+weekdayShortFmt.format(new Date(dateISO))+')' + 
-            (ev.urgent ? '<span class="flag-urgent"><span class="icon"><svg class="icon"><use href="#i-fire-clock"></use></svg></span></span>' : '') +
+            '<div><strong>Дата:</strong> '+Ev.formatISO(dateISO)+' ('+weekdayShortFmt.format(new Date(dateISO))+')' + 
+            
             '</div>'+
-             '<div><strong>Час:</strong> '+(ev.time||'')+'</div>'+
+             '<div><strong>Час:</strong> '+(ev.time||'')+'</div>'+ 
              '<div><strong>Назва:</strong> '+Ev.escapeHtml(ev.title||'')+'</div>'+
              '<div><strong>Відповідальний:</strong> '+Ev.escapeHtml(ev.owner||'—')+'</div>'+
              '<div><strong>Тип:</strong> '+Ev.labelForType(ev.type)+'</div>'+
              '<div><strong>Терміновість:</strong> '+(ev.urgent?'так':'ні')+'</div>' +
-             '<div><strong>Виконана:</strong> '+(ev.done?'так':'ні')+'</div>'+
-              (ev.urgent?' <div class="bottom-right" style="color:var(--urgent);">' +
+             '<div style="position:relative;margin-right:1em;">' +
+             '<strong>Виконана:</strong> '+(ev.done?'так':'ні') +
+             (ev.urgent ? '<span class="flag-urgent"><span class="icon"><svg class="icon"><use href="#i-fire-clock"></use></svg></span></span>' : '') +
                 // '<span class="urgent-icon">🔥</span>' + 
-                '</div>':'');
+                '</div>';
 
     if (infoContent) infoContent.innerHTML=html;
       setInfoModalType(ev.type);
