@@ -271,15 +271,22 @@
 .modal .urgent-icon { font-size: 2em; opacity: 70%; }
 
 /* Urgent switch */
-.urgent-switch {
+.urgent-switch, .done-switch {
   display: inline-flex; gap: 8px; align-items: center;
   border: 1px solid var(--border); border-radius: 999px; padding: 6px 10px;
   background: var(--event-bg); font-weight: 800; color: var(--fg);
 }
 .urgent-switch input { accent-color: var(--urgent); }
+.done-switch input { accent-color: var(--done); }
+
 .urgent-switch.active {
   background: color-mix(in oklab, var(--urgent) 20%, var(--event-bg));
   border-color: color-mix(in oklab, var(--urgent) 40%, var(--border));
+}
+
+.done-switch.active {
+    background: color-mix(in oklab, var(--done) 20%, var(--event-bg));
+    background: color-mix(in oklab, var(--done) 20%, var(--event-bg));
 }
 :root[data-theme=dark]  .urgent-switch.active { color: #fff; }
 :root[data-theme=light] .urgent-switch.active { color: #111827; }

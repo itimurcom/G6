@@ -11,7 +11,8 @@ class HomeController extends Controller
             'title' => 'Планування',
             'extra_css' => [
                 '/assets/css/calendar.css',
-                '/assets/css/planning.css'
+                '/assets/css/planning.css',
+                '/assets/css/icons.css',
             ],
             'extra_js' => [
                 '/assets/js/tools.js',

@@ -6,7 +6,7 @@
         <label id="urgentSwitch" class="urgent-switch" title="Позначити як терміново">
           <input type="checkbox" id="inputUrgent"> Терміново
         </label>
-        <label id="doneSwitch" class="urgent-switch" title="Позначити як виконано" style="margin-left:10px">
+        <label id="doneSwitch" class="done-switch" title="Позначити як виконано" style="margin-left:10px">
           <input type="checkbox" id="inputDone"> Виконано
         </label>
       </div>
@@ -51,7 +51,10 @@
     <header>
       <div id="infoTitle">Деталі події</div>
       <div>
-        <button type="button" id="editEvBtn" class="event-btn" aria-label="Редагувати">&#128190;</button>
+        <button type="button" id="editEvBtn" class="event-btn" aria-label="Редагувати">
+         <svg class="icon"><use href="#i-edit"></use></svg>
+          <!-- &#128190; -->
+        </button>
         <button type="button" id="infoClose" class="event-btn" aria-label="Закрити">×</button>
       </div>
     </header>
