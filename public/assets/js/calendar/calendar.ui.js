@@ -467,14 +467,20 @@ if (window.CalendarApp && window.CalendarApp.ui) {
   }
   function openInfo(dateISO,id){ 
     var arr=Data.getEventsFor(dateISO); var ev=arr.find(function(e){return e.id===id;}); if(!ev) return;
-    var html='<div><strong>Дата:</strong> '+Ev.formatISO(dateISO)+' ('+weekdayShortFmt.format(new Date(dateISO))+')</div>'+
+    var html=
+            
+            '<div style="position:relative;width:fit-content;padding-right:1.62em;"><strong>Дата:</strong> '+Ev.formatISO(dateISO)+' ('+weekdayShortFmt.format(new Date(dateISO))+')' + 
+            (ev.urgent ? '<span class="flag-urgent"><span class="icon"><svg class="icon"><use href="#i-fire-clock"></use></svg></span></span>' : '') +
+            '</div>'+
              '<div><strong>Час:</strong> '+(ev.time||'')+'</div>'+
              '<div><strong>Назва:</strong> '+Ev.escapeHtml(ev.title||'')+'</div>'+
              '<div><strong>Відповідальний:</strong> '+Ev.escapeHtml(ev.owner||'—')+'</div>'+
              '<div><strong>Тип:</strong> '+Ev.labelForType(ev.type)+'</div>'+
              '<div><strong>Терміновість:</strong> '+(ev.urgent?'так':'ні')+'</div>' +
              '<div><strong>Виконана:</strong> '+(ev.done?'так':'ні')+'</div>'+
-              (ev.urgent?' <div class="bottom-right"><span class="urgent-icon">🔥</span></div>':'');
+              (ev.urgent?' <div class="bottom-right" style="color:var(--urgent);">' +
+                // '<span class="urgent-icon">🔥</span>' + 
+                '</div>':'');
 
     if (infoContent) infoContent.innerHTML=html;
       setInfoModalType(ev.type);
@@ -513,7 +519,8 @@ if (window.CalendarApp && window.CalendarApp.ui) {
         card.className='chat-card'+(ev.urgent?' urgent':'');
         if(ev.urgent){
           var flag=document.createElement('span'); flag.className='flag-urgent';
-          var icon=document.createElement('span'); icon.className='icon'; icon.textContent='🔥';
+          var icon=document.createElement('span'); icon.className='icon'; icon.innerHTML ='<svg class="icon"><use href="#i-fire-clock"></use></svg>';
+          // '🔥';
           flag.appendChild(icon); card.appendChild(flag);
         }
         card.innerHTML+='<div><strong>'+Ev.escapeHtml(ev.time||'')+' • '+Ev.escapeHtml(ev.title)+'</strong></div>'+
@@ -616,7 +623,8 @@ if (window.CalendarApp && window.CalendarApp.ui) {
 
       if(ev.urgent){
         var flag=document.createElement('span'); flag.className='flag-urgent';
-        var icon=document.createElement('span'); icon.className='icon'; icon.textContent='🔥';
+        var icon=document.createElement('span'); icon.className='icon'; icon.innerHTML ='<svg class="icon"><use href="#i-fire-clock"></use></svg>';
+          // '🔥';
         flag.appendChild(icon); item.appendChild(flag);
       }
       title.appendChild(document.createTextNode(ev.title||''));
@@ -758,7 +766,9 @@ if (window.CalendarApp && window.CalendarApp.ui) {
           arr.forEach(function(ev){
             var row=document.createElement('div'); row.className='item'+(ev.urgent?' urgent':''); if (ev && ev.done) { try { row.classList.add('done'); } catch(_){ row.className += ' done'; } } row.dataset.date=dateISO; row.dataset.id=ev.id; row.setAttribute('draggable','true');
             row.addEventListener('dragstart',function(e){ var id=e.currentTarget.dataset.id; var d=e.currentTarget.dataset.date; e.dataTransfer.effectAllowed='move'; e.dataTransfer.setData('text/calendar-event', JSON.stringify({fromDate:d,id:id})); });
-            if(ev.urgent){ var flag=document.createElement('span'); flag.className='flag-urgent'; var icon=document.createElement('span'); icon.className='icon'; icon.textContent='🔥'; flag.appendChild(icon); row.appendChild(flag); }
+            if(ev.urgent){ var flag=document.createElement('span'); flag.className='flag-urgent'; var icon=document.createElement('span'); icon.className='icon'; icon.innerHTML ='<svg class="icon"><use href="#i-fire-clock"></use></svg>';
+          // '🔥';
+                flag.appendChild(icon); row.appendChild(flag); }
             var dot=document.createElement('span'); dot.className='dot '+(ev.type||'evt'); row.appendChild(dot);
             var label=(ev.time||'')+' — '+ev.title+(ev.owner?(' • '+ev.owner):''); row.appendChild(document.createTextNode(label));
             row.addEventListener('click',function(){ openInfo(dateISO,ev.id); });

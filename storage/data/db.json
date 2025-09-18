@@ -19,8 +19,8 @@
             "title": "ВКЗ ЖЕСТЬ  іваіваіва",
             "owner": "Тім",
             "type": "evt",
-            "urgent": true,
-            "done": false,
+            "urgent": false,
+            "done": true,
             "user_id": 0
         },
         {
@@ -29,7 +29,7 @@
             "title": "Такой ось подій ВКЗ",
             "owner": "Вася",
             "type": "evt",
-            "urgent": false,
+            "urgent": true,
             "done": false,
             "user_id": 0
         },

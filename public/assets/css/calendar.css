@@ -143,20 +143,6 @@
 .type-other .bar { background: var(--type-other); }
 .event.urgent { outline: none; }
 
-/* Urgent flag */
-.flag-urgent {
-  position: absolute; top: -14px; right: -14px; width: 28px; height: 28px;
-  pointer-events: none; z-index: 3;
-  text-decoration: none !important;
-}
-
-.flag-urgent * {
-  text-decoration: none !important;
-}
-
-.flag-urgent::before { content: none !important; }
-
-
 /* Legend */
 .legend { display: flex; gap: 12px; align-items: center; font-size: 12px; color: var(--muted); margin-top: 12px; }
 .lg { display: inline-flex; align-items: center; gap: 6px; }
