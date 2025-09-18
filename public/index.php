@@ -3,14 +3,14 @@ require_once __DIR__ . '/../vendor/autoload.php';
 
 use App\core\Request;
 use App\core\Router;
-use App\controllers\EventsController;
+use App\core\EventsController;
 
 $request = new Request();
 $router  = new Router($request);
 
 $router->get('/',         [\App\Controllers\HomeController::class, 'planning']);
 $router->get('/calendar', [\App\Controllers\CalendarController::class, 'index']);
-$router->get('/cabinet',  [\App\Controllers\HomeController::class, 'cabinet']);
+$router->get('/cabinet',  [\App\Controllers\CabinetController::class, 'cabinet']);
 
 $router->get('/api/events', [EventsController::class, 'get']);
 $router->post('/api/events/store', [EventsController::class, 'store']);

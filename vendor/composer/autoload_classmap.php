@@ -6,11 +6,12 @@ $vendorDir = dirname(__DIR__);
 $baseDir = dirname($vendorDir);
 
 return array(
+    'App\\Controllers\\CabinetController' => $baseDir . '/app/controllers/CabinetController.php',
     'App\\Controllers\\CalendarController' => $baseDir . '/app/controllers/CalendarController.php',
-    'App\\Controllers\\EventsController' => $baseDir . '/app/controllers/EventsController.php',
     'App\\Controllers\\HomeController' => $baseDir . '/app/controllers/HomeController.php',
     'App\\Models\\EventStore' => $baseDir . '/app/models/EventStore.php',
     'App\\core\\Controller' => $baseDir . '/app/core/Controller.php',
+    'App\\core\\EventsController' => $baseDir . '/app/core/EventsController.php',
     'App\\core\\Request' => $baseDir . '/app/core/Request.php',
     'App\\core\\Router' => $baseDir . '/app/core/Router.php',
     'Composer\\InstalledVersions' => $vendorDir . '/composer/InstalledVersions.php',

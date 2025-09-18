@@ -31,11 +31,12 @@ class ComposerStaticInitf502405953d43c522bce30c01bf37ad3
     );
 
     public static $classMap = array (
+        'App\\Controllers\\CabinetController' => __DIR__ . '/../..' . '/app/controllers/CabinetController.php',
         'App\\Controllers\\CalendarController' => __DIR__ . '/../..' . '/app/controllers/CalendarController.php',
-        'App\\Controllers\\EventsController' => __DIR__ . '/../..' . '/app/controllers/EventsController.php',
         'App\\Controllers\\HomeController' => __DIR__ . '/../..' . '/app/controllers/HomeController.php',
         'App\\Models\\EventStore' => __DIR__ . '/../..' . '/app/models/EventStore.php',
         'App\\core\\Controller' => __DIR__ . '/../..' . '/app/core/Controller.php',
+        'App\\core\\EventsController' => __DIR__ . '/../..' . '/app/core/EventsController.php',
         'App\\core\\Request' => __DIR__ . '/../..' . '/app/core/Request.php',
         'App\\core\\Router' => __DIR__ . '/../..' . '/app/core/Router.php',
         'Composer\\InstalledVersions' => __DIR__ . '/..' . '/composer/InstalledVersions.php',

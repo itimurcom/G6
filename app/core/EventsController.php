@@ -1,5 +1,5 @@
 <?php
-namespace App\Controllers;
+namespace App\core;
 
 use App\Models\EventStore;
 
