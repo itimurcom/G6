@@ -36,8 +36,11 @@ body{
   border:1px solid var(--border);
   border-radius:16px;
   padding:16px;
-  min-height: calc(100svh - var(--gap) - var(--gap));
   background:var(--bg);
+}
+
+.container:not(.auto) {
+   min-height: calc(100svh - var(--gap) - var(--gap));
 }
 
 .ui-fab{

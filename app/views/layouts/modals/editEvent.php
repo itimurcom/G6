@@ -12,14 +12,39 @@
       </div>
       <button type="button" id="btnClose" class="event-btn" aria-label="Закрити">×</button>
     </header>
+
     <div class="content">
+      <!-- 1. Дата | Час -->
       <div class="row">
-        <div><label for="inputDate">Дата</label><input id="inputDate" name="date" type="date" required></div>
-        <div><label for="inputTime">Час</label><input id="inputTime" name="time" type="time" required></div>
+        <div>
+          <label for="inputDate">Дата</label>
+          <input id="inputDate" name="date" type="date" required>
+        </div>
+        <div>
+          <label for="inputTime">Час</label>
+          <input id="inputTime" name="time" type="time" required>
+        </div>
       </div>
-      <div><label for="inputTitle">Назва події</label><input id="inputTitle" name="title" type="text" placeholder="Напр., Статус-дзвінок" required></div>
+
+      <!-- 2. Назва події (повна ширина) -->
+      <div>
+        <label for="inputTitle">Назва події</label>
+        <input id="inputTitle" name="title" type="text" placeholder="Напр., Статус-дзвінок" required>
+      </div>
+
+      <!-- 3. Опис (повна ширина, 3 рядки, закруглені кути як у input) -->
+      <div>
+        <label for="inputDescription">Опис</label>
+        <textarea id="inputDescription" name="description" rows="3"
+          placeholder="Детальний опис події..." style="border-radius:8px;"></textarea>
+      </div>
+
+      <!-- 4. Відповідальний | Тип -->
       <div class="row">
-        <div><label for="inputOwner">Відповідальний</label><input id="inputOwner" name="owner" type="text" placeholder="Ім'я або команда"></div>
+        <div>
+          <label for="inputOwner">Відповідальний</label>
+          <input id="inputOwner" name="owner" type="text" placeholder="Ім'я або команда">
+        </div>
         <div>
           <label for="inputType">Тип</label>
           <select id="inputType" name="type" required>
@@ -30,14 +55,29 @@
           </select>
         </div>
       </div>
-    </div>
-    <footer>
+
+      <!-- 5. Вхідний номер | Вихідний номер -->
+      <div class="row">
+        <div>
+          <label for="inputIncoming">Вхідний номер</label>
+          <input id="inputIncoming" name="incoming_no" type="text" autocomplete="off" placeholder="Напр.: Вх-1234/09">
+        </div>
+        <div>
+          <label for="inputOutgoing">Вихідний номер</label>
+          <input id="inputOutgoing" name="outgoing_no" type="text" autocomplete="off" placeholder="Напр.: Вих-5678/09">
+        </div>
+      </div>
+
+      <!-- Легенда (залишаємо у content, як у тебе було) -->
       <div class="legend" aria-hidden="true">
         <span class="lg"><i style="background:var(--type-mi)"></i>ТЛГ: МИ</span>
         <span class="lg"><i style="background:var(--type-nas)"></i>ТЛГ: НАС</span>
         <span class="lg"><i style="background:var(--type-evt)"></i>Захід</span>
         <span class="lg"><i style="background:var(--type-other)"></i>Інше</span>
       </div>
+    </div>
+
+    <footer>
       <div style="display:flex; gap:10px;">
         <button type="button" class="btn" id="btnCancel">Скасувати</button>
         <button type="submit" class="btn" style="background:var(--accent);border-color:var(--accent);color:#fff">Зберегти</button>

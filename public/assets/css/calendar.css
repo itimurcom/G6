@@ -81,6 +81,7 @@
 
 /* Inputs */
 .input,
+.modal textarea,
 .modal input,
 .modal select {
   width: 100%;
@@ -303,3 +304,15 @@
 .today-panel .items > div.done::after { content: none !important; }
 
 .gridcell {overflow-y:auto; max-height:20em;}
+
+/* якщо треба вирівняти радіус під інпути */
+textarea#inputDescription {
+  border-radius: 8px;
+  overflow-y: auto;   /* скрол тільки коли треба */
+  resize: none;       /* фіксована висота */
+  /* Не обов'язково, але корисно для точності */
+  line-height: 1.5;
+  height: calc(1em * 1.5 * 3); /* 2 рядки * line-height */
+  box-sizing: border-box;      /* враховує падінги/рамку */
+  width:100%;
+}

@@ -53,6 +53,11 @@
   var btnCancel    = $('btnCancel');
   var editModal    = overlay ? overlay.querySelector('.modal') : null;
 
+  // New optional fields
+  var inputIncoming     = $('inputIncoming');    // Вхідний номер
+  var inputOutgoing     = $('inputOutgoing');    // Вихідний номер
+  var inputDescription  = $('inputDescription'); // Опис (textarea)
+
   // Інфо-модалка
   var infoOverlay = $('infoOverlay');
   var infoContent = $('infoContent');
@@ -277,8 +282,15 @@ if (filePicker) filePicker.addEventListener('change', function(e){
     if (inputOwner)  inputOwner.value = '';
     if (inputType)   inputType.value = 'evt';
     if (inputUrgent) inputUrgent.checked = false;
+    
+    if (inputIncoming)     inputIncoming.value = '';
+    if (inputOutgoing)     inputOutgoing.value = '';
+    if (inputDescription)  inputDescription.value = '';
+    
     setEditModalType(inputType ? inputType.value : 'evt'); applyUrgentClass(); showOverlay();
   }
+
+
   function openModalEdit(dateISO,id){
     var arr=Data.getEventsFor(dateISO); var ev=arr.find(function(e){return e.id===id;}); if(!ev) return;
     if (modalTitle) modalTitle.textContent='Редагувати подію';
@@ -291,6 +303,11 @@ if (filePicker) filePicker.addEventListener('change', function(e){
     if (inputType)   inputType.value = ev.type || 'evt';
     if (inputUrgent) inputUrgent.checked = !!ev.urgent;
     if (inputDone)   inputDone.checked   = !!ev.done;
+    
+    if (inputIncoming)     inputIncoming.value = ev.incoming_no || '';
+    if (inputOutgoing)     inputOutgoing.value = ev.outgoing_no || '';
+    if (inputDescription)  inputDescription.value = ev.description || '';
+
     setEditModalType(inputType ? inputType.value : 'evt'); applyUrgentClass(); showOverlay();
   }
 
@@ -308,7 +325,12 @@ if (filePicker) filePicker.addEventListener('change', function(e){
       type:  inputType.value,
       urgent: !!(inputUrgent && inputUrgent.checked),
       done:   !!(inputDone && inputDone.checked),
-      user_id: 0
+      user_id: 0,
+
+      // NEW:
+      incoming_no: (inputIncoming    && inputIncoming.value    || '').trim(),
+      outgoing_no: (inputOutgoing    && inputOutgoing.value    || '').trim(),
+      description: (inputDescription && inputDescription.value || '').trim()
     };
 
     var mode     = overlay ? overlay.dataset.mode : 'new';
@@ -468,20 +490,27 @@ if (window.CalendarApp && window.CalendarApp.ui) {
   function openInfo(dateISO,id){ 
     var arr=Data.getEventsFor(dateISO); var ev=arr.find(function(e){return e.id===id;}); if(!ev) return;
     var html=
-            
-            '<div><strong>Дата:</strong> '+Ev.formatISO(dateISO)+' ('+weekdayShortFmt.format(new Date(dateISO))+')' + 
-            
-            '</div>'+
-             '<div><strong>Час:</strong> '+(ev.time||'')+'</div>'+ 
-             '<div><strong>Назва:</strong> '+Ev.escapeHtml(ev.title||'')+'</div>'+
-             '<div><strong>Відповідальний:</strong> '+Ev.escapeHtml(ev.owner||'—')+'</div>'+
-             '<div><strong>Тип:</strong> '+Ev.labelForType(ev.type)+'</div>'+
-             '<div><strong>Терміновість:</strong> '+(ev.urgent?'так':'ні')+'</div>' +
-             '<div style="position:relative;margin-right:1em;">' +
-             '<strong>Виконана:</strong> '+(ev.done?'так':'ні') +
-             (ev.urgent ? '<span class="flag-urgent"><span class="icon"><svg class="icon"><use href="#i-fire-clock"></use></svg></span></span>' : '') +
-                // '<span class="urgent-icon">🔥</span>' + 
-                '</div>';
+              '<div class="row">' +
+                '<div><strong>Дата:</strong> '+Ev.formatISO(dateISO)+' ('+weekdayShortFmt.format(new Date(dateISO))+')</div>'+
+                '<div><strong>Час:</strong> '+(ev.time||'')+'</div>'+
+              '</div>' +
+
+              '<div class="row">' +
+                '<div><strong>Тип:</strong> '+Ev.labelForType(ev.type)+'</div>'+
+                '<div style="position:relative;margin-right:1em;">' +
+                  '<strong>Виконана:</strong> '+(ev.done?'так':'ні') +
+                  (ev.urgent ? '<span style="top:-36px;" class="flag-urgent"><span class="icon"><svg class="icon"><use href="#i-fire-clock"></use></svg></span></span>' : '') +
+                  // '<span class="urgent-icon">🔥</span>' + 
+                '</div>' +
+              '</div>' +
+              '<div><strong>Назва:</strong> '+Ev.escapeHtml(ev.title||'')+'</div>'+
+              '<div><strong>Відповідальний:</strong> '+Ev.escapeHtml(ev.owner||'—')+'</div>'+
+              
+              '<div><strong>Терміновість:</strong> '+(ev.urgent?'так':'ні')+'</div>' +
+
+              (ev.incoming_no ? '<div><strong>Вхідний №:</strong> '+Ev.escapeHtml(ev.incoming_no||'—')+'</div>' : '') +
+              (ev.outgoing_no ? '<div><strong>Вихідний №:</strong> '+Ev.escapeHtml(ev.outgoing_no||'—')+'</div>' : '') + 
+              (ev.description ? ('<div><strong>Опис:</strong><br><div class="container auto">'+Ev.escapeHtml(ev.description)+'</div></div>') : '');
 
     if (infoContent) infoContent.innerHTML=html;
       setInfoModalType(ev.type);

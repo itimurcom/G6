@@ -22,7 +22,10 @@
             "type": "evt",
             "urgent": true,
             "done": false,
-            "user_id": 0
+            "user_id": 0,
+            "incoming_no": "1",
+            "outgoing_no": "2",
+            "description": "ваіваіва"
         },
         {
             "id": "841291b6-3245-49aa-9587-3c63815270e5",
@@ -50,12 +53,15 @@
         {
             "id": "e14197d2-8fe8-484e-bbd5-329dc2a3f04e",
             "time": "08:30",
-            "title": "ВКЗ",
+            "title": "ВКЗ - тест",
             "owner": "Максим Юрійович",
-            "type": "mi",
+            "type": "evt",
             "urgent": true,
             "done": false,
-            "user_id": 0
+            "user_id": 0,
+            "incoming_no": "1",
+            "outgoing_no": "2",
+            "description": "123"
         },
         {
             "id": "745b5167-36e2-4c32-b214-7658d7fa7e59",
