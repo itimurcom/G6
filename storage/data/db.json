@@ -19,13 +19,13 @@
             "time": "12:15",
             "title": "Такой ось подій ВКЗ",
             "owner": "Вася",
-            "type": "evt",
+            "type": "other",
             "urgent": true,
             "done": false,
             "user_id": 0,
             "incoming_no": "1",
             "outgoing_no": "2",
-            "description": "ваіваіва"
+            "description": "ваіваіва\n\nf\nf\nsd\nfs\ndf\nsd\nfs\ndf\nsd\nfs\ndf\nsd"
         },
         {
             "id": "841291b6-3245-49aa-9587-3c63815270e5",

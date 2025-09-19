@@ -38,9 +38,6 @@
   gap: 16px 20px;
   margin-bottom: 10px;
 }
-.heading { display: grid; gap: 2px; align-self: start; }
-.title { font-size: clamp(20px,2.6vw,28px); font-weight: 800; }
-.subtle { color: var(--muted); font-weight: 600; }
 
 /* Nav & filters */
 .nav-filters { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
