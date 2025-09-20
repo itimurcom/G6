@@ -1,5 +1,5 @@
 <?php
-namespace App\Core;
+namespace App\core;
 
 class Request {
     public function method(): string {

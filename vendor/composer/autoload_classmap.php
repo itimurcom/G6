@@ -6,18 +6,13 @@ $vendorDir = dirname(__DIR__);
 $baseDir = dirname($vendorDir);
 
 return array(
-    'App\\Controllers\\AuthController' => $baseDir . '/App/Controllers/AuthController.php',
-    'App\\Controllers\\BaseController' => $baseDir . '/App/Controllers/BaseController.php',
-    'App\\Controllers\\CabinetController' => $baseDir . '/App/Controllers/CabinetController.php',
-    'App\\Controllers\\CalendarController' => $baseDir . '/App/Controllers/CalendarController.php',
-    'App\\Controllers\\HomeController' => $baseDir . '/App/Controllers/HomeController.php',
-    'App\\Controllers\\ProfileController' => $baseDir . '/App/Controllers/ProfileController.php',
-    'App\\Core\\Auth' => $baseDir . '/App/Core/Auth.php',
-    'App\\Core\\Controller' => $baseDir . '/App/Core/Controller.php',
-    'App\\Core\\EventsController' => $baseDir . '/App/Core/EventsController.php',
-    'App\\Core\\Request' => $baseDir . '/App/Core/Request.php',
-    'App\\Core\\Router' => $baseDir . '/App/Core/Router.php',
-    'App\\Middleware\\AuthMiddleware' => $baseDir . '/App/Middleware/AuthMiddleware.php',
-    'App\\Models\\EventStore' => $baseDir . '/App/Models/EventStore.php',
+    'App\\Controllers\\CabinetController' => $baseDir . '/app/controllers/CabinetController.php',
+    'App\\Controllers\\CalendarController' => $baseDir . '/app/controllers/CalendarController.php',
+    'App\\Controllers\\HomeController' => $baseDir . '/app/controllers/HomeController.php',
+    'App\\Models\\EventStore' => $baseDir . '/app/models/EventStore.php',
+    'App\\core\\Controller' => $baseDir . '/app/core/Controller.php',
+    'App\\core\\EventsController' => $baseDir . '/app/core/EventsController.php',
+    'App\\core\\Request' => $baseDir . '/app/core/Request.php',
+    'App\\core\\Router' => $baseDir . '/app/core/Router.php',
     'Composer\\InstalledVersions' => $vendorDir . '/composer/InstalledVersions.php',
 );

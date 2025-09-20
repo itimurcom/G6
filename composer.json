@@ -6,11 +6,9 @@
   "require": {},
   "autoload": {
     "psr-4": {
-      "App\\": "App/",
-      "App\\Core\\": "App/core/",
-      "App\\Models\\": "App/Models/",
-      "App\\Controllers\\": "App/Controllers/",
-      "App\\Middleware\\": "App/Middleware/"
+      "App\\": "app/",
+      "App\\Models\\": "app/models/",
+      "App\\Controllers\\": "app/controllers/"
     }
   },
   "config": {
