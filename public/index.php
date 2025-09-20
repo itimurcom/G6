@@ -1,9 +1,9 @@
 <?php
 require_once __DIR__ . '/../vendor/autoload.php';
 
-use App\core\Request;
-use App\core\Router;
-use App\core\EventsController;
+use App\Core\Request;
+use App\Core\Router;
+use App\Core\EventsController;
 
 $request = new Request();
 $router  = new Router($request);

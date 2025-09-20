@@ -1,8 +1,8 @@
 <?php
 namespace App\Controllers;
 
-use App\core\Controller;
-use App\core\Request;
+use App\Core\Controller;
+use App\Core\Request;
 
 class CabinetController extends Controller
 {
