@@ -22,7 +22,7 @@
           console.groupEnd();
           throw new Error('HTTP '+r.status);
         }
-        return ensureStoreShape(data && data.data);
+        return ensureStoreShape((data && data.data) ? data.data : data);
       })
       .catch(function(err){
         console.error('[API] load failed:', err);

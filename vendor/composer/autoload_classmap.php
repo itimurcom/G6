@@ -6,6 +6,8 @@ $vendorDir = dirname(__DIR__);
 $baseDir = dirname($vendorDir);
 
 return array(
+    'App\\Controllers\\ApiBackupController' => $baseDir . '/App/Controllers/ApiBackupController.php',
+    'App\\Controllers\\ApiEventsController' => $baseDir . '/App/Controllers/ApiEventsController.php',
     'App\\Controllers\\CabinetController' => $baseDir . '/App/Controllers/CabinetController.php',
     'App\\Controllers\\CalendarController' => $baseDir . '/App/Controllers/CalendarController.php',
     'App\\Controllers\\HomeController' => $baseDir . '/App/Controllers/HomeController.php',
@@ -13,6 +15,8 @@ return array(
     'App\\Core\\EventsController' => $baseDir . '/App/Core/EventsController.php',
     'App\\Core\\Request' => $baseDir . '/App/Core/Request.php',
     'App\\Core\\Router' => $baseDir . '/App/Core/Router.php',
+    'App\\Models\\EventRepositoryInterface' => $baseDir . '/App/Models/EventRepositoryInterface.php',
     'App\\Models\\EventStore' => $baseDir . '/App/Models/EventStore.php',
+    'App\\Models\\FileEventRepository' => $baseDir . '/App/Models/FileEventRepository.php',
     'Composer\\InstalledVersions' => $vendorDir . '/composer/InstalledVersions.php',
 );

@@ -31,6 +31,8 @@ class ComposerStaticInitf502405953d43c522bce30c01bf37ad3
     );
 
     public static $classMap = array (
+        'App\\Controllers\\ApiBackupController' => __DIR__ . '/../..' . '/App/Controllers/ApiBackupController.php',
+        'App\\Controllers\\ApiEventsController' => __DIR__ . '/../..' . '/App/Controllers/ApiEventsController.php',
         'App\\Controllers\\CabinetController' => __DIR__ . '/../..' . '/App/Controllers/CabinetController.php',
         'App\\Controllers\\CalendarController' => __DIR__ . '/../..' . '/App/Controllers/CalendarController.php',
         'App\\Controllers\\HomeController' => __DIR__ . '/../..' . '/App/Controllers/HomeController.php',
@@ -38,7 +40,9 @@ class ComposerStaticInitf502405953d43c522bce30c01bf37ad3
         'App\\Core\\EventsController' => __DIR__ . '/../..' . '/App/Core/EventsController.php',
         'App\\Core\\Request' => __DIR__ . '/../..' . '/App/Core/Request.php',
         'App\\Core\\Router' => __DIR__ . '/../..' . '/App/Core/Router.php',
+        'App\\Models\\EventRepositoryInterface' => __DIR__ . '/../..' . '/App/Models/EventRepositoryInterface.php',
         'App\\Models\\EventStore' => __DIR__ . '/../..' . '/App/Models/EventStore.php',
+        'App\\Models\\FileEventRepository' => __DIR__ . '/../..' . '/App/Models/FileEventRepository.php',
         'Composer\\InstalledVersions' => __DIR__ . '/..' . '/composer/InstalledVersions.php',
     );
 
