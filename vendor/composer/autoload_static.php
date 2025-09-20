@@ -10,6 +10,8 @@ class ComposerStaticInitf502405953d43c522bce30c01bf37ad3
         'A' => 
         array (
             'App\\Models\\' => 11,
+            'App\\Middleware\\' => 15,
+            'App\\Core\\' => 9,
             'App\\Controllers\\' => 16,
             'App\\' => 4,
         ),
@@ -18,27 +20,40 @@ class ComposerStaticInitf502405953d43c522bce30c01bf37ad3
     public static $prefixDirsPsr4 = array (
         'App\\Models\\' => 
         array (
-            0 => __DIR__ . '/../..' . '/app/models',
+            0 => __DIR__ . '/../..' . '/App/Models',
+        ),
+        'App\\Middleware\\' => 
+        array (
+            0 => __DIR__ . '/../..' . '/App/Middleware',
+        ),
+        'App\\Core\\' => 
+        array (
+            0 => __DIR__ . '/../..' . '/App/core',
         ),
         'App\\Controllers\\' => 
         array (
-            0 => __DIR__ . '/../..' . '/app/controllers',
+            0 => __DIR__ . '/../..' . '/App/Controllers',
         ),
         'App\\' => 
         array (
-            0 => __DIR__ . '/../..' . '/app',
+            0 => __DIR__ . '/../..' . '/App',
         ),
     );
 
     public static $classMap = array (
-        'App\\Controllers\\CabinetController' => __DIR__ . '/../..' . '/app/controllers/CabinetController.php',
-        'App\\Controllers\\CalendarController' => __DIR__ . '/../..' . '/app/controllers/CalendarController.php',
-        'App\\Controllers\\HomeController' => __DIR__ . '/../..' . '/app/controllers/HomeController.php',
-        'App\\Models\\EventStore' => __DIR__ . '/../..' . '/app/models/EventStore.php',
-        'App\\core\\Controller' => __DIR__ . '/../..' . '/app/core/Controller.php',
-        'App\\core\\EventsController' => __DIR__ . '/../..' . '/app/core/EventsController.php',
-        'App\\core\\Request' => __DIR__ . '/../..' . '/app/core/Request.php',
-        'App\\core\\Router' => __DIR__ . '/../..' . '/app/core/Router.php',
+        'App\\Controllers\\AuthController' => __DIR__ . '/../..' . '/App/Controllers/AuthController.php',
+        'App\\Controllers\\BaseController' => __DIR__ . '/../..' . '/App/Controllers/BaseController.php',
+        'App\\Controllers\\CabinetController' => __DIR__ . '/../..' . '/App/Controllers/CabinetController.php',
+        'App\\Controllers\\CalendarController' => __DIR__ . '/../..' . '/App/Controllers/CalendarController.php',
+        'App\\Controllers\\HomeController' => __DIR__ . '/../..' . '/App/Controllers/HomeController.php',
+        'App\\Controllers\\ProfileController' => __DIR__ . '/../..' . '/App/Controllers/ProfileController.php',
+        'App\\Core\\Auth' => __DIR__ . '/../..' . '/App/Core/Auth.php',
+        'App\\Core\\Controller' => __DIR__ . '/../..' . '/App/Core/Controller.php',
+        'App\\Core\\EventsController' => __DIR__ . '/../..' . '/App/Core/EventsController.php',
+        'App\\Core\\Request' => __DIR__ . '/../..' . '/App/Core/Request.php',
+        'App\\Core\\Router' => __DIR__ . '/../..' . '/App/Core/Router.php',
+        'App\\Middleware\\AuthMiddleware' => __DIR__ . '/../..' . '/App/Middleware/AuthMiddleware.php',
+        'App\\Models\\EventStore' => __DIR__ . '/../..' . '/App/Models/EventStore.php',
         'Composer\\InstalledVersions' => __DIR__ . '/..' . '/composer/InstalledVersions.php',
     );
 

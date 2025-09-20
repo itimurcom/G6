@@ -108,5 +108,5 @@
     <footer><span></span><div style="display:flex;gap:10px;"><button id="chatOk" class="btn" style="background:var(--accent);border-color:var(--accent);color:#fff">Закрити</button></div></footer>
   </div>
 </div>
-<? include ("/var/www/html/calendar.localhost/app/views/layouts/modals/editEvent.php"); ?>
-<? include ("/var/www/html/calendar.localhost/app/views/layouts/modals/infoEvent.php"); ?>
+<? include ("/var/www/html/calendar.localhost/App/Views/layouts/modals/editEvent.php"); ?>
+<? include ("/var/www/html/calendar.localhost/App/Views/layouts/modals/infoEvent.php"); ?>
