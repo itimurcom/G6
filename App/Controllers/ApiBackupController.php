@@ -1,45 +1,74 @@
 <?php
+declare(strict_types=1);
+
 namespace App\Controllers;
 
-use App\Core\Request;
 use App\Models\EventStore;
 
-class ApiBackupController
+final class ApiBackupController
 {
-    private function json($data, int $code = 200): void {
+    private EventStore $store;
+
+    public function __construct()
+    {
+        $this->store = new EventStore();
+    }
+
+    /** GET /api/events -> plain store map */
+    public function events(): void
+    {
+        $this->json($this->store->read());
+    }
+
+    /**
+     * POST /api/events/store
+     * Body: either { data: { ...store... } } or plain store map.
+     * Applies server-side diff (upsert/move/delete).
+     */
+    public function store(): void
+    {
+        $payload = $this->readJson();
+        if (isset($payload['data']) && is_array($payload['data'])) { $payload = $payload['data']; }
+        if (isset($payload['store']) && is_array($payload['store'])) { $payload = $payload['store']; }
+        $summary = $this->store->writeDiff(is_array($payload) ? $payload : []);
+        $this->json(['ok' => true] + $summary);
+    }
+
+    /** GET /api/backup/export -> { ok:true, data: store } */
+    public function export(): void
+    {
+        $this->json(['ok' => true, 'data' => $this->store->read()]);
+    }
+
+    /** POST /api/backup/import -> {ok:true, ...summary} */
+    public function import(): void
+    {
+        $payload = $this->readJson();
+        if (isset($payload['data']) && is_array($payload['data'])) { $payload = $payload['data']; }
+        if (isset($payload['store']) && is_array($payload['store'])) { $payload = $payload['store']; }
+        $summary = $this->store->writeDiff(is_array($payload) ? $payload : []);
+        $this->json(['ok' => true] + $summary);
+    }
+
+    /** GET /api/backup/diag -> info */
+    public function diag(): void
+    {
+        $path = $this->store->getPath();
+        $size = file_exists($path) ? filesize($path) : 0;
+        $this->json(['ok' => true, 'path' => $path, 'size' => $size]);
+    }
+
+    /* === helpers === */
+    private function readJson(): array
+    {
+        $raw = file_get_contents('php://input');
+        $json = json_decode($raw ?: "{}", true);
+        return is_array($json) ? $json : [];
+    }
+    private function json($data, int $code = 200): void
+    {
         http_response_code($code);
         header('Content-Type: application/json; charset=utf-8');
-        header('Cache-Control: no-store');
-        echo json_encode($data, JSON_UNESCAPED_UNICODE);
-    }
-
-    public function export(Request $req): void {
-        $s = new EventStore();
-        $this->json($s->read());
-    }
-
-    public function import(Request $req): void {
-        $raw = file_get_contents('php://input');
-        $data = json_decode($raw ?: 'null', true);
-        if (!is_array($data)) { $this->json(['error'=>'invalid json'], 400); return; }
-        $s = new EventStore();
-        $ok = $s->write($data);
-        $this->json(['ok' => (bool)$ok]);
-    }
-
-    public function diag(Request $req): void {
-        $s = new EventStore();
-        $path = $s->path();
-        $dir  = dirname($path);
-        $result = [
-            'ok' => true,
-            'path' => $path,
-            'dir' => $dir,
-            'dir_exists' => is_dir($dir),
-            'dir_writable' => is_writable($dir),
-            'exists' => file_exists($path),
-            'php_sapi' => PHP_SAPI,
-        ];
-        $this->json($result);
+        echo json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
     }
 }
