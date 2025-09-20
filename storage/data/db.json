@@ -18,34 +18,6 @@
     "2025-09-18": [],
     "2025-09-19": [
         {
-            "id": "e14197d2-8fe8-484e-bbd5-329dc2a3f04e",
-            "time": "07:15",
-            "title": "ВКЗ",
-            "owner": "Максим Юрійович",
-            "type": "evt",
-            "urgent": false,
-            "done": false,
-            "user_id": 0,
-            "incoming_no": "",
-            "outgoing_no": "",
-            "description": "44444"
-        },
-        {
-            "id": "e_ca2eada6ed391ccc",
-            "time": "07:30",
-            "title": "еуіе",
-            "owner": "кцук",
-            "type": "mi",
-            "urgent": false,
-            "done": false,
-            "user_id": 0,
-            "incoming_no": "",
-            "outgoing_no": "",
-            "description": ""
-        }
-    ],
-    "2025-09-20": [
-        {
             "id": "ab5721b3-8778-4c69-a46e-b43983cd7b35",
             "time": "11:30",
             "title": "ВКЗ Відправка листа на КДШВ",
@@ -57,7 +29,9 @@
             "incoming_no": "",
             "outgoing_no": "",
             "description": ""
-        },
+        }
+    ],
+    "2025-09-20": [
         {
             "id": "841291b6-3245-49aa-9587-3c63815270e5",
             "time": "07:15",
@@ -72,24 +46,37 @@
             "description": ""
         },
         {
-            "id": "745b5167-36e2-4c32-b214-7658d7fa7e59",
-            "time": "10:30",
-            "title": "Донесення щодо ВКЗ на КДШВ",
-            "owner": "Максим Юрійович",
+            "id": "e_32e9d3b94c0a91bb",
+            "time": "06:15",
+            "title": "Ще одне ЩОСЬ",
+            "owner": "Тімур",
             "type": "other",
             "urgent": false,
-            "done": false,
+            "done": true,
             "user_id": 0,
             "incoming_no": "",
             "outgoing_no": "",
             "description": ""
         },
         {
-            "id": "cbfc93e4-bc78-4e95-b4e6-662c6b0a2beb",
-            "time": "06:15",
+            "id": "e14197d2-8fe8-484e-bbd5-329dc2a3f04e",
+            "time": "07:15",
             "title": "ВКЗ",
             "owner": "Максим Юрійович",
             "type": "evt",
+            "urgent": false,
+            "done": false,
+            "user_id": 0,
+            "incoming_no": "",
+            "outgoing_no": "",
+            "description": "44444"
+        },
+        {
+            "id": "745b5167-36e2-4c32-b214-7658d7fa7e59",
+            "time": "10:30",
+            "title": "Донесення щодо ВКЗ на КДШВ",
+            "owner": "Максим Юрійович",
+            "type": "other",
             "urgent": false,
             "done": false,
             "user_id": 0,
@@ -111,18 +98,32 @@
             "description": "qwdqwdqw"
         },
         {
-            "id": "e_32e9d3b94c0a91bb",
-            "time": "06:15",
-            "title": "Ще одне ЩОСЬ",
-            "owner": "Тімур",
-            "type": "other",
+            "id": "e_ca2eada6ed391ccc",
+            "time": "07:30",
+            "title": "еуіе",
+            "owner": "кцук",
+            "type": "mi",
             "urgent": false,
-            "done": true,
+            "done": false,
             "user_id": 0,
             "incoming_no": "",
             "outgoing_no": "",
             "description": ""
         }
     ],
-    "2025-09-21": []
+    "2025-09-21": [
+        {
+            "id": "cbfc93e4-bc78-4e95-b4e6-662c6b0a2beb",
+            "time": "06:15",
+            "title": "ВКЗ",
+            "owner": "Максим Юрійович",
+            "type": "evt",
+            "urgent": false,
+            "done": false,
+            "user_id": 0,
+            "incoming_no": "",
+            "outgoing_no": "",
+            "description": ""
+        }
+    ]
 }

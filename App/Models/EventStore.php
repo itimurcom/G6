@@ -17,7 +17,6 @@ final class EventStore
 
     public function getPath(): string { return $this->path; }
 
-    /** Read whole store: [ 'YYYY-MM-DD' => [ {event}, ... ], ... ] */
     public function read(): array
     {
         $raw = @file_get_contents($this->path);
@@ -25,7 +24,6 @@ final class EventStore
         return is_array($json) ? $json : [];
     }
 
-    /** Write whole store atomically */
     public function write(array $store): void
     {
         $tmp = $this->path . '.tmp';
@@ -42,8 +40,6 @@ final class EventStore
         }
     }
 
-    /* ===== Helpers ===== */
-
     private function uuidV4(): string
     {
         $data = random_bytes(16);
@@ -52,7 +48,6 @@ final class EventStore
         return vsprintf('%s%s-%s-%s-%s-%s%s%s', str_split(bin2hex($data), 4));
     }
 
-    /** Ensure map shape and basic typing. Assign ids if missing. */
     public function normalizeStore(array $store): array
     {
         $out = [];
@@ -84,7 +79,6 @@ final class EventStore
         return $out;
     }
 
-    /** id => ['date'=>..., 'index'=>..., 'ev'=>...] */
     private function indexStore(array $store): array
     {
         $idx = [];
@@ -100,7 +94,6 @@ final class EventStore
         return $idx;
     }
 
-    /** Remove duplicates by id: keep LAST occurrence by date order */
     public function dedupe(array $store): array
     {
         $dates = array_keys($store);
@@ -121,6 +114,11 @@ final class EventStore
                     if (isset($out[$prevD][$prevI])) {
                         unset($out[$prevD][$prevI]);
                         $out[$prevD] = array_values($out[$prevD]);
+                        foreach ($out[$prevD] as $k => $v) {
+                            if (isset($v['id']) && $v['id'] !== '') {
+                                $seen[$v['id']] = ['date' => $prevD, 'index' => $k];
+                            }
+                        }
                     }
                 }
                 $bucket[] = $ev;
@@ -131,7 +129,6 @@ final class EventStore
         return $out;
     }
 
-    /** Apply per-record diff and persist. */
     public function writeDiff(array $incoming): array
     {
         $current = $this->normalizeStore($this->read());
@@ -183,6 +180,58 @@ final class EventStore
             'updated' => $updated,
             'moved'   => $moved,
             'deleted' => $deleted,
+        ];
+    }
+
+    public function repairSummary(bool $apply = false): array
+    {
+        $before = $this->read();
+
+        // Count events and missing IDs in the original store (before normalization)
+        $eventsBefore = 0;
+        $missingIdsBefore = 0;
+        foreach ($before as $d => $arr) {
+            if (!is_array($arr)) continue;
+            $eventsBefore += count($arr);
+            foreach ($arr as $e) {
+                $id = $e['id'] ?? '';
+                if (!is_string($id) || $id === '') $missingIdsBefore++;
+            }
+        }
+
+        // Normalize (assign IDs where missing), then dedupe
+        $norm = $this->normalizeStore($before);
+        $after = $this->dedupe($norm);
+
+        // Count events after
+        $eventsAfter = 0;
+        foreach ($after as $d => $arr) { if (is_array($arr)) $eventsAfter += count($arr); }
+
+        // 'ids_assigned' = how many events in the original store had no id at all
+        $idsAssigned = $missingIdsBefore;
+
+        // 'dups_removed' = how many total entries got removed due to dedupe
+        $dupsRemoved = max(0, $eventsBefore - $eventsAfter);
+
+        // days touched metric: days where content differs
+        $daysTouched = 0;
+        $all = array_unique(array_merge(array_keys($before), array_keys($after)));
+        foreach ($all as $d) {
+            $ba = isset($before[$d]) && is_array($before[$d]) ? $before[$d] : [];
+            $aa = isset($after[$d]) && is_array($after[$d]) ? $after[$d] : [];
+            if (json_encode($ba, JSON_UNESCAPED_UNICODE) !== json_encode($aa, JSON_UNESCAPED_UNICODE)) $daysTouched++;
+        }
+
+        if ($apply) $this->write($after);
+
+        return [
+            'ok' => true,
+            'dry_run' => !$apply,
+            'events_before' => $eventsBefore,
+            'events_after' => $eventsAfter,
+            'ids_assigned' => $idsAssigned,
+            'dups_removed' => $dupsRemoved,
+            'days_touched' => $daysTouched,
         ];
     }
 }

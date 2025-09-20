@@ -13,7 +13,9 @@ $router->get('/calendar', [\App\Controllers\CalendarController::class, 'index'])
 $router->get('/cabinet',  [\App\Controllers\CabinetController::class, 'cabinet']);
 
 
-
+// ✅ Новий маршрут(и) для repair (без змін Router.php усередині)
+$router->get('/api/repair',                 [\App\Controllers\ApiBackupController::class, 'repair']);        // плоский
+$router->get('/api/backup/repair-dups',     [\App\Controllers\ApiBackupController::class, 'repair']);
 
 
 $router->get('/api/mysql/diag', [\App\Controllers\ApiMysqlEventsController::class, 'diag']);

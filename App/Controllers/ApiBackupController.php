@@ -5,26 +5,23 @@ namespace App\Controllers;
 
 use App\Models\EventStore;
 
-final class ApiBackupController
+class ApiBackupController
 {
-    private EventStore $store;
+    // was private; keep protected for tests
+    protected EventStore $store;
 
     public function __construct()
     {
         $this->store = new EventStore();
     }
 
-    /** GET /api/events -> plain store map */
+    /** alias of export for legacy */
     public function events(): void
     {
         $this->json($this->store->read());
     }
 
-    /**
-     * POST /api/events/store
-     * Body: either { data: { ...store... } } or plain store map.
-     * Applies server-side diff (upsert/move/delete).
-     */
+    /** alias of import for legacy */
     public function store(): void
     {
         $payload = $this->readJson();
@@ -34,13 +31,11 @@ final class ApiBackupController
         $this->json(['ok' => true] + $summary);
     }
 
-    /** GET /api/backup/export -> { ok:true, data: store } */
     public function export(): void
     {
-        $this->json(['ok' => true, 'data' => $this->store->read()]);
+        $this->json($this->store->read());
     }
 
-    /** POST /api/backup/import -> {ok:true, ...summary} */
     public function import(): void
     {
         $payload = $this->readJson();
@@ -50,22 +45,40 @@ final class ApiBackupController
         $this->json(['ok' => true] + $summary);
     }
 
-    /** GET /api/backup/diag -> info */
     public function diag(): void
     {
+        if (isset($_GET['repair'])) {
+            $dry = isset($_GET['dry_run']) ? filter_var($_GET['dry_run'], FILTER_VALIDATE_BOOLEAN) : true;
+            $summary = $this->store->repairSummary(!$dry);
+            $path = $this->store->getPath();
+            $size = file_exists($path) ? filesize($path) : 0;
+            $this->json($summary + ['path' => $path, 'size' => $size]);
+            return;
+        }
         $path = $this->store->getPath();
         $size = file_exists($path) ? filesize($path) : 0;
         $this->json(['ok' => true, 'path' => $path, 'size' => $size]);
     }
 
-    /* === helpers === */
-    private function readJson(): array
+    /** simple route for repair */
+    public function repair(): void
+    {
+        $dry = isset($_GET['dry_run']) ? filter_var($_GET['dry_run'], FILTER_VALIDATE_BOOLEAN) : true;
+        $summary = $this->store->repairSummary(!$dry);
+        $path = $this->store->getPath();
+        $size = file_exists($path) ? filesize($path) : 0;
+        $this->json($summary + ['path' => $path, 'size' => $size]);
+    }
+
+    // --- helpers (protected for tests) ---
+    protected function readJson(): array
     {
         $raw = file_get_contents('php://input');
         $json = json_decode($raw ?: "{}", true);
         return is_array($json) ? $json : [];
     }
-    private function json($data, int $code = 200): void
+
+    protected function json($data, int $code = 200): void
     {
         http_response_code($code);
         header('Content-Type: application/json; charset=utf-8');
