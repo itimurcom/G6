@@ -1,110 +1,155 @@
 <?php
+declare(strict_types=1);
+
 namespace App\Controllers;
 
-use App\Core\Request;
 use App\Models\FileEventRepository;
 use App\Models\EventRepositoryInterface;
 
-class ApiEventsController
+final class ApiEventsController
 {
-    private EventRepositoryInterface $repo;
+    /** @var EventRepositoryInterface */
+    private $repo; // <— прибрали жорстку типізацію властивості (залишили phpdoc)
 
     public function __construct() {
         $this->repo = new FileEventRepository();
     }
 
     private function json($data, int $code = 200): void {
-        http_response_code($code);
-        header('Content-Type: application/json; charset=utf-8');
-        header('Cache-Control: no-store');
+        if (!headers_sent()) {
+            header('Content-Type: application/json; charset=utf-8');
+            header('Cache-Control: no-store');
+            http_response_code($code);
+        }
         echo json_encode($data, JSON_UNESCAPED_UNICODE);
     }
 
-    public function byDate(Request $req): void {
+    private function parseJson(): ?array {
+        $raw = file_get_contents('php://input');
+        if ($raw === false || $raw === '') return [];
+        $payload = json_decode($raw, true);
+        return is_array($payload) ? $payload : null;
+    }
+
+    public function byDate(): void {
         $date = (string)($_GET['date'] ?? '');
-        if (!$date) { $this->json(['error'=>'date required'], 400); return; }
-        $this->json($this->repo->listByDate($date));
-    }
-
-    public function byRange(Request $req): void {
-        $start = (string)($_GET['start'] ?? '');
-        $end   = (string)($_GET['end'] ?? '');
-        if (!$start || !$end) { $this->json(['error'=>'start/end required'], 400); return; }
-        $this->json($this->repo->listByRange($start, $end));
-    }
-
-    public function get(Request $req): void {
-        $id = (string)($_GET['id'] ?? '');
-        if (!$id) { $this->json(['error'=>'id required'], 400); return; }
-        $row = $this->repo->getById($id);
-        if (!$row) { $this->json(['error'=>'not_found'], 404); return; }
-        $this->json($row);
-    }
-
-    public function create(Request $req): void {
-        $payload = json_decode(file_get_contents('php://input') ?: 'null', true);
-        if (!is_array($payload)) { $this->json(['error'=>'invalid json'], 400); return; }
+        if ($date === '') { $this->json(['ok'=>false,'error'=>'date required'], 400); return; }
         try {
-            $id = $this->repo->create($payload);
-            $this->json(['id'=>$id], 201);
+            $rows = $this->repo->listByDate($date);
+            $this->json(['ok'=>true,'date'=>$date,'events'=>$rows]);
         } catch (\Throwable $e) {
-            $this->json(['error'=>$e->getMessage()], 400);
+            $this->json(['ok'=>false,'error'=>'internal','message'=>$e->getMessage()], 500);
         }
     }
 
-    public function update(Request $req): void {
-        $payload = json_decode(file_get_contents('php://input') ?: 'null', true);
-        if (!is_array($payload)) { $this->json(['error'=>'invalid json'], 400); return; }
+    public function byRange(): void {
+        $start = (string)($_GET['start'] ?? '');
+        $end   = (string)($_GET['end'] ?? '');
+        if ($start === '' || $end === '') { $this->json(['ok'=>false,'error'=>'start/end required'], 400); return; }
+        try {
+            $map = $this->repo->listByRange($start, $end);
+            $this->json(['ok'=>true,'data'=>$map,'start'=>$start,'end'=>$end]);
+        } catch (\Throwable $e) {
+            $this->json(['ok'=>false,'error'=>'internal','message'=>$e->getMessage()], 500);
+        }
+    }
+
+    public function get(): void {
+        $id = (string)($_GET['id'] ?? '');
+        if ($id === '') { $this->json(['ok'=>false,'error'=>'id required'], 400); return; }
+        try {
+            $row = $this->repo->getById($id);
+            if (!$row) { $this->json(['ok'=>false,'error'=>'not_found'], 404); return; }
+            $this->json(['ok'=>true,'event'=>$row]);
+        } catch (\Throwable $e) {
+            $this->json(['ok'=>false,'error'=>'internal','message'=>$e->getMessage()], 500);
+        }
+    }
+
+    public function create(): void {
+        $payload = $this->parseJson();
+        if ($payload === null) { $this->json(['ok'=>false,'error'=>'invalid json'], 400); return; }
+        try {
+            $id = $this->repo->create($payload);
+            $this->json(['ok'=>true,'id'=>$id], 201);
+        } catch (\Throwable $e) {
+            $this->json(['ok'=>false,'error'=>$e->getMessage()], 400);
+        }
+    }
+
+    public function update(): void {
+        $payload = $this->parseJson();
+        if ($payload === null) { $this->json(['ok'=>false,'error'=>'invalid json'], 400); return; }
         $id = (string)($payload['id'] ?? '');
-        if (!$id) { $this->json(['error'=>'id required'], 400); return; }
+        if ($id === '') { $this->json(['ok'=>false,'error'=>'id required'], 400); return; }
         unset($payload['id']);
-        $ok = $this->repo->updateById($id, $payload);
-        $this->json(['ok'=>$ok]);
+        try {
+            $ok = $this->repo->updateById($id, $payload);
+            $this->json(['ok'=>(bool)$ok]);
+        } catch (\Throwable $e) {
+            $this->json(['ok'=>false,'error'=>'internal','message'=>$e->getMessage()], 500);
+        }
     }
 
-    public function delete(Request $req): void {
-        $payload = json_decode(file_get_contents('php://input') ?: 'null', true);
-        if (!is_array($payload)) { $this->json(['error'=>'invalid json'], 400); return; }
+    public function delete(): void {
+        $payload = $this->parseJson();
+        if ($payload === null) { $this->json(['ok'=>false,'error'=>'invalid json'], 400); return; }
         $id = (string)($payload['id'] ?? '');
-        if (!$id) { $this->json(['error'=>'id required'], 400); return; }
-        $ok = $this->repo->deleteById($id);
-        $this->json(['ok'=>$ok]);
+        if ($id === '') { $this->json(['ok'=>false,'error'=>'id required'], 400); return; }
+        try {
+            $ok = $this->repo->deleteById($id);
+            $this->json(['ok'=>(bool)$ok]);
+        } catch (\Throwable $e) {
+            $this->json(['ok'=>false,'error'=>'internal','message'=>$e->getMessage()], 500);
+        }
     }
 
-    public function done(Request $req): void {
-        $payload = json_decode(file_get_contents('php://input') ?: 'null', true);
-        if (!is_array($payload)) { $this->json(['error'=>'invalid json'], 400); return; }
-        $id = (string)($payload['id'] ?? '');
-        $done = $payload['done'] ?? 1;
-        if (!$id) { $this->json(['error'=>'id required'], 400); return; }
-        $ok = $this->repo->setDone($id, $done);
-        $this->json(['ok'=>$ok]);
+    public function done(): void {
+        $payload = $this->parseJson();
+        if ($payload === null) { $this->json(['ok'=>false,'error'=>'invalid json'], 400); return; }
+        $id   = (string)($payload['id'] ?? '');
+        $done = (bool)($payload['done'] ?? 1);
+        if ($id === '') { $this->json(['ok'=>false,'error'=>'id required'], 400); return; }
+        try {
+            $ok = $this->repo->setDone($id, $done);
+            $this->json(['ok'=>(bool)$ok]);
+        } catch (\Throwable $e) {
+            $this->json(['ok'=>false,'error'=>'internal','message'=>$e->getMessage()], 500);
+        }
     }
 
-    public function urgent(Request $req): void {
-        $payload = json_decode(file_get_contents('php://input') ?: 'null', true);
-        if (!is_array($payload)) { $this->json(['error'=>'invalid json'], 400); return; }
-        $id = (string)($payload['id'] ?? '');
-        $urgent = $payload['urgent'] ?? 1;
-        if (!$id) { $this->json(['error'=>'id required'], 400); return; }
-        $ok = $this->repo->setUrgent($id, $urgent);
-        $this->json(['ok'=>$ok]);
+    public function urgent(): void {
+        $payload = $this->parseJson();
+        if ($payload === null) { $this->json(['ok'=>false,'error'=>'invalid json'], 400); return; }
+        $id     = (string)($payload['id'] ?? '');
+        $urgent = (bool)($payload['urgent'] ?? 1);
+        if ($id === '') { $this->json(['ok'=>false,'error'=>'id required'], 400); return; }
+        try {
+            $ok = $this->repo->setUrgent($id, $urgent);
+            $this->json(['ok'=>(bool)$ok]);
+        } catch (\Throwable $e) {
+            $this->json(['ok'=>false,'error'=>'internal','message'=>$e->getMessage()], 500);
+        }
     }
 
-    public function search(Request $req): void {
+    public function search(): void {
         $filters = [
-            'text' => $_GET['text'] ?? null,
-            'type' => $_GET['type'] ?? null,
-            'owner' => $_GET['owner'] ?? null,
+            'text'   => $_GET['text']   ?? null,
+            'type'   => $_GET['type']   ?? null,
+            'owner'  => $_GET['owner']  ?? null,
             'urgent' => $_GET['urgent'] ?? null,
-            'done' => $_GET['done'] ?? null,
-            'date' => $_GET['date'] ?? null,
-            'start' => $_GET['start'] ?? null,
-            'end' => $_GET['end'] ?? null,
+            'done'   => $_GET['done']   ?? null,
+            'date'   => $_GET['date']   ?? null,
+            'start'  => $_GET['start']  ?? null,
+            'end'    => $_GET['end']    ?? null,
         ];
-        $limit = isset($_GET['limit']) ? (int)$_GET['limit'] : 200;
+        $limit  = isset($_GET['limit'])  ? (int)$_GET['limit']  : 200;
         $offset = isset($_GET['offset']) ? (int)$_GET['offset'] : 0;
-        $rows = $this->repo->search($filters, $limit, $offset);
-        $this->json($rows);
+        try {
+            $rows = $this->repo->search($filters, $limit, $offset);
+            $this->json(['ok'=>true,'data'=>$rows,'limit'=>$limit,'offset'=>$offset]);
+        } catch (\Throwable $e) {
+            $this->json(['ok'=>false,'error'=>'internal','message'=>$e->getMessage()], 500);
+        }
     }
 }

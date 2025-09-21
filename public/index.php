@@ -39,6 +39,8 @@ $router->get('/favicon.ico', function(){
 // ---- API V2 (table-like) ----
 $router->get('/api/events/by-date', [\App\Controllers\ApiEventsController::class, 'byDate']);
 $router->get('/api/events/by-range', [\App\Controllers\ApiEventsController::class, 'byRange']);
+
+
 $router->get('/api/events/get', [\App\Controllers\ApiEventsController::class, 'get']);
 $router->get('/api/events/search', [\App\Controllers\ApiEventsController::class, 'search']);
 $router->post('/api/events/create', [\App\Controllers\ApiEventsController::class, 'create']);
@@ -53,7 +55,8 @@ $router->post('/api/backup/import', [\App\Controllers\ApiBackupController::class
 $router->get('/api/backup/diag', [\App\Controllers\ApiBackupController::class, 'diag']);
 
 // Legacy aliases (kept for compatibility)
-$router->get('/api/events', [\App\Controllers\ApiBackupController::class, 'export']);
+// $router->get('/api/events', [\App\Controllers\ApiBackupController::class, 'export']);
+$router->get('/api/events', [\App\Controllers\ApiBackupController::class, 'events']);
 $router->post('/api/events/store', [\App\Controllers\ApiBackupController::class, 'import']);
 $router->get('/api/events/diag', [\App\Controllers\ApiBackupController::class, 'diag']);
 
