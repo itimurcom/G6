@@ -1,4 +1,0 @@
-[2025-09-20 17:14:27] [DRY] Backup created: /var/www/html/calendar.localhost/bin/../storage/backups/db-20250920-171427.json.gz bytes=3686
-[2025-09-20 17:14:27] [DRY] No backups found for retention.
-[2025-09-20 17:24:17] Backup created: /var/www/html/calendar.localhost/bin/../storage/backups/db-20250920-172417.json.gz bytes=95271
-[2025-09-20 17:24:17] Retention OK: nothing to remove.
