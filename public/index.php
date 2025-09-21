@@ -19,9 +19,7 @@ $router->get('/',                           [\App\Controllers\HomeController::cl
 $router->get('/calendar',                   [\App\Controllers\CalendarController::class,        'index']);
 $router->get('/cabinet',                    [\App\Controllers\CabinetController::class,         'cabinet']);
 
-// ✅ Новий маршрут(и) для repair (без змін Router.php усередині)
-$router->get('/api/repair',                 [\App\Controllers\ApiBackupController::class,       'repair']);        // плоский
-$router->get('/api/backup/repair-dups',     [\App\Controllers\ApiBackupController::class,       'repair']);
+
 
 // ---- API V2 (table-like) ----
 $router->get('/api/events/by-date',         [\App\Controllers\ApiEventsController::class,       'byDate']);
@@ -44,20 +42,23 @@ $router->post('/api/backup/import',         [\App\Controllers\ApiBackupControlle
 // $router->get('/api/events', [\App\Controllers\ApiBackupController::class, 'export']);
 $router->get('/api/events',                 [\App\Controllers\ApiBackupController::class,       'events']);
 $router->get('/api/events/diag',            [\App\Controllers\ApiBackupController::class,       'diag']);
+$router->get('/api/repair',                 [\App\Controllers\ApiBackupController::class,       'repair']);        // плоский
+$router->get('/api/backup/repair-dups',     [\App\Controllers\ApiBackupController::class,       'repair']);
+
 $router->post('/api/events/store',          [\App\Controllers\ApiBackupController::class,       'import']);
 
 
 // MySQL conrollers
-$router->get('/api/mysql/diag',             [\App\Controllers\ApiMysqlEventsController::class,  'diag']);
-$router->get('/api/mysql/events/by-date',   [\App\Controllers\ApiMysqlEventsController::class,  'listByDate']);
-$router->get('/api/mysql/events/by-range',  [\App\Controllers\ApiMysqlEventsController::class,  'listByRange']);
-$router->get('/api/mysql/events/get',       [\App\Controllers\ApiMysqlEventsController::class,  'getById']);
+// $router->get('/api/mysql/diag',             [\App\Controllers\ApiMysqlEventsController::class,  'diag']);
+// $router->get('/api/mysql/events/by-date',   [\App\Controllers\ApiMysqlEventsController::class,  'listByDate']);
+// $router->get('/api/mysql/events/by-range',  [\App\Controllers\ApiMysqlEventsController::class,  'listByRange']);
+// $router->get('/api/mysql/events/get',       [\App\Controllers\ApiMysqlEventsController::class,  'getById']);
 
-$router->post('/api/mysql/events/create',   [\App\Controllers\ApiMysqlEventsController::class,  'create']);
-$router->post('/api/mysql/events/update',   [\App\Controllers\ApiMysqlEventsController::class,  'update']);
-$router->post('/api/mysql/events/delete',   [\App\Controllers\ApiMysqlEventsController::class,  'delete']);
-$router->post('/api/mysql/events/done',     [\App\Controllers\ApiMysqlEventsController::class,  'setDone']);
-$router->post('/api/mysql/events/urgent',   [\App\Controllers\ApiMysqlEventsController::class,  'setUrgent']);
+// $router->post('/api/mysql/events/create',   [\App\Controllers\ApiMysqlEventsController::class,  'create']);
+// $router->post('/api/mysql/events/update',   [\App\Controllers\ApiMysqlEventsController::class,  'update']);
+// $router->post('/api/mysql/events/delete',   [\App\Controllers\ApiMysqlEventsController::class,  'delete']);
+// $router->post('/api/mysql/events/done',     [\App\Controllers\ApiMysqlEventsController::class,  'setDone']);
+// $router->post('/api/mysql/events/urgent',   [\App\Controllers\ApiMysqlEventsController::class,  'setUrgent']);
 
 $router->resolve();
 

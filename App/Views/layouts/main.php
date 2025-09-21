@@ -173,9 +173,6 @@
   </g>
 </symbol>
 
-
-</svg>
-
 <!-- USAGE EXAMPLES (you can delete after copy) -->
 <!--
 <link rel="stylesheet" href="/assets/css/icons.css">

@@ -487,6 +487,7 @@ if (window.CalendarApp && window.CalendarApp.ui) {
     infoModal.classList.remove('type-mi','type-nas','type-evt','type-other');
     infoModal.classList.add(t==='mi'?'type-mi':t==='nas'?'type-nas':t==='evt'?'type-evt':'type-other');
   }
+
   function openInfo(dateISO,id){ 
     var arr=Data.getEventsFor(dateISO); var ev=arr.find(function(e){return e.id===id;}); if(!ev) return;
     var html=
@@ -525,12 +526,14 @@ if (window.CalendarApp && window.CalendarApp.ui) {
       // item.addEventListener('click',function(e){ e.stopPropagation(); var eid=e.currentTarget.getAttribute('data-id'); openModalEdit(dateISO,eid); });
     }
   }
+
   function closeInfo(){
     if (!infoOverlay) return;
     if (infoOverlay.contains(document.activeElement)) { try{ document.activeElement.blur(); }catch(_){} }
     infoOverlay.classList.remove('show'); infoOverlay.setAttribute('aria-hidden','true'); infoOverlay.setAttribute('inert','');
     document.body.style.overflow='';
   }
+
   if (infoClose) infoClose.addEventListener('click',function(){ closeInfo(); });
   if (infoOk)    infoOk.addEventListener('click',function(){ closeInfo(); });
 
@@ -725,6 +728,7 @@ if (window.CalendarApp && window.CalendarApp.ui) {
         if(elq) elq.style.display='grid';
       });
     }
+    
     function collapseHour(dateISO,hour){
       if(quarterHas[dateISO] && quarterHas[dateISO][hour]) return;
       ['15','30','45'].forEach(function(min){
@@ -732,6 +736,7 @@ if (window.CalendarApp && window.CalendarApp.ui) {
         if(elq) elq.style.display='none';
       });
     }
+
     window.foldAllQuarters=function(){
       Object.keys(tlAll).forEach(function(dateISO){
         for(var h=0;h<24;h++){

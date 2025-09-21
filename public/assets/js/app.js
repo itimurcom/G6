@@ -2,7 +2,6 @@
 (function () {
   'use strict';
   var THEME_KEY   = 'ui-theme';
-  var SIDEBAR_KEY = 'sidebar-open';
   var mqMobile    = window.matchMedia('(max-width: 900px)');
   function prefersDark(){ return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches; }
   function readTheme(){ return localStorage.getItem(THEME_KEY) || (prefersDark() ? 'dark' : 'light'); }
@@ -18,21 +17,7 @@
     document.documentElement.setAttribute('data-theme', (t === 'dark') ? 'dark' : 'light');
     updateThemeIcon();
   }
-  function readSidebar(){ return localStorage.getItem(SIDEBAR_KEY) === '1'; }
-  function saveSidebar(open){ localStorage.setItem(SIDEBAR_KEY, open ? '1' : '0'); }
-  function applySidebar(open){
-    var sb = document.getElementById('sidebar');
-    var bd = document.getElementById('sidebarBackdrop');
-    if (sb) sb.classList.toggle('open', !!open);
-    var push = !!open && !mqMobile.matches;
-    document.body.classList.toggle('sidebar-open', push);
-    if (bd) bd.classList.toggle('show', !!open && mqMobile.matches);
-  }
-  function toggleSidebar(){
-    var next = !readSidebar();
-    saveSidebar(next);
-    applySidebar(next);
-  }
+
   function ensureFAB(){
     if(!document.getElementById('themeToggle')){
       var t = document.createElement('button');
@@ -41,22 +26,10 @@
       t.innerHTML = (readTheme()==='dark') ? sunSvg() : moonSvg();
     }
   }
-  function setActiveLink(){
-    var links = document.querySelectorAll('#sidebar nav a, .sidebar nav a');
-    var path  = (location.pathname.replace(/\/+$|$/, '') || '/');
-    links.forEach(function(a){
-      var href = a.getAttribute('href') || '';
-      try{
-        var p = (new URL(href, location.origin)).pathname.replace(/\/+$|$/, '') || '/';
-        a.classList.toggle('active', p === path);
-      }catch(_){}
-    });
-  }
+
   function init(){
     ensureFAB();
     applyTheme(readTheme());
-    applySidebar(readSidebar());
-    setActiveLink();
     var themeBtn = document.getElementById('themeToggle');
     if (themeBtn) themeBtn.addEventListener('click', function(){
       var cur  = document.documentElement.getAttribute('data-theme') || 'light';
@@ -64,23 +37,6 @@
       saveTheme(next); applyTheme(next);
     });
     
-var backdrop = document.getElementById('sidebarBackdrop');
-    if (backdrop) backdrop.addEventListener('click', function(){ saveSidebar(false); applySidebar(false); });
-    document.addEventListener('keydown', function(e){
-      if (e.key === 'Escape' && readSidebar()) { saveSidebar(false); applySidebar(false); }
-    });
-    var sideNav = document.querySelector('#sidebar nav');
-    if (sideNav) {
-      sideNav.addEventListener('click', function(ev){
-        var a = ev.target.closest('a');
-        if (!a) return;
-        saveSidebar(false);
-        applySidebar(false);
-      });
-    }
-    mqMobile.addEventListener && mqMobile.addEventListener('change', function(){
-      applySidebar(readSidebar());
-    });
     console.debug('UI ready (v2.3)');
   }
   if (document.readyState === 'loading') {
@@ -89,3 +45,61 @@ var backdrop = document.getElementById('sidebarBackdrop');
     init();
   }
 })();
+
+
+// Safe time parsing: supports "HH:MM" and ignores ISO date prefixes
+  // ---------- date/time helpers ----------
+  function parseDayKey(dk){
+    var p = String(dk||"").split("-").map(function(x){ return parseInt(x,10)||0; });
+    return new Date(p[0]||1970, (p[1]||1)-1, p[2]||1, 0, 0, 0, 0);
+  }  
+
+function parseHoursMinutes(s){
+    var str = String(s||"");
+    var m = str.match(/(\d{1,2}):(\d{2})/);
+    var h = m ? parseInt(m[1],10) : 0;
+    var min = m ? parseInt(m[2],10) : 0;
+    if (!isFinite(h)) h = 0;
+    if (!isFinite(min)) min = 0;
+    return [h, min];
+  }
+
+  function toDate(dk, timeStr){
+    var d = parseDayKey(dk);
+    var hm = parseHoursMinutes(timeStr);
+    d.setHours(hm[0], hm[1], 0, 0);
+    return d;
+  }
+
+  function keyFromDateLocal(d){
+    var y = d.getFullYear();
+    var m = String(d.getMonth()+1).padStart(2,"0");
+    var day = String(d.getDate()).padStart(2,"0");
+    return y+"-"+m+"-"+day;
+  }
+
+  function formatTime(d){
+    var h = String(d.getHours()).padStart(2,"0");
+    var m = String(d.getMinutes()).padStart(2,"0");
+    return h+":"+m;
+  }
+
+  // ---------- UA date display helpers (single include) ----------
+function formatDateUA(d){
+  var weekdays = ['Нд','Пн','Вт','Ср','Чт','Пт','Сб'];
+  var monthsGen = [
+    'січня','лютого','березня','квітня','травня','червня',
+    'липня','серпня','вересня','жовтня','листопада','грудня'
+  ];
+  var dow = weekdays[d.getDay()];
+  var dd  = String(d.getDate()).padStart(2,'0');
+  var mon = monthsGen[d.getMonth()];
+  var yyyy = d.getFullYear();
+  return dow + ', ' + dd + ' ' + mon + ' ' + yyyy;
+}
+
+function toUADisplayDate(dateLike){
+  if (dateLike instanceof Date && !isNaN(dateLike)) return formatDateUA(dateLike);
+  var d = new Date(dateLike);
+  return isNaN(d) ? String(dateLike || '') : formatDateUA(d);
+}

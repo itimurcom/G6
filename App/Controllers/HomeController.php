@@ -15,7 +15,6 @@ class HomeController extends Controller
                 '/assets/css/icons.css',
             ],
             'extra_js' => [
-                '/assets/js/tools.js',
                 '/assets/js/calendar/calendar.events.js',
                 '/assets/js/calendar/calendar.data.js',
                 '/assets/js/calendar/calendar.ui.js',
