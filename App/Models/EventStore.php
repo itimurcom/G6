@@ -15,7 +15,9 @@ final class EventStore
         if (!file_exists($this->path)) { @file_put_contents($this->path, "{}"); }
     }
 
-    public function getPath(): string { return $this->path; }
+    public function getPath(): string {
+        return $this->path; 
+    }
 
     public function read(): array
     {
