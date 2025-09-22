@@ -13,27 +13,40 @@ final class UserFileRepository implements UserRepositoryInterface
     }
 
     private function read(): array {
-        $json = file_get_contents($this->path);
-        $data = json_decode($json, true) ?: ['last_id'=>0,'rows'=>[]];
+        $json = @file_get_contents($this->path);
+        $data = json_decode($json ?: '', true);
+        if (!is_array($data)) $data = ['last_id'=>0,'rows'=>[]];
         if (!isset($data['rows']) || !is_array($data['rows'])) $data['rows'] = [];
         if (!isset($data['last_id'])) $data['last_id'] = 0;
         return $data;
     }
 
     private function write(array $data): void {
-        file_put_contents($this->path, json_encode($data, JSON_PRETTY_PRINT|JSON_UNESCAPED_UNICODE));
+        $json = json_encode($data, JSON_PRETTY_PRINT|JSON_UNESCAPED_UNICODE);
+        if ($json === false) {
+            throw new \RuntimeException('users.json encode failed');
+        }
+        $bytes = @file_put_contents($this->path, $json, LOCK_EX);
+        if ($bytes === false) {
+            $err = error_get_last();
+            throw new \RuntimeException('users.json write failed: ' . ($err['message'] ?? 'unknown'));
+        }
     }
 
     public function findById(int $id): ?array {
         $data = $this->read();
-        foreach ($data['rows'] as $u) if ((int)$u['id'] === $id) return $u;
+        foreach ($data['rows'] as $u) if ((int)($u['id'] ?? 0) === $id) return $u;
         return null;
     }
 
-    public function findByEmail(string $email): ?array {
-        $email = mb_strtolower(trim($email));
+    public function findByLogin(string $login): ?array {
+        $login = mb_strtolower(trim($login));
         $data = $this->read();
-        foreach ($data['rows'] as $u) if (mb_strtolower($u['email']) === $email) return $u;
+        foreach ($data['rows'] as $u) {
+            $ulog = isset($u['login']) ? mb_strtolower($u['login']) : null;
+            $uold = isset($u['email']) ? mb_strtolower($u['email']) : null; // backward-compat
+            if ($ulog === $login || $uold === $login) return $u;
+        }
         return null;
     }
 
@@ -41,13 +54,13 @@ final class UserFileRepository implements UserRepositoryInterface
         $d = $this->read();
         $id = (int)$d['last_id'] + 1;
         $row = [
-            'id' => $id,
-            'name' => (string)($data['name'] ?? ''),
-            'email' => (string)($data['email'] ?? ''),
+            'id'            => $id,
+            'name'          => (string)($data['name'] ?? ''),
+            'login'         => (string)($data['login'] ?? ''),
             'password_hash' => (string)($data['password_hash'] ?? ''),
-            'role' => (string)($data['role'] ?? 'user'),
-            'created_at' => date('c'),
-            'updated_at' => date('c'),
+            'role'          => (string)($data['role'] ?? 'user'),
+            'created_at'    => date('c'),
+            'updated_at'    => date('c'),
         ];
         $d['rows'][] = $row;
         $d['last_id'] = $id;

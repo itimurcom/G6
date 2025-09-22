@@ -1,13 +1,32 @@
 <?php /** @var string $title */ ?>
-<section class="auth">
-  <h1><?= htmlspecialchars($title ?? 'Sign In') ?></h1>
-  <?php $err = \App\Core\Session::flash('error'); if ($err): ?>
-    <div class="auth-error"><?= htmlspecialchars($err) ?></div>
-  <?php endif; ?>
-  <form method="post" action="/login">
-    <label>Email<input type="email" name="email" required></label>
-    <label>Password<input type="password" name="password" required minlength="6"></label>
-    <button type="submit">Sign In</button>
+<?php $err = \App\Core\Session::flash('error'); ?>
+<div class="overlay" style="display:grid;place-items:center;z-index:50">
+  <form class="modal" method="post" action="/login" aria-labelledby="authTitle" style="max-width:380px;width:92%;">
+    <header>
+      <div id="authTitle">Вхід</div>
+      <button type="button" class="event-btn" aria-label="Закрити" onclick="location.href='/'">×</button>
+    </header>
+    <div class="content">
+      <?php if ($err): ?>
+        <div class="alert" style="background:#2b1b1b;border:1px solid #7f1d1d;color:#fecaca;padding:10px 12px;border-radius:10px;margin-bottom:10px;">
+          <?= htmlspecialchars($err) ?>
+        </div>
+      <?php endif; ?>
+      <label class="field">
+        <div class="hint">Логін</div>
+        <input type="text" name="login" required autofocus>
+      </label>
+      <label class="field">
+        <div class="hint">Пароль</div>
+        <input type="password" name="password" required minlength="6">
+      </label>
+    </div>
+    <footer>
+      <span></span>
+      <div style="display:flex;gap:10px;">
+        <a class="btn" href="/register">Реєстрація</a>
+        <button type="submit" class="btn" style="background:var(--accent);border-color:var(--accent);color:#fff">Увійти</button>
+      </div>
+    </footer>
   </form>
-  <p><a href="/register">Create an account</a></p>
-</section>
+</div>

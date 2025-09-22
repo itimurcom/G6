@@ -17,9 +17,9 @@ final class AuthController extends Controller
     }
 
     public function login(Request $r): string {
-        $email = trim($_POST['email'] ?? '');
+        $login = trim($_POST['login'] ?? '');
         $pass  = (string)($_POST['password'] ?? '');
-        $ok = Auth::login($email, $pass);
+        $ok = Auth::login($login, $pass);
         if ($ok) {
             header('Location: /cabinet', true, 302);
             return '';
@@ -31,16 +31,16 @@ final class AuthController extends Controller
 
     public function register(Request $r): string {
         $name = trim($_POST['name'] ?? '');
-        $email= trim($_POST['email'] ?? '');
+        $login= trim($_POST['login'] ?? '');
         $pass = (string)($_POST['password'] ?? '');
-        if ($name === '' || $email === '' || strlen($pass) < 6) {
-            Session::flash('error', 'Fill all fields (min password length 6)');
+        if ($name === '' || $login === '' || strlen($pass) < 6) {
+            Session::flash('error', 'Fill all fields (min password length 6). Login is required.');
             header('Location: /register', true, 302);
             return '';
         }
-        $res = Auth::register($name, $email, $pass);
+        $res = Auth::register($name, $login, $pass);
         if (!($res['ok'] ?? false)) {
-            Session::flash('error', 'Email already taken');
+            Session::flash('error', 'Login already taken');
             header('Location: /register', true, 302);
             return '';
         }

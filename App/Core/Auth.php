@@ -4,10 +4,6 @@ namespace App\Core;
 use App\Models\UserRepositoryInterface;
 use App\Models\UserFileRepository;
 
-/**
- * Simple auth facade (file-based storage by default).
- * Switch to DB-backed repository by swapping the concrete implementation.
- */
 final class Auth
 {
     private static ?UserRepositoryInterface $repo = null;
@@ -32,23 +28,23 @@ final class Auth
         return self::id() !== null;
     }
 
-    public static function login(string $email, string $password): bool {
-        $user = self::repo()->findByEmail($email);
+    public static function login(string $login, string $password): bool {
+        $user = self::repo()->findByLogin($login);
         if (!$user) return false;
         if (!password_verify($password, $user['password_hash'])) return false;
         Session::set('uid', (int)$user['id']);
         return true;
     }
 
-    public static function register(string $name, string $email, string $password): array {
-        $existing = self::repo()->findByEmail($email);
+    public static function register(string $name, string $login, string $password): array {
+        $existing = self::repo()->findByLogin($login);
         if ($existing) {
-            return ['ok'=>false, 'error'=>'email_taken'];
+            return ['ok'=>false, 'error'=>'login_taken'];
         }
         $hash = password_hash($password, PASSWORD_DEFAULT);
         $id = self::repo()->create([
             'name' => $name,
-            'email' => $email,
+            'login' => $login,
             'password_hash' => $hash,
             'role' => 'user',
         ]);

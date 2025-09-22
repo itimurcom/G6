@@ -10,7 +10,21 @@
     "2025-09-09": [],
     "2025-09-10": [],
     "2025-09-11": [],
-    "2025-09-12": [],
+    "2025-09-12": [
+        {
+            "id": "cbfc93e4-bc78-4e95-b4e6-662c6b0a2beb",
+            "time": "13:00",
+            "title": "ВКЗ",
+            "owner": "Максим Юрійович",
+            "type": "evt",
+            "urgent": false,
+            "done": false,
+            "incoming_no": "",
+            "outgoing_no": "",
+            "description": "",
+            "user_id": 0
+        }
+    ],
     "2025-09-13": [
         {
             "id": "6c412b5f-c988-4fce-a535-21800caafb7d",
@@ -20,19 +34,6 @@
             "type": "nas",
             "urgent": false,
             "done": true,
-            "user_id": 0,
-            "incoming_no": "",
-            "outgoing_no": "",
-            "description": ""
-        },
-        {
-            "id": "cbfc93e4-bc78-4e95-b4e6-662c6b0a2beb",
-            "time": "03:00",
-            "title": "ВКЗ",
-            "owner": "Максим Юрійович",
-            "type": "evt",
-            "urgent": false,
-            "done": false,
             "user_id": 0,
             "incoming_no": "",
             "outgoing_no": "",

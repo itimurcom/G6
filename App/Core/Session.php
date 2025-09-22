@@ -1,20 +1,15 @@
 <?php
 namespace App\Core;
 
-/**
- * Minimal session wrapper.
- * Starts session lazily, provides get/set/flash helpers.
- */
 final class Session
 {
     private static bool $started = false;
 
     private static function ensureStarted(): void {
         if (!self::$started) {
-            // secure cookie defaults
             ini_set('session.cookie_httponly', '1');
             ini_set('session.use_strict_mode', '1');
-            if (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') {
+            if (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') {
                 ini_set('session.cookie_secure', '1');
             }
             if (PHP_VERSION_ID >= 70300) {
