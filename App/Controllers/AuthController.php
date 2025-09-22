@@ -9,11 +9,30 @@ use App\Core\Session;
 final class AuthController extends Controller
 {
     public function loginForm(Request $r): string {
-        return $this->render('auth/login', ['title'=>'Sign In']);
+        return $this->render('auth/login', [
+        'title'      => 'Вхід',
+        'extra_css'  => [
+            // приклади: підключи все, що треба саме для auth
+            '/assets/css/calendar.css',
+            '/assets/css/icons.css',
+            // '/assets/css/auth.css',  // якщо винесеш стилі логіну в окремий файл
+        ],
+        'extra_js'   => [],
+        'modules_js' => [],
+        ]);
     }
 
     public function registerForm(Request $r): string {
-        return $this->render('auth/register', ['title'=>'Sign Up']);
+            return $this->render('auth/register', [
+        'title'      => 'Реєстрація',
+        'extra_css'  => [
+            '/assets/css/calendar.css',
+            '/assets/css/icons.css',
+            // '/assets/css/auth.css',
+        ],
+        'extra_js'   => [],
+        'modules_js' => [],
+    ]);
     }
 
     public function login(Request $r): string {

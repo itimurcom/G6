@@ -1,31 +1,30 @@
 <?php /** @var string $title */ ?>
 <?php $err = \App\Core\Session::flash('error'); ?>
-<div class="overlay" style="display:grid;place-items:center;z-index:50">
-  <form class="modal" method="post" action="/login" aria-labelledby="authTitle" style="max-width:380px;width:92%;">
+<div class="auth-center">
+  <form class="modal auth-modal" method="post" action="/login" aria-labelledby="authTitle">
     <header>
       <div id="authTitle">Вхід</div>
-      <button type="button" class="event-btn" aria-label="Закрити" onclick="location.href='/'">×</button>
     </header>
     <div class="content">
       <?php if ($err): ?>
-        <div class="alert" style="background:#2b1b1b;border:1px solid #7f1d1d;color:#fecaca;padding:10px 12px;border-radius:10px;margin-bottom:10px;">
+        <div class="alert alert--error">
           <?= htmlspecialchars($err) ?>
         </div>
       <?php endif; ?>
       <label class="field">
         <div class="hint">Логін</div>
-        <input type="text" name="login" required autofocus>
+        <input class="input" type="text" name="login" required autofocus>
       </label>
       <label class="field">
         <div class="hint">Пароль</div>
-        <input type="password" name="password" required minlength="6">
+        <input class="input" type="password" name="password" required minlength="6">
       </label>
     </div>
     <footer>
       <span></span>
-      <div style="display:flex;gap:10px;">
-        <a class="btn" href="/register">Реєстрація</a>
-        <button type="submit" class="btn" style="background:var(--accent);border-color:var(--accent);color:#fff">Увійти</button>
+      <div class="actions">
+        <a class="btn btn--ghost" href="/register">Реєстрація</a>
+        <button type="submit" class="btn btn--primary">Увійти</button>
       </div>
     </footer>
   </form>
