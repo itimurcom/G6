@@ -78,6 +78,7 @@
     </div>
 
     <footer>
+      <span></span>
       <div style="display:flex; gap:10px;">
         <button type="button" class="btn" id="btnCancel">Скасувати</button>
         <button type="submit" class="btn" style="background:var(--accent);border-color:var(--accent);color:#fff">Зберегти</button>
