@@ -121,3 +121,15 @@ body{
 .auth-modal .actions { display:flex; gap:10px; }
 .alert { border-radius: 10px; padding: 10px 12px; }
 .alert--error { background:#2b1b1b; border:1px solid #7f1d1d; color:#fecaca; }
+
+/* === Auth forms refined (center in .container) === */
+.auth-center { display:flex; justify-content:center; padding: 24px 0; }
+.auth-modal  { max-width: 520px; width: 100%; border-radius: 14px; overflow: hidden; }
+.auth-modal .content { padding: 14px; }
+.auth-modal .field { display:block; margin: 10px 0 12px; }
+.auth-modal .hint  { opacity:.85; margin-bottom:6px; }
+.auth-modal .input { width:100%; }
+.auth-modal footer { display:flex; align-items:center; justify-content:space-between; padding: 12px 14px; border-top: 1px solid var(--border); }
+.auth-modal .actions { display:flex; gap:10px; }
+.alert { border-radius: 10px; padding: 10px 12px; }
+.alert--error { background:#2b1b1b; border:1px solid #7f1d1d; color:#fecaca; }
