@@ -4,8 +4,6 @@ require_once __DIR__ . '/../vendor/autoload.php';
 use App\Core\Request;
 use App\Core\Router;
 use App\Core\EventsController;
-use App\Controllers\AuthController;
-use App\Core\Auth;
 
 $request = new Request();
 $router  = new Router($request);
@@ -61,21 +59,6 @@ $router->post('/api/events/store',          [\App\Controllers\ApiBackupControlle
 // $router->post('/api/mysql/events/delete',   [\App\Controllers\ApiMysqlEventsController::class,  'delete']);
 // $router->post('/api/mysql/events/done',     [\App\Controllers\ApiMysqlEventsController::class,  'setDone']);
 // $router->post('/api/mysql/events/urgent',   [\App\Controllers\ApiMysqlEventsController::class,  'setUrgent']);
-
-
-// === Users/Auth (MVP) ===
-$router->get('/login',    [\App\Controllers\AuthController::class, 'loginForm']);
-$router->post('/login',   [\App\Controllers\AuthController::class, 'login']);
-$router->get('/register', [\App\Controllers\AuthController::class, 'registerForm']);
-$router->post('/register',[\App\Controllers\AuthController::class, 'register']);
-$router->post('/logout',  [\App\Controllers\AuthController::class, 'logout']);
-
-// Secure /cabinet behind auth
-$router->get('/cabinet', function($req){
-    if (!\App\Core\Auth::check()) { header('Location: /login', true, 302); return ''; }
-    return (new \App\Controllers\CabinetController())->cabinet($req);
-});
-
 
 $router->resolve();
 

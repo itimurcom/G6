@@ -69,6 +69,9 @@ final class FileEventRepository
         if (empty($event['id']) || !is_string($event['id'])) $event['id'] = $this->uuidV4();
         $next[$d][] = $event;
 
+        
+        // Inject current user id if missing
+        if (!isset($event['user_id'])) { $event['user_id'] = \App\Core\Auth::id() ?? 0; }
         $res = $this->store->writeDiff($next);
         $res['id'] = $event['id'];
         $res['date'] = $d;

@@ -325,7 +325,7 @@ if (filePicker) filePicker.addEventListener('change', function(e){
       type:  inputType.value,
       urgent: !!(inputUrgent && inputUrgent.checked),
       done:   !!(inputDone && inputDone.checked),
-      user_id: 0,
+      // user_id is set by server,
 
       // NEW:
       incoming_no: (inputIncoming    && inputIncoming.value    || '').trim(),

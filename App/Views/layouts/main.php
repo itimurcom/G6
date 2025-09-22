@@ -11,17 +11,19 @@
     $path = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?? '/';
     $isCalendar = ($path === '/calendar' || $path === '/calendar/');
   ?>
-  <?php foreach ($extra_css as $href):
-    if (file_exists($_SERVER['DOCUMENT_ROOT'].$href)) { ?>
-    <link rel="stylesheet" href="<?= htmlspecialchars($href) ?>?v=<?= htmlspecialchars($ver ?? time()) ?>">
-  <?php } else { ?>
-    <script> console.log("<?= $_SERVER['DOCUMENT_ROOT'].$href?> not found"); </script>
+  <?php if (!empty($extra_css)): ?>
+    <?php foreach ((array)$extra_css as $href):
+      if (file_exists($_SERVER['DOCUMENT_ROOT'].$href)) { ?>
+        <link rel="stylesheet" href="<?= htmlspecialchars($href) ?>?v=<?= htmlspecialchars($ver ?? time()) ?>">
+        <?php } else { ?>
+            <script> console.log("<?= $_SERVER['DOCUMENT_ROOT'].$href?> not found"); </script>
     <?php }endforeach; ?>
+  <?php endif; ?>
   
 </head>
 <body>
 <!-- <?php if (!empty($modules_js)): ?>
-  <?php foreach ($modules_js as $src): 
+  <?php foreach ((array)$modules_js as $src): 
     if (file_exists($_SERVER['DOCUMENT_ROOT'].$src)) { ?>
 <script type="module" src="<?= htmlspecialchars($src, ENT_QUOTES) ?>?v=<?= time() ?>"</script>    
   <?php } else { ?>
@@ -51,7 +53,7 @@
 
   <script src="/assets/js/app.js" defer></script>
 <?php if (!empty($extra_js)): ?>
-  <?php foreach ($extra_js as $src): 
+  <?php foreach ((array)$extra_js as $src): 
     if (file_exists($_SERVER['DOCUMENT_ROOT'].$src)) { ?>
 <script src="<?= htmlspecialchars($src, ENT_QUOTES) ?>?v=<?= time() ?>" defer></script>
   <?php } else { ?>
