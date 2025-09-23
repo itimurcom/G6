@@ -31,24 +31,5 @@
         <button type="submit" class="btn btn--primary">Створити</button>
       </div>
     </footer>
-  <?php
-<?php $cfg = @include dirname(__DIR__, 3) . '/config/auth.php';
-$mode = $cfg['registration']['mode'] ?? 'invite';
-$adminsExist = \App\Core\Auth::adminsExist();
-?>
-<div class="form-row">
-  <label for="role"><strong>Role</strong></label>
-  <select name="role" id="role">
-    <option value="user">User</option>
-    <option value="admin" <?php if ($mode === 'bootstrap' && $adminsExist) echo 'disabled'; ?>>Admin</option>
-  </select>
-</div>
-<?php if ($mode === 'invite'): ?>
-<div class="form-row">
-  <label for="admin_code"><strong>Admin invite code</strong></label>
-  <input type="text" id="admin_code" name="admin_code" placeholder="Enter admin invite code">
-</div>
-<?php endif; ?>
-
 </form>
 </div>
