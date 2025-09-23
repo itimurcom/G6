@@ -1,4 +1,37 @@
 <?php
+
+// === ROLE REGISTRATION LOGIC (sanitizer for /register) ===
+if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
+    $path = strtok($_SERVER['REQUEST_URI'] ?? '/', '?') ?: '/';
+    if ($path === '/register') {
+        $cfg = @include dirname(__DIR__) . '/config/auth.php';
+        $mode = $cfg['registration']['mode'] ?? 'invite';
+        $allow = $cfg['registration']['allow_roles'] ?? ['user'];
+        $code  = $cfg['registration']['admin_invite_code'] ?? 'CHANGE_ME_ADMIN_CODE';
+
+        $requested = isset($_POST['role']) ? (string)$_POST['role'] : 'user';
+        $adminCode = isset($_POST['admin_code']) ? (string)$_POST['admin_code'] : '';
+
+        $final = 'user';
+        if ($mode === 'dev') {
+            if (in_array($requested, $allow, true)) $final = $requested;
+        } elseif ($mode === 'invite') {
+            if ($requested === 'admin' && is_string($adminCode) && $adminCode !== '' && hash_equals($code, $adminCode)) {
+                $final = 'admin';
+            }
+        } elseif ($mode === 'bootstrap') {
+            if ($requested === 'admin' && !\App\Core\Auth::adminsExist()) {
+                $final = 'admin';
+            }
+        }
+        $_POST['role'] = $final;
+        // Back-compat flag
+        $_POST['is_admin'] = ($final === 'admin') ? '1' : '0';
+    }
+}
+// === /ROLE REGISTRATION LOGIC ===
+
+
 require_once __DIR__ . '/../vendor/autoload.php';
 
 use App\Core\Request;

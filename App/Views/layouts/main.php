@@ -184,3 +184,5 @@
 -->
 
 </html>
+
+<script src="/js/bootstrap.csrf.js"></script>

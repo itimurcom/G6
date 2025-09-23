@@ -7,7 +7,6 @@ $baseDir = dirname($vendorDir);
 
 return array(
     'App\\Controllers\\ApiBackupController' => $baseDir . '/App/Controllers/ApiBackupController.php',
-    'App\\Controllers\\ApiEventsController' => $baseDir . '/App/Controllers/ApiEventsController.php',
     'App\\Controllers\\ApiMysqlEventsController' => $baseDir . '/App/Controllers/ApiMysqlEventsController.php',
     'App\\Controllers\\AuthController' => $baseDir . '/App/Controllers/AuthController.php',
     'App\\Controllers\\CabinetController' => $baseDir . '/App/Controllers/CabinetController.php',
@@ -19,11 +18,13 @@ return array(
     'App\\Core\\Request' => $baseDir . '/App/Core/Request.php',
     'App\\Core\\Router' => $baseDir . '/App/Core/Router.php',
     'App\\Core\\Session' => $baseDir . '/App/Core/Session.php',
+    'App\\Models\\EventRepositoryFactory' => $baseDir . '/App/Models/EventRepositoryFactory.php',
     'App\\Models\\EventRepositoryInterface' => $baseDir . '/App/Models/EventRepositoryInterface.php',
     'App\\Models\\EventStore' => $baseDir . '/App/Models/EventStore.php',
     'App\\Models\\FileEventRepository' => $baseDir . '/App/Models/FileEventRepository.php',
     'App\\Models\\UserFileRepository' => $baseDir . '/App/Models/UserFileRepository.php',
     'App\\Models\\UserRepositoryInterface' => $baseDir . '/App/Models/UserRepositoryInterface.php',
+    'App\\Security\\Csrf' => $baseDir . '/App/Security/Csrf.php',
     'Composer\\InstalledVersions' => $vendorDir . '/composer/InstalledVersions.php',
     'DeepCopy\\DeepCopy' => $vendorDir . '/myclabs/deep-copy/src/DeepCopy/DeepCopy.php',
     'DeepCopy\\Exception\\CloneException' => $vendorDir . '/myclabs/deep-copy/src/DeepCopy/Exception/CloneException.php',

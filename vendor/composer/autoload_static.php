@@ -61,7 +61,6 @@ class ComposerStaticInitf502405953d43c522bce30c01bf37ad3
 
     public static $classMap = array (
         'App\\Controllers\\ApiBackupController' => __DIR__ . '/../..' . '/App/Controllers/ApiBackupController.php',
-        'App\\Controllers\\ApiEventsController' => __DIR__ . '/../..' . '/App/Controllers/ApiEventsController.php',
         'App\\Controllers\\ApiMysqlEventsController' => __DIR__ . '/../..' . '/App/Controllers/ApiMysqlEventsController.php',
         'App\\Controllers\\AuthController' => __DIR__ . '/../..' . '/App/Controllers/AuthController.php',
         'App\\Controllers\\CabinetController' => __DIR__ . '/../..' . '/App/Controllers/CabinetController.php',
@@ -73,11 +72,13 @@ class ComposerStaticInitf502405953d43c522bce30c01bf37ad3
         'App\\Core\\Request' => __DIR__ . '/../..' . '/App/Core/Request.php',
         'App\\Core\\Router' => __DIR__ . '/../..' . '/App/Core/Router.php',
         'App\\Core\\Session' => __DIR__ . '/../..' . '/App/Core/Session.php',
+        'App\\Models\\EventRepositoryFactory' => __DIR__ . '/../..' . '/App/Models/EventRepositoryFactory.php',
         'App\\Models\\EventRepositoryInterface' => __DIR__ . '/../..' . '/App/Models/EventRepositoryInterface.php',
         'App\\Models\\EventStore' => __DIR__ . '/../..' . '/App/Models/EventStore.php',
         'App\\Models\\FileEventRepository' => __DIR__ . '/../..' . '/App/Models/FileEventRepository.php',
         'App\\Models\\UserFileRepository' => __DIR__ . '/../..' . '/App/Models/UserFileRepository.php',
         'App\\Models\\UserRepositoryInterface' => __DIR__ . '/../..' . '/App/Models/UserRepositoryInterface.php',
+        'App\\Security\\Csrf' => __DIR__ . '/../..' . '/App/Security/Csrf.php',
         'Composer\\InstalledVersions' => __DIR__ . '/..' . '/composer/InstalledVersions.php',
         'DeepCopy\\DeepCopy' => __DIR__ . '/..' . '/myclabs/deep-copy/src/DeepCopy/DeepCopy.php',
         'DeepCopy\\Exception\\CloneException' => __DIR__ . '/..' . '/myclabs/deep-copy/src/DeepCopy/Exception/CloneException.php',

@@ -4,19 +4,18 @@ declare(strict_types=1);
 namespace App\Controllers;
 
 use App\Models\FileEventRepository;
+use App\Models\EventRepositoryInterface;
 
 final class ApiEventsController
 {
-    /** @var \App\Models\FileEventRepository */
-    private $repo;
+    /** @var EventRepositoryInterface */
+    private $repo; // <— прибрали жорстку типізацію властивості (залишили phpdoc)
 
-    public function __construct()
-    {
+    public function __construct() {
         $this->repo = new FileEventRepository();
     }
 
-    private function json($data, int $code = 200): void
-    {
+    private function json($data, int $code = 200): void {
         if (!headers_sent()) {
             header('Content-Type: application/json; charset=utf-8');
             header('Cache-Control: no-store');
@@ -25,16 +24,14 @@ final class ApiEventsController
         echo json_encode($data, JSON_UNESCAPED_UNICODE);
     }
 
-    private function parseJson(): ?array
-    {
+    private function parseJson(): ?array {
         $raw = file_get_contents('php://input');
         if ($raw === false || $raw === '') return [];
         $payload = json_decode($raw, true);
         return is_array($payload) ? $payload : null;
     }
 
-    public function byDate(): void
-    {
+    public function byDate(): void {
         $date = (string)($_GET['date'] ?? '');
         if ($date === '') { $this->json(['ok'=>false,'error'=>'date required'], 400); return; }
         try {
@@ -45,8 +42,7 @@ final class ApiEventsController
         }
     }
 
-    public function byRange(): void
-    {
+    public function byRange(): void {
         $start = (string)($_GET['start'] ?? '');
         $end   = (string)($_GET['end'] ?? '');
         if ($start === '' || $end === '') { $this->json(['ok'=>false,'error'=>'start/end required'], 400); return; }
@@ -58,8 +54,7 @@ final class ApiEventsController
         }
     }
 
-    public function get(): void
-    {
+    public function get(): void {
         $id = (string)($_GET['id'] ?? '');
         if ($id === '') { $this->json(['ok'=>false,'error'=>'id required'], 400); return; }
         try {
@@ -71,20 +66,18 @@ final class ApiEventsController
         }
     }
 
-    public function create(): void
-    {
+    public function create(): void {
         $payload = $this->parseJson();
         if ($payload === null) { $this->json(['ok'=>false,'error'=>'invalid json'], 400); return; }
         try {
-            $id = $this->repo->create($payload['date'] ?? '', $payload);
+            $id = $this->repo->create($payload);
             $this->json(['ok'=>true,'id'=>$id], 201);
         } catch (\Throwable $e) {
             $this->json(['ok'=>false,'error'=>$e->getMessage()], 400);
         }
     }
 
-    public function update(): void
-    {
+    public function update(): void {
         $payload = $this->parseJson();
         if ($payload === null) { $this->json(['ok'=>false,'error'=>'invalid json'], 400); return; }
         $id = (string)($payload['id'] ?? '');
@@ -98,8 +91,7 @@ final class ApiEventsController
         }
     }
 
-    public function delete(): void
-    {
+    public function delete(): void {
         $payload = $this->parseJson();
         if ($payload === null) { $this->json(['ok'=>false,'error'=>'invalid json'], 400); return; }
         $id = (string)($payload['id'] ?? '');
@@ -112,8 +104,7 @@ final class ApiEventsController
         }
     }
 
-    public function done(): void
-    {
+    public function done(): void {
         $payload = $this->parseJson();
         if ($payload === null) { $this->json(['ok'=>false,'error'=>'invalid json'], 400); return; }
         $id   = (string)($payload['id'] ?? '');
@@ -127,8 +118,7 @@ final class ApiEventsController
         }
     }
 
-    public function urgent(): void
-    {
+    public function urgent(): void {
         $payload = $this->parseJson();
         if ($payload === null) { $this->json(['ok'=>false,'error'=>'invalid json'], 400); return; }
         $id     = (string)($payload['id'] ?? '');
@@ -142,8 +132,7 @@ final class ApiEventsController
         }
     }
 
-    public function search(): void
-    {
+    public function search(): void {
         $filters = [
             'text'   => $_GET['text']   ?? null,
             'type'   => $_GET['type']   ?? null,

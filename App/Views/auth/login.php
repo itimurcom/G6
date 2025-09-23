@@ -27,5 +27,6 @@
         <button type="submit" class="btn btn--primary">Увійти</button>
       </div>
     </footer>
-  </form>
+  <input type="hidden" name="_csrf" value="<?= htmlspecialchars(\App\Security\Csrf::token(), ENT_QUOTES) ?>">
+</form>
 </div>

@@ -1,3 +1,4 @@
+function getUserHash(){try{return localStorage.getItem('calendar.userHash')||null;}catch(e){return null;}}
 /*! api.events.js — unified client for Calendar API V2 + legacy fallback.
  *  Exposes global window.ApiEvents
  */

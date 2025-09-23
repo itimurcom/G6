@@ -55,4 +55,21 @@ final class Auth
     public static function logout(): void {
         Session::forget('uid');
     }
+
+    public static function adminsExist(): bool
+    {
+        // File-based check; adjust if/when moving to DB
+        $file = dirname(__DIR__, 2) . '/storage/data/users.json';
+        if (!is_file($file)) return false;
+        $json = file_get_contents($file);
+        if ($json === false) return false;
+        $arr = json_decode($json, true);
+        if (!is_array($arr)) return false;
+        foreach ($arr as $u) {
+            $role = is_array($u) ? ($u['role'] ?? null) : (is_object($u) ? ($u->role ?? null) : null);
+            $isAdmin = is_array($u) ? (!empty($u['is_admin'])) : (is_object($u) ? (!empty($u->is_admin ?? null)) : false);
+            if ($role === 'admin' || $isAdmin) return true;
+        }
+        return false;
+    }
 }
