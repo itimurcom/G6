@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 // Usage: php tools/make_user.php <username> <password> [role]
-const USERS_FILE = __DIR__ . '/../config/users.json';
+const USERS_FILE = __DIR__ . '/../torage/data/users.json';
 function read_users(): array {
     if (!file_exists(USERS_FILE)) return ['users' => []];
     $json = file_get_contents(USERS_FILE);

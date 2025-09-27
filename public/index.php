@@ -82,6 +82,11 @@ $router->get('/api/backup/repair-dups',     [\App\Controllers\ApiBackupControlle
 
 $router->post('/api/events/store',          [\App\Controllers\ApiBackupController::class,       'import']);
 
+$router->post('/cabinet/profile/update',    [\App\Controllers\CabinetController::class, 'updateProfile']);
+$router->post('/cabinet/password/change',   [\App\Controllers\CabinetController::class, 'changePassword']);
+
+$router->get('/logout',                    [\App\Controllers\AuthController::class, 'logout']);
+
 
 // MySQL conrollers
 // $router->get('/api/mysql/diag',             [\App\Controllers\ApiMysqlEventsController::class,  'diag']);
@@ -103,12 +108,22 @@ $router->get('/register', [\App\Controllers\AuthController::class, 'registerForm
 $router->post('/register',[\App\Controllers\AuthController::class, 'register']);
 $router->post('/logout',  [\App\Controllers\AuthController::class, 'logout']);
 
-// Secure /cabinet behind auth
-$router->get('/cabinet', function($req){
-    if (!\App\Core\Auth::check()) { header('Location: /login', true, 302); return ''; }
-    return (new \App\Controllers\CabinetController())->cabinet($req);
-});
+// // Secure /cabinet behind auth
+// $router->get('/cabinet', function($req){
+//     if (!\App\Core\Auth::check()) { header('Location: /login', true, 302); return ''; }
+//     return (new \App\Controllers\CabinetController())->cabinet($req);
+// });
 
+$router->get('/password/setup', [\App\Controllers\AuthController::class, 'passwordSetupForm']);
+$router->post('/password/setup', [\App\Controllers\AuthController::class, 'passwordSetupSave']);
 
+// Exact paths that require auth (no subpaths)
+$_PROTECTED = ['/', '/calendar', '/calendar/', '/cabinet', '/cabinet/'];
+
+$path = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?? '/';
+if (!\App\Core\Auth::check() && in_array($path, $_PROTECTED, true)) {
+    header('Location: /login', true, 302);
+    exit;
+}
 $router->resolve();
 

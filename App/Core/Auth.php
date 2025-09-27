@@ -31,6 +31,17 @@ final class Auth
     public static function login(string $login, string $password): bool {
         $user = self::repo()->findByLogin($login);
         if (!$user) return false;
+            // if user exists but has empty/absent password hash -> force setup flow
+            if ($user && (!isset($user['password_hash']) || trim((string)$user['password_hash']) === '')) {
+                $_SESSION['password_setup_user_id'] = (int)($user['id'] ?? 0);
+                $_SESSION['password_setup_email']   = (string)($user['email'] ?? '');
+                $_SESSION['password_setup_token']   = bin2hex(random_bytes(16));
+                if (method_exists(\App\Core\Session::class, 'flash')) {
+                    \App\Core\Session::flash('info', 'Потрібно встановити пароль для цього акаунта.');
+                }
+                header('Location: /password/setup', true, 302);
+                return '';
+            }
         if (!password_verify($password, $user['password_hash'])) return false;
         Session::set('uid', (int)$user['id']);
         return true;

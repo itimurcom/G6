@@ -1,0 +1,90 @@
+/* ----- THEME TOKENS (light by default) ----- */
+:root {
+  --cabinet-text: #0b1220;
+  --cabinet-card-bg: #ffffff;
+  --cabinet-border: #d1d5db;
+  --cabinet-input-bg: #ffffff;
+  --cabinet-btn-bg: #f3f4f6;
+  --cabinet-btn-text: #111827;
+  --cabinet-primary-bg: #2563eb;
+  --cabinet-primary-text: #ffffff;
+  --cabinet-primary-border: #2563eb;
+  --cabinet-shadow: 0 6px 24px rgba(0, 0, 0, 0.08);
+}
+
+/* Dark overrides (support multiple togglers) */
+[data-theme="dark"], .theme-dark, .dark {
+  --cabinet-text: #e6e9ef;
+  --cabinet-card-bg: #111418;
+  --cabinet-border: #2a2f36;
+  --cabinet-input-bg: #0e1116;
+  --cabinet-btn-bg: #1a2230;
+  --cabinet-btn-text: #e6e9ef;
+  --cabinet-primary-bg: #2563eb;
+  --cabinet-primary-text: #ffffff;
+  --cabinet-primary-border: #2563eb;
+  --cabinet-shadow: 0 6px 24px rgba(0, 0, 0, 0.25);
+}
+
+/* Fallback to system scheme if no explicit theme is set */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]):not(.theme-light):not(.light) {
+    --cabinet-text: #e6e9ef;
+    --cabinet-card-bg: #111418;
+    --cabinet-border: #2a2f36;
+    --cabinet-input-bg: #0e1116;
+    --cabinet-btn-bg: #1a2230;
+    --cabinet-btn-text: #e6e9ef;
+    --cabinet-primary-bg: #2563eb;
+    --cabinet-primary-text: #ffffff;
+    --cabinet-primary-border: #2563eb;
+    --cabinet-shadow: 0 6px 24px rgba(0, 0, 0, 0.25);
+  }
+}
+
+/* ----- COMPONENT STYLES (use only tokens above) ----- */
+.cabinet-wrap {
+  display: flex; flex-direction: column; align-items: center; gap: 24px;
+  margin: 0 auto; padding: 12px; max-width: 920px;
+  color: var(--cabinet-text);
+}
+
+.cabinet-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 24px; width: 100%;
+}
+@media (max-width: 900px) { .cabinet-grid { grid-template-columns: 1fr; } }
+
+.cabinet-card {
+  margin: 0 auto; width: 100%; max-width: 460px;
+  padding: 20px; border-radius: 16px;
+  background: var(--cabinet-card-bg);
+  box-shadow: var(--cabinet-shadow);
+  color: var(--cabinet-text);
+}
+
+.cabinet-card h3 { margin: 0 0 16px 0; color: var(--cabinet-text); }
+
+.field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; }
+.field label { font-size: 14px; color: var(--cabinet-text); }
+
+.input {
+  width: 100%; box-sizing: border-box;
+  padding: 10px 12px; border-radius: 10px;
+  border: 1px solid var(--cabinet-border);
+  background: var(--cabinet-input-bg);
+  color: var(--cabinet-text);
+}
+
+.btn {
+  padding: 10px 16px; border-radius: 10px;
+  border: 1px solid var(--cabinet-border);
+  background: var(--cabinet-btn-bg);
+  color: var(--cabinet-btn-text);
+  cursor: pointer;
+}
+
+.btn--primary {
+  background: var(--cabinet-primary-bg);
+  border-color: var(--cabinet-primary-border);
+  color: var(--cabinet-primary-text);
+}

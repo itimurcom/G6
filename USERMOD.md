@@ -1,1 +1,0 @@
-sudo usermod -aG www-data $USER

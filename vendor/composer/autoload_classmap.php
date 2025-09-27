@@ -7,6 +7,7 @@ $baseDir = dirname($vendorDir);
 
 return array(
     'App\\Controllers\\ApiBackupController' => $baseDir . '/App/Controllers/ApiBackupController.php',
+    'App\\Controllers\\ApiEventsController' => $baseDir . '/App/Controllers/ApiEventsController.php',
     'App\\Controllers\\ApiMysqlEventsController' => $baseDir . '/App/Controllers/ApiMysqlEventsController.php',
     'App\\Controllers\\AuthController' => $baseDir . '/App/Controllers/AuthController.php',
     'App\\Controllers\\CabinetController' => $baseDir . '/App/Controllers/CabinetController.php',
