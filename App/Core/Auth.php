@@ -78,7 +78,8 @@ final class Auth
         if (!is_array($arr)) return false;
         foreach ($arr as $u) {
             $role = is_array($u) ? ($u['role'] ?? null) : (is_object($u) ? ($u->role ?? null) : null);
-            $isAdmin = is_array($u) ? (!empty($u['is_admin'])) : (is_object($u) ? (!empty($u->is_admin ?? null)) : false);
+            $isAdmin = mb_strtolower((string)($me['role'] ?? '')) === 'admin';
+            // $isAdmin = is_array($u) ? (!empty($u['is_admin'])) : (is_object($u) ? (!empty($u->is_admin ?? null)) : false);
             if ($role === 'admin' || $isAdmin) return true;
         }
         return false;

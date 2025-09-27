@@ -53,17 +53,21 @@
           </tr>
         </thead>
         <tbody>
-          <?php foreach ($users as $u): 
-            $login = $u['login'] ?? $u['username'] ?? ($u['email'] ?? '');
-            $email = $u['email']  ?? '';
-            $isAdm = !empty($u['is_admin']) || (($u['role'] ?? '') === 'admin');
+          <?php foreach ($users as $row):
+            $email = (string)($row['email'] ?? '');
+            $login = (string)($row['login'] ?? ($row['username'] ?? ''));
+            if ($login === '' || mb_strtolower($login) === mb_strtolower($email)) {
+                $login = '—';
+            }
+            $role  = mb_strtolower((string)($row['role'] ?? ''));
+            $isAdm = $role === 'admin' || !empty($row['is_admin']);
             $type  = $isAdm ? 'адмін' : 'користувач';
           ?>
-          <tr>
-            <td style="padding:6px 8px;"><?= htmlspecialchars((string)$login, ENT_QUOTES) ?></td>
-            <td style="padding:6px 8px;"><?= htmlspecialchars((string)$email, ENT_QUOTES) ?></td>
-            <td style="padding:6px 8px;"><?= $type ?></td>
-          </tr>
+            <tr>
+              <td style="padding:6px 8px;"><?= htmlspecialchars($login, ENT_QUOTES) ?></td>
+              <td style="padding:6px 8px;"><?= htmlspecialchars($email, ENT_QUOTES) ?></td>
+              <td style="padding:6px 8px;"><?= $type ?></td>
+            </tr>
           <?php endforeach; ?>
         </tbody>
       </table>

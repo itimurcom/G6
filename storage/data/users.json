@@ -5,11 +5,11 @@
             "id": 1,
             "name": "admin",
             "email": "info@itimur.com",
+            "login": "admin",
             "password_hash": "$2y$10$PL57KVI6.qQcND.xP6ic\/uzIfrkghzMCtn9rSsAPQ1.r02mT\/B8P.",
             "role": "admin",
             "created_at": "2025-09-22T07:01:19+00:00",
-            "updated_at": "2025-09-27T05:15:17+00:00",
-            "is_admin": true
+            "updated_at": "2025-09-27T05:15:17+00:00"
         }
     ]
 }
