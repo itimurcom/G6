@@ -133,3 +133,8 @@ body{
 .auth-modal .actions { display:flex; gap:10px; }
 .alert { border-radius: 10px; padding: 10px 12px; }
 .alert--error { background:#2b1b1b; border:1px solid #7f1d1d; color:#fecaca; }
+
+
+.space {
+  padding:8px 12px;
+}

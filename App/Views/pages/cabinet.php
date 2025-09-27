@@ -3,7 +3,7 @@
 
 <div class="cabinet-wrap">
   <div class="cabinet-grid">
-    <section class="cabinet-card">
+    <!-- <section class="cabinet-card">
       <h3>Профіль</h3>
       <form method="post" action="/cabinet/profile/update">
         <div class="field">
@@ -17,6 +17,19 @@
         <input type="hidden" name="_csrf" value="<?= htmlspecialchars(\App\Security\Csrf::token(), ENT_QUOTES) ?>">
         <button class="btn btn--primary" type="submit">Зберегти</button>
       </form>
+    </section> -->
+    <section class="cabinet-card">
+      <h3>Профіль</h3>
+        <table>
+          <tr>
+            <td class='space'><label>Ім’я</label><span></td>
+            <td class='space'><?= htmlspecialchars($u['name'] ?? '') ?></td>
+          </tr>
+           <tr>
+            <td class='space'><label>Ел. пошта</label></td>
+            <td class='space'><?= htmlspecialchars($u['email'] ?? '') ?></td>
+          </tr>    
+        </table>
     </section>
 
     <section class="cabinet-card">
@@ -38,8 +51,6 @@
         <button class="btn btn--primary" type="submit">Змінити пароль</button>
       </form>
     </section>
-  </div>
-</div>
 <?php if (!empty($is_admin) && !empty($users) && is_array($users)): ?>
   <section class="cabinet-card" style="margin-top:24px">
     <h3>Користувачі</h3>
@@ -64,13 +75,16 @@
             $type  = $isAdm ? 'адмін' : 'користувач';
           ?>
             <tr>
-              <td style="padding:6px 8px;"><?= htmlspecialchars($login, ENT_QUOTES) ?></td>
-              <td style="padding:6px 8px;"><?= htmlspecialchars($email, ENT_QUOTES) ?></td>
-              <td style="padding:6px 8px;"><?= $type ?></td>
+              <td class='space'><?= htmlspecialchars($login, ENT_QUOTES) ?></td>
+              <td class='space'><?= htmlspecialchars($email, ENT_QUOTES) ?></td>
+              <td class='space'><?= $type ?></td>
             </tr>
           <?php endforeach; ?>
         </tbody>
       </table>
     </div>
-  </section>
+  </section>  
 <?php endif; ?>
+
+  </div>
+</div>
