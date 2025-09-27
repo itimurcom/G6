@@ -56,9 +56,6 @@ class CabinetController extends Controller
             // 2) fallback: читання файлу напряму (підтримка {"last_id":...,"rows":[...]} і плоского масиву)
             if (empty($users)) {
                 $file = \dirname(__DIR__, 2) . '/storage/data/users.json';
-                if (!is_file($file)) {
-                    $file = \dirname(__DIR__, 2) . '/config/users.json';
-                }
                 $db   = json_decode(@file_get_contents($file) ?: '[]', true);
                 $rows = (isset($db['rows']) && is_array($db['rows'])) ? $db['rows'] : (is_array($db) ? $db : []);
                 $users = array_values($rows);
@@ -89,6 +86,5 @@ class CabinetController extends Controller
             // verify current + strength + match, hash + save, flash + redirect
             header('Location: /cabinet', true, 302); return '';
         }
-
     
 }

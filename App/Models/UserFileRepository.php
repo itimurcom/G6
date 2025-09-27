@@ -9,9 +9,7 @@ final class UserFileRepository implements UserRepositoryInterface
     public function __construct()
     {
         $this->root = \dirname(__DIR__, 2);
-        $primary    = $this->root . '/storage/data/users.json';
-        $fallback   = $this->root . '/config/users.json';
-        $this->file = is_file($primary) ? $primary : $fallback;
+        $this->file = $this->root . '/storage/data/users.json';
     }
 
     /** Return all users (normalized) */

@@ -33,3 +33,4 @@
     </footer>
 </form>
 </div>
+<input type="hidden" name="_csrf" value="<?= htmlspecialchars(\App\Security\Csrf::token(), ENT_QUOTES) ?>">
