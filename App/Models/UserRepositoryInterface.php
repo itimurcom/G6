@@ -13,4 +13,7 @@ interface UserRepositoryInterface
     public function findByLogin(string $login): ?array;
 
     public function updateById(int $id, array $data): bool;
+
+    /** Create a user and return its numeric ID */
+    public function create(array $data): int;
 }

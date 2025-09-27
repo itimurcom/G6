@@ -1,5 +1,5 @@
 {
-    "last_id": 3,
+    "last_id": 2,
     "rows": [
         {
             "id": 1,
@@ -20,15 +20,6 @@
             "id": 2,
             "created_at": "2025-09-27T12:37:02+00:00",
             "updated_at": "2025-09-27T12:37:02+00:00"
-        },
-        {
-            "name": "user2",
-            "login": "test",
-            "password_hash": "$2y$10$Avj\/r0tEvTFMWzy0rIPE..4wN471sUsdyMhnaJ3ddnarucshxugz.",
-            "role": "user",
-            "id": 3,
-            "created_at": "2025-09-27T12:37:37+00:00",
-            "updated_at": "2025-09-27T12:37:37+00:00"
         }
     ]
 }

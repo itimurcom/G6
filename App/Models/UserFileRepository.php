@@ -143,4 +143,38 @@ final class UserFileRepository implements UserRepositoryInterface
         }
         return $m;
     }
+    
+     /** Create a user and return its numeric ID */
+    public function create(array $data): int
+    {
+        // Load raw DB to preserve wrapper shape if present
+        $db = $this->loadDb(raw: true);
+
+        // Normalize to wrapper format { last_id, rows }
+        if (!isset($db['rows']) || !is_array($db['rows'])) {
+            $rows = is_array($db) ? $db : [];
+            $db = [
+                'last_id' => $this->maxId($rows),
+                'rows'    => $rows,
+            ];
+        }
+
+        $rows = $db['rows'];
+        $last = (int)($db['last_id'] ?? 0);
+        // Be safe if file was edited manually
+        $nextId = max($last, $this->maxId($rows)) + 1;
+
+        $row = $data;
+        $row['id'] = $nextId;
+        if (!isset($row['created_at'])) $row['created_at'] = date('c');
+        if (!isset($row['updated_at'])) $row['updated_at'] = $row['created_at'];
+
+        $db['rows'][] = $row;
+        $db['last_id'] = $nextId;
+
+        if (!$this->saveDb($db)) {
+            throw new \RuntimeException('Failed to save users.json');
+        }
+        return $nextId;
+    }
 }
