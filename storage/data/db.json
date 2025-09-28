@@ -54,8 +54,7 @@
     "2025-09-21": [],
     "2025-09-22": [],
     "2025-09-23": [],
-    "2025-09-24": [],
-    "2025-09-25": [
+    "2025-09-24": [
         {
             "end_date": "2025-09-30",
             "id": "e_5c760929b85f684b",
@@ -71,35 +70,22 @@
             "user_id": 0
         }
     ],
+    "2025-09-25": [],
     "2025-09-26": [],
-    "2025-09-27": [],
-    "2025-09-28": [
+    "2025-09-27": [
         {
             "end_date": null,
-            "id": "841291b6-3245-49aa-9587-3c63815270e5",
-            "time": "16:00",
-            "title": "ВКЗ ЖЕСТЬ  іваіваіва",
-            "owner": "Тім",
-            "type": "other",
-            "urgent": false,
+            "id": "cbfc93e4-bc78-4e95-b4e6-662c6b0a2beb",
+            "time": "19:30",
+            "title": "ВКЗ",
+            "owner": "вапвап",
+            "type": "evt",
+            "urgent": true,
             "done": false,
             "incoming_no": "",
             "outgoing_no": "",
             "description": "",
             "user_id": 0
-        },
-        {
-            "id": "745b5167-36e2-4c32-b214-7658d7fa7e59",
-            "time": "18:00",
-            "title": "Донесення щодо ВКЗ на КДШВ",
-            "owner": "Василь з Адмінки",
-            "type": "nas",
-            "urgent": false,
-            "done": false,
-            "user_id": 0,
-            "incoming_no": "",
-            "outgoing_no": "",
-            "description": ""
         },
         {
             "end_date": null,
@@ -130,19 +116,33 @@
         },
         {
             "end_date": null,
-            "id": "cbfc93e4-bc78-4e95-b4e6-662c6b0a2beb",
-            "time": "18:30",
-            "title": "ВКЗ",
-            "owner": "вапвап",
-            "type": "evt",
-            "urgent": true,
+            "id": "841291b6-3245-49aa-9587-3c63815270e5",
+            "time": "13:15",
+            "title": "ВКЗ ЖЕСТЬ  іваіваіва",
+            "owner": "Тім",
+            "type": "other",
+            "urgent": false,
             "done": false,
             "incoming_no": "",
             "outgoing_no": "",
             "description": "",
             "user_id": 0
+        },
+        {
+            "id": "745b5167-36e2-4c32-b214-7658d7fa7e59",
+            "time": "18:00",
+            "title": "Донесення щодо ВКЗ на КДШВ",
+            "owner": "Василь з Адмінки",
+            "type": "nas",
+            "urgent": false,
+            "done": false,
+            "user_id": 0,
+            "incoming_no": "",
+            "outgoing_no": "",
+            "description": ""
         }
     ],
+    "2025-09-28": [],
     "2025-09-29": [],
     "2025-09-30": [],
     "2025-10-01": [],

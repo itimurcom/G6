@@ -174,21 +174,21 @@ var inputTitle   = $('inputTitle');
     btnTypeOther.classList.toggle('active',currentType==='other');
     if (btnTypeReset) btnTypeReset.style.display=(currentType==='all')?'none':'inline-grid';
   }
-  function setTypeFilter(t){ currentType=t||'all'; updateTypeButtons(); renderAllCells(); renderTodayPanel(); }
+  function setTypeFilter(t){ currentType=t||'all'; updateTypeButtons(); withStableScroll(function(){ renderAllCells(); try{ renderTodayPanel(); }catch(_){} }); }
 
   if (btnTypeMi)    btnTypeMi.addEventListener('click',function(){ setTypeFilter('mi'); });
   if (btnTypeNas)   btnTypeNas.addEventListener('click',function(){ setTypeFilter('nas'); });
   if (btnTypeEvt)   btnTypeEvt.addEventListener('click',function(){ setTypeFilter('evt'); });
   if (btnTypeOther) btnTypeOther.addEventListener('click',function(){ setTypeFilter('other'); });
   if (btnTypeReset) btnTypeReset.addEventListener('click',function(){ setTypeFilter('all'); });
-  if (filterText)   filterText.addEventListener('input',function(){ renderAllCells(); renderTodayPanel(); });
+  if (filterText)   filterText.addEventListener('input',function(){ withStableScroll(function(){ renderAllCells(); try{ renderTodayPanel(); }catch(_){} }); });
   if (btnClearFilters) btnClearFilters.addEventListener('click',function(){ if(filterText) filterText.value=''; setTypeFilter('all'); });
   if (quickFilters) quickFilters.addEventListener('click',function(e){
     var b=e.target && e.target.closest ? e.target.closest('button[data-type]') : null;
     if(!b) return;
     setTypeFilter(b.getAttribute('data-type'));
     if (filterText) filterText.value = b.getAttribute('data-text') || '';
-    renderAllCells(); renderTodayPanel();
+    withStableScroll(function(){ renderAllCells(); try{ renderTodayPanel(); }catch(_){} });
   });
 
   /* ===== Навігація місяців ===== */
@@ -200,6 +200,8 @@ var inputTitle   = $('inputTitle');
   if (btnPrev)  btnPrev.addEventListener('click',function(){ changeMonth(-1); });
   if (btnNext)  btnNext.addEventListener('click',function(){ changeMonth(1); });
   if (btnToday) btnToday.addEventListener('click',function(){ state.year=today.getFullYear(); state.month=today.getMonth(); renderCalendar(); });
+  if (btnClose)  btnClose.addEventListener('click',function(){ closeOverlay(); });
+  if (btnCancel) btnCancel.addEventListener('click',function(){ closeOverlay(); });
   window.addEventListener('keydown',function(e){
     if (['INPUT','SELECT','TEXTAREA'].includes(e.target && e.target.tagName)) return;
     if (e.key==='ArrowLeft') changeMonth(-1);
@@ -228,7 +230,7 @@ if (filePicker) filePicker.addEventListener('change', function(e){
       var parsed = JSON.parse(text);
       Data._setCache( Data.ensureStoreShape(parsed) );
       return Data.serverSaveStore(Data._getCache()).then(function(){
-        renderAllCells(); renderTodayPanel();
+        withStableScroll(function(){ renderAllCells(); try{ renderTodayPanel(); }catch(_){} });
       });
     }catch(err){
       alert('Не вдалося імпортувати файл. Перевірте формат JSON.');
@@ -259,23 +261,27 @@ if (filePicker) filePicker.addEventListener('change', function(e){
     overlay.removeAttribute('inert');
     overlay.setAttribute('aria-hidden','false');
     overlay.classList.add('show');
-    document.body.style.overflow='hidden';
+    // [css стрибки] overflow hidden disabled;
     setTimeout(function(){ if(inputTitle) inputTitle.focus(); },0);
   }
   function closeOverlay(){
     if (!overlay) return;
+    // Blur anything inside the overlay to avoid scroll jumps
     if (overlay.contains(document.activeElement)) { try{ document.activeElement.blur(); }catch(_){ } }
+    var x = window.scrollX, y = window.scrollY;
     overlay.classList.remove('show');
     overlay.setAttribute('aria-hidden','true');
     overlay.setAttribute('inert','');
-    document.body.style.overflow='';
-    requestAnimationFrame(function(){ if (btnToday && btnToday.focus) btnToday.focus(); });
+    // return focus back to the opener without scrolling
+    requestAnimationFrame(function(){
+      try{ window.scrollTo(x,y); }catch(_){}
+      try{ __lastFocusEl && __lastFocusEl.focus && __lastFocusEl.focus({preventScroll:true}); }catch(_){}
+    });
   }
-  if (btnClose)  btnClose.addEventListener('click',function(){ closeOverlay(); });
-  if (btnCancel) btnCancel.addEventListener('click',function(){ closeOverlay(); });
   window.addEventListener('keydown',function(e){ if(e.key==='Escape') closeOverlay(); });
 
   function openModalNew(dateISO){
+  try{ __lastFocusEl = document.activeElement; }catch(_){}
     if (!overlay) return;
     if (modalTitle) modalTitle.textContent='Нова подія';
     overlay.dataset.mode='new'; overlay.dataset.origDate=dateISO; delete overlay.dataset.id;
@@ -295,9 +301,27 @@ if (inputTitle)  inputTitle.value = '';
     
     setEditModalType(inputType ? inputType.value : 'evt'); applyUrgentClass(); showOverlay();
   }
-
-
   function openModalEdit(dateISO, id){
+try{ __lastFocusEl = document.activeElement; }catch(_){}
+  if (!overlay) return;
+  // Find event strictly from its start day
+  var arr = Data.getEventsFor(dateISO) || [];
+  var ev  = arr.find(function(e){ return e.id===id; });
+  if (!ev) return;
+
+  // Prefill span days (difference between end_date and start date)
+  if (inputSpanDays){
+    var ed = ev.end_date || '';
+    if (ed){
+      try{
+        var ds=new Date(dateISO+'T00:00:00');
+        var de=new Date(ed+'T00:00:00');
+        var diff=Math.round((de-ds)/86400000);
+        inputSpanDays.value = (diff>0) ? String(diff) : '';
+      } catch(_){ inputSpanDays.value=''; }
+    }
+  }
+    try{ __lastFocusEl = document.activeElement; }catch(_){}
     var arr=Data.getEventsFor(dateISO); var ev=arr.find(function(e){return e.id===id;}); if(!ev) return;
     if (modalTitle) modalTitle.textContent='Редагувати подію';
     if (!overlay) return;
@@ -317,14 +341,23 @@ if (inputTitle)  inputTitle.value = '';
     setEditModalType(inputType ? inputType.value : 'evt'); applyUrgentClass(); showOverlay();
   }
 
-  if (modal) modal.addEventListener('submit',function(e){
+  
+if (modal) modal.addEventListener('submit', function(e){
     e.preventDefault();
-    var newDate = inputDate ? inputDate.value : '';
-    if(!newDate || !inputTime || !inputTitle || !inputType) return;
-    if(!inputTime.value || !inputTitle.value.trim() || !inputType.value) return;
 
+    // Native validity: if invalid, show browser hints and keep modal open
+    try {
+      if (modal && typeof modal.checkValidity === 'function' && !modal.checkValidity()) {
+        if (typeof modal.reportValidity === 'function') modal.reportValidity();
+        return;
+      }
+    } catch(_){}
+
+    var newDate = inputDate ? inputDate.value : '';
+    if (!newDate) return;
+
+    // Build event payload
     var ev = {
-      // end_date derived from span days (if >0); else null
       end_date: (function(){
         var v = (inputSpanDays && inputSpanDays.value!=='') ? parseInt(inputSpanDays.value,10) : NaN;
         var d = (inputDate && inputDate.value) ? inputDate.value : '';
@@ -335,45 +368,62 @@ if (inputTitle)  inputTitle.value = '';
         return null;
       })(),
       id: (overlay && overlay.dataset.id) ? overlay.dataset.id : Ev.genId(),
-      time:  inputTime.value,
-      title: inputTitle.value.trim(),
+      time:  (inputTime && inputTime.value) ? inputTime.value : '',
+      title: (inputTitle && inputTitle.value) ? inputTitle.value.trim() : '',
       owner: (inputOwner && inputOwner.value || '').trim(),
-      type:  inputType.value,
+      type:  (inputType && inputType.value) ? inputType.value : 'evt',
       urgent: !!(inputUrgent && inputUrgent.checked),
       done:   !!(inputDone && inputDone.checked),
-      // user_id is set by server,
-
-      // NEW:
       incoming_no: (inputIncoming    && inputIncoming.value    || '').trim(),
       outgoing_no: (inputOutgoing    && inputOutgoing.value    || '').trim(),
       description: (inputDescription && inputDescription.value || '').trim()
     };
 
+    // Minimal guards
+    if (!ev.title) return;
+    if (!ev.type) ev.type = 'evt';
+
     var mode     = overlay ? overlay.dataset.mode : 'new';
     var origDate = overlay ? overlay.dataset.origDate : newDate;
 
-    if (mode==='edit'){
-      var fromArr=Data.getEventsFor(origDate);
-      var idx=Ev.findIndexById(fromArr, ev.id);
-      if (idx>-1){
-        if (newDate===origDate){
-          fromArr[idx]=ev; Data.setEventsFor(origDate, fromArr);
-          var c=findCell(origDate); if (c) renderCell(c);
-        } else {
-          fromArr.splice(idx,1); Data.setEventsFor(origDate, fromArr);
-          var toArr=Data.getEventsFor(newDate); toArr.push(ev); Data.setEventsFor(newDate, toArr);
-          var c1=findCell(origDate); if (c1) renderCell(c1);
-          var c2=findCell(newDate);  if (c2) renderCell(c2);
-         renderAllCells(); renderTodayPanel(); }
+    try {
+      if (mode==='edit'){
+        var fromArr = Data.getEventsFor(origDate);
+        var idx     = Ev.findIndexById(fromArr, ev.id);
+        if (idx>-1){
+          if (newDate===origDate){
+            fromArr[idx] = ev;
+            Data.setEventsFor(origDate, fromArr);
+          } else {
+            fromArr.splice(idx,1);
+            Data.setEventsFor(origDate, fromArr);
+            var toArr = Data.getEventsFor(newDate);
+            toArr.push(ev);
+            Data.setEventsFor(newDate, toArr);
+          }
+        }
+      } else {
+        var arr = Data.getEventsFor(newDate);
+        arr.push(ev);
+        Data.setEventsFor(newDate, arr);
       }
-    } else {
-      var arr=Data.getEventsFor(newDate); arr.push(ev); Data.setEventsFor(newDate, arr);
-      var c=findCell(newDate); if (c) renderCell(c);
+      // Rerender everything in a stable scroll frame
+      withStableScroll(function(){
+        try {
+          renderAllCells();
+          if (typeof renderTodayPanel === 'function') renderTodayPanel();
+        } catch(_){}
+      });
+    } catch(err){
+      console.warn('submit/save failed', err);
+      // If saving failed, keep modal open so user sees state
+      return;
     }
-    renderTodayPanel(); closeOverlay();
-  });
 
-  /* ===== Позначення подій як виконаних (close_user_id/close_time) ===== */
+    // Close the modal AFTER successful save/rerender
+    closeOverlay();
+  });
+/* ===== Позначення подій як виконаних (close_user_id/close_time) ===== */
 
 // Ensure close fields exist on every event (in-place)
 function migrateEnsureCloseFields(dayMap) {
@@ -533,7 +583,7 @@ if (window.CalendarApp && window.CalendarApp.ui) {
       setInfoModalType(ev.type);
     if (infoOverlay){
       infoOverlay.classList.add('show'); infoOverlay.setAttribute('aria-hidden','false'); infoOverlay.removeAttribute('inert');
-      document.body.style.overflow='hidden';
+      // [css стрибки] overflow hidden disabled;
 
       var el = document.querySelector('#editEvBtn');
       el.setAttribute('data-id',id);
@@ -547,7 +597,7 @@ if (window.CalendarApp && window.CalendarApp.ui) {
     if (!infoOverlay) return;
     if (infoOverlay.contains(document.activeElement)) { try{ document.activeElement.blur(); }catch(_){} }
     infoOverlay.classList.remove('show'); infoOverlay.setAttribute('aria-hidden','true'); infoOverlay.setAttribute('inert','');
-    document.body.style.overflow='';
+    // [css стрибки] no-op: restore not needed
   }
 
   if (infoClose) infoClose.addEventListener('click',function(){ closeInfo(); });
@@ -579,13 +629,19 @@ if (window.CalendarApp && window.CalendarApp.ui) {
       });
     }
     chatOverlay.classList.add('show'); chatOverlay.setAttribute('aria-hidden','false'); chatOverlay.removeAttribute('inert');
-    document.body.style.overflow='hidden';
+    // [css стрибки] overflow hidden disabled;
   }
   if (btnChat)   btnChat.addEventListener('click',openChat);
-  if (chatClose) chatClose.addEventListener('click',function(){ chatOverlay.classList.remove('show'); chatOverlay.setAttribute('aria-hidden','true'); chatOverlay.setAttribute('inert',''); document.body.style.overflow=''; });
-  if (chatOk)    chatOk.addEventListener('click',function(){ chatOverlay.classList.remove('show'); chatOverlay.setAttribute('aria-hidden','true'); chatOverlay.setAttribute('inert',''); document.body.style.overflow=''; });
-
-  /* ===== Рендер календаря ===== */
+  if (chatClose) chatClose.addEventListener('click', function(){ chatOverlay.classList.remove('show'); chatOverlay.setAttribute('aria-hidden','true'); chatOverlay.setAttribute('inert',''); });
+if (chatOk) chatOk.addEventListener('click', function(){ chatOverlay.classList.remove('show'); chatOverlay.setAttribute('aria-hidden','true'); chatOverlay.setAttribute('inert',''); });
+/* ===== Фокус та стабільний скрол ===== */
+var __lastFocusEl = null;
+function withStableScroll(fn){
+  var x = window.scrollX, y = window.scrollY;
+  try { fn && fn(); } catch(e){ console.warn('withStableScroll failed', e); }
+  try { window.scrollTo(x, y); } catch(_){}
+}
+/* ===== Рендер календаря ===== */
   var cells=[], quarterHas={}, hourHoverCount={}, earlyOpen=false, lateOpen=false;
 
   function renderCalendar(){
@@ -628,8 +684,24 @@ if (window.CalendarApp && window.CalendarApp.ui) {
       // cell.addEventListener('click',function(){ openInfo(iso2,ev.id); });
 
       cell.addEventListener('dragenter',function(e){ e.preventDefault(); this.classList.add('drop-target'); });
-      cell.addEventListener('dragover', function(e){ e.preventDefault(); e.dataTransfer.dropEffect='move'; this.classList.add('drop-target'); });
-      cell.addEventListener('dragleave',function(){ this.classList.remove('drop-target'); });
+      cell.addEventListener('dragover', function(e){
+  try {
+    var types = e.dataTransfer && e.dataTransfer.types;
+    var hasMove = false, hasResize = false;
+    if (types) {
+      var arr = (typeof types.contains==='function') ? {contains:function(t){return types.contains(t);} } : {contains:function(t){ return Array.prototype.indexOf.call(types,t)!==-1; }};
+      hasMove = arr.contains('text/calendar-event');
+      hasResize = arr.contains('text/calendar-resize-end');
+    }
+    if (hasMove || hasResize) {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      // don't block other handlers on dragover; only stop on drop for resize
+      cell.classList.add('drop-target');
+    }
+  } catch(_){}
+});
+          cell.addEventListener('dragleave',function(){ this.classList.remove('drop-target'); });
       cell.addEventListener('drop',function(e){
         e.preventDefault(); this.classList.remove('drop-target');
         try{
@@ -637,15 +709,15 @@ if (window.CalendarApp && window.CalendarApp.ui) {
           var obj=JSON.parse(payload); var fromDate=obj.fromDate; var id=obj.id; var toDate=this.dataset.date; if(!fromDate||!id||toDate===fromDate) return;
           var fromArr=Data.getEventsFor(fromDate); var idx=Ev.findIndexById(fromArr,id); if(idx===-1) return;
           var moved=fromArr.splice(idx,1)[0]; Data.setEventsFor(fromDate,fromArr);
-          var toArr=Data.getEventsFor(toDate); toArr.push(moved); Data.setEventsFor(toDate,toArr);
-          renderAllCells(); renderTodayPanel(); var cFrom=cells.find(function(c){return c.dataset.date===fromDate;}); if(cFrom) renderCell(cFrom);
+          renderAllCells(); var toArr=Data.getEventsFor(toDate); toArr.push(moved); Data.setEventsFor(toDate,toArr);
+          withStableScroll(function(){ renderAllCells(); try{ renderTodayPanel(); }catch(_){} }); withStableScroll(function(){ renderAllCells(); try{ renderTodayPanel(); }catch(_){} }); var cFrom=cells.find(function(c){return c.dataset.date===fromDate;}); if(cFrom) renderCell(cFrom);
           renderCell(this); renderTodayPanel();
         renderAllCells(); }catch(err){ console.warn('drop failed',err); }
       });
 
       grid.appendChild(cell); cells.push(cell);
     }
-    renderAllCells(); renderTodayPanel();
+    withStableScroll(function(){ renderAllCells(); try{ renderTodayPanel(); }catch(_){} });
   }
 
   function renderAllCells(){ for(var i=0;i<cells.length;i++){ renderCell(cells[i]); } if (typeof enableResizeDnDOnCells==='function'){ enableResizeDnDOnCells(); } }
@@ -658,7 +730,7 @@ if (window.CalendarApp && window.CalendarApp.ui) {
           cell.addEventListener('dragover', function(e){
             try {
               if (e.dataTransfer && (e.dataTransfer.types||[]).indexOf('text/calendar-resize-end')!==-1){
-                e.preventDefault(); e.dataTransfer.dropEffect='move'; cell.classList.add('drop-target');
+                e.preventDefault(); e.dataTransfer.dropEffect='move'; e.stopImmediatePropagation(); cell.classList.add('drop-target');
               }
             } catch(_){}
           });
@@ -669,7 +741,7 @@ if (window.CalendarApp && window.CalendarApp.ui) {
               var payload = e.dataTransfer.getData('text/calendar-resize-end');
               if (!payload) return;
               e.preventDefault();
-              var obj = JSON.parse(payload||'{}');
+              e.stopImmediatePropagation(); var obj = JSON.parse(payload||'{}');
               var startDate = obj.startDate, id = obj.id;
               var toDate = cell.dataset.date;
               if (!startDate || !id || !toDate) return;
@@ -679,7 +751,7 @@ if (window.CalendarApp && window.CalendarApp.ui) {
               // set end_date = null if toDate == startDate, else toDate
               arr[idx].end_date = (toDate===startDate) ? null : toDate;
               Data.setEventsFor(startDate, arr);
-              // re-render affected range (old/new)
+              renderAllCells(); // re-render affected range (old/new)
               renderAllCells();
               renderTodayPanel();
             }catch(err){ console.warn('resize drop failed', err); }
@@ -720,8 +792,6 @@ function getEventsForDayExpanded(dateISO){
         var seg = segmentForDay(dateISO, day, ev.end_date);
         if (!seg) continue;
         var c = Object.assign({}, ev); c._seg = seg; c._startDay = day;
-        // mid/end: hide time by default (can be overridden later)
-        if (seg!=='start' && seg!=='single') c._hideTime = true;
         out.push(c);
       }
     });
@@ -744,14 +814,24 @@ function renderCell(cell){
 
     for(var i=0;i<filtered.length;i++){
       var ev=filtered[i];
-      var item=document.createElement('div'); item.className='event '+Ev.typeToClass(ev.type)+(ev.urgent?' urgent':''); if (ev && ev.done) { try { item.classList.add('done'); } catch(_){ item.className += ' done'; } } item.setAttribute('draggable',(ev._seg && ev._seg!=='start' && ev._seg!=='single') ? 'false' : 'true'); item.setAttribute('data-id',ev.id);
-      item.setAttribute('data-seg', (ev._seg||'single'));
+      var item=document.createElement('div'); item.className='event '+Ev.typeToClass(ev.type)+(ev.urgent?' urgent':''); if (ev && ev.done) { try { item.classList.add('done'); } catch(_){ item.className += ' done'; } } item.setAttribute('draggable', (ev._seg && ev._seg==='mid') ? 'false' : 'true'); item.setAttribute('data-id',ev.id);
+item.setAttribute('data-seg', (ev._seg||'single'));
       item.setAttribute('data-start', (ev._startDay||dateISO));
     item.addEventListener('dragstart',function(e){
-        var d=e.currentTarget; var parent=d.closest('.cell'); var dt=e.dataTransfer; var eid=d.getAttribute('data-id'); var from=parent?parent.dataset.date:null;
-        d.classList.add('dragging'); dt.effectAllowed='move'; dt.setData('text/calendar-event', JSON.stringify({fromDate:from,id:eid}));
-      });
-      item.addEventListener('dragend',function(e){ e.currentTarget.classList.remove('dragging'); });
+  var d=e.currentTarget;
+  var dt=e.dataTransfer; if (!dt) return;
+  d.classList.add('dragging'); dt.effectAllowed='move';
+  var seg=d.getAttribute('data-seg');
+  var sday=d.getAttribute('data-start')||dateISO;
+  var eid = d.getAttribute('data-id');
+  if (seg==='end'){
+    dt.setData('text/calendar-resize-end', JSON.stringify({ startDate: sday, id: eid }));
+  } else {
+    // standard move from start/single
+    dt.setData('text/calendar-event', JSON.stringify({ fromDate: sday, id: eid }));
+  }
+});
+item.addEventListener('dragend',function(e){ e.currentTarget.classList.remove('dragging'); });
 
       var bar=document.createElement('div'); bar.className='bar';
     
@@ -775,11 +855,11 @@ function renderCell(cell){
 
       del.addEventListener('click',function(e){
         e.stopPropagation(); var eid=e.currentTarget.parentElement.getAttribute('data-id');
-        var arr=Data.getEventsFor(dateISO); var idx=Ev.findIndexById(arr,eid); if(idx>-1){ arr.splice(idx,1); Data.setEventsFor(dateISO,arr); renderCell(cell); renderTodayPanel(); renderAllCells();
+        var arr=Data.getEventsFor(dateISO); var idx=Ev.findIndexById(arr,eid); if(idx>-1){ arr.splice(idx,1); Data.setEventsFor(dateISO,arr); withStableScroll(function(){ renderAllCells(); try{ renderTodayPanel(); }catch(_){} }); renderCell(cell); renderTodayPanel(); renderAllCells(); renderAllCells();
     }
       });
       
-      item.addEventListener('click',function(e){ e.stopPropagation(); var eid=e.currentTarget.getAttribute('data-id'); openInfo(dateISO,eid); });
+      item.addEventListener('click',function(e){ e.stopPropagation(); var eid=this.getAttribute('data-id'); var seg=this.getAttribute('data-seg'); var sday=this.getAttribute('data-start')||dateISO; if(seg&&seg!=='single'){ openModalEdit(sday, eid); } else { openInfo(dateISO,eid); } });
 
       item.appendChild(bar);
       item.appendChild(time);
@@ -787,169 +867,170 @@ function renderCell(cell){
       
     
     if (ev._seg && ev._seg!=='single'){ item.classList.add('ev--multi'); }
-if (ev._seg){ item.className += ' ev--'+ev._seg; }
-    if (ev._seg && ev._seg!=='start' && ev._seg!=='single'){ time.textContent=''; }
-// item.appendChild(del);
+if (ev._seg){ item.className += ' ev--'+ev._seg; }      // item.appendChild(del);
       if (!__isMultiSeg){ item.appendChild(owner); }
-
-      // Add resize handle for end segment
-      if (ev._seg==='end'){
-        var rz=document.createElement('span');
-        rz.className='ev-resize-end';
-        rz.setAttribute('title','Змінити кінець');
-        rz.setAttribute('draggable','true');
-        rz.addEventListener('dragstart', function(e){
-          var dt=e.dataTransfer; dt.effectAllowed='move';
-          dt.setData('text/calendar-resize-end', JSON.stringify({ startDate: (ev._startDay||dateISO), id: ev.id }));
-        });
-        item.appendChild(rz);
-      }
-      item.setAttribute('title', ev.title);
+      item.setAttribute('title', ev.title||'');
       list.appendChild(item);
     }
   }
-
-  /* ===== Таймлайн «Сьогодні» ===== */
-  if (btnEarly) btnEarly.addEventListener('click',function(){ earlyOpen=!earlyOpen; renderTodayPanel(); });
-  if (btnLate)  btnLate.addEventListener('click',function(){ lateOpen=!lateOpen; renderTodayPanel(); });
+/* ===== Таймлайн «Сьогодні» ===== */
+;(function(){ try{
+  if (typeof btnEarly!=='undefined' && btnEarly) btnEarly.addEventListener('click',function(){ earlyOpen=!earlyOpen; renderTodayPanel(); });
+  if (typeof btnLate!=='undefined' && btnLate)  btnLate.addEventListener('click',function(){ lateOpen=!lateOpen; renderTodayPanel(); });
+} catch(_){ /* no-op */ } })();
 
   function renderTodayPanel(){
     if (!todayTimeline) return;
-    earlyTimeline.innerHTML=''; todayTimeline.innerHTML=''; lateTimeline.innerHTML='';
-    hourHoverCount={}; quarterHas={};
+    try {
+      earlyTimeline.innerHTML = '';
+      todayTimeline.innerHTML = '';
+      lateTimeline.innerHTML  = '';
+    } catch (_) { return; }
 
-    var todayISO=Ev.toISODate(today);
-    var nextISO =Ev.toISODate(new Date(today.getFullYear(),today.getMonth(),today.getDate()+1));
+    hourHoverCount = {}; quarterHas = {};
 
-    var matcher=Ev.buildMatcher(currentType, filterText ? filterText.value : '');
-    var allToday=Data.getEventsFor(todayISO).filter(matcher).sort(function(a,b){return (a.time||'').localeCompare(b.time||'');});
-    var allNext =Data.getEventsFor(nextISO ).filter(matcher).sort(function(a,b){return (a.time||'').localeCompare(b.time||'');});
+    var todayISO = Ev.toISODate(today);
+    var nextISO  = Ev.toISODate(new Date(today.getFullYear(), today.getMonth(), today.getDate()+1));
 
-    quarterHas[todayISO]={}; quarterHas[nextISO]={};
-    for(var i=0;i<allToday.length;i++){ var p=(allToday[i].time||'00:00').split(':'), hh=+p[0]||0, mm=+p[1]||0; if(mm!==0) quarterHas[todayISO][hh]=true; }
-    for(var j=0;j<allNext.length;j++){ var q=(allNext[j].time||'00:00').split(':'), h2=+q[0]||0, m2=+q[1]||0; if(m2!==0) quarterHas[nextISO][h2]=true; }
+    var matcher  = Ev.buildMatcher(currentType, filterText ? filterText.value : '');
+    var allToday = getEventsForDayExpanded(todayISO)
+      .filter(matcher)
+      .sort(function(a,b){ return (a.time||'').localeCompare(b.time||''); });
+    var allNext  = getEventsForDayExpanded(nextISO)
+      .filter(matcher)
+      .sort(function(a,b){ return (a.time||'').localeCompare(b.time||''); });
 
-    var earlyCount=allToday.filter(function(e){ var h=(+((e.time||'00:00').split(':')[0])||0); return h<6; }).length;
-    var lateCount =allNext .filter(function(e){ var h=(+((e.time||'00:00').split(':')[0])||0); return h<6; }).length;
-    var earlyCountEl=$('earlyCount'), lateCountEl=$('lateCount');
-    if (earlyCountEl) earlyCountEl.textContent = earlyCount?('подій: '+earlyCount):'';
-    if (lateCountEl)  lateCountEl.textContent  = lateCount ?('подій: '+lateCount) :'';
-    if (earlyWrap) earlyWrap.classList.toggle('open',earlyOpen);
-    if (lateWrap)  lateWrap.classList.toggle('open',lateOpen);
+    quarterHas[todayISO] = {}; quarterHas[nextISO] = {};
+
+    for (var i1=0; i1<allToday.length; i1++) {
+      var p = (allToday[i1].time||'00:00').split(':'), hh = +p[0]||0, mm = +p[1]||0;
+      if (mm!==0) quarterHas[todayISO][hh] = true;
+    }
+    for (var j1=0; j1<allNext.length; j1++) {
+      var q = (allNext[j1].time||'00:00').split(':'), h2 = +q[0]||0, m2 = +q[1]||0;
+      if (m2!==0) quarterHas[nextISO][h2] = true;
+    }
+
+    var earlyCount = allToday.filter(function(e){ var h=(+((e.time||'00:00').split(':')[0])||0); return h<6; }).length;
+    var lateCount  = allNext .filter(function(e){ var h=(+((e.time||'00:00').split(':')[0])||0); return h<6; }).length;
+    var earlyCountEl = $('earlyCount'), lateCountEl = $('lateCount');
+    if (earlyCountEl) earlyCountEl.textContent = earlyCount ? ('подій: '+earlyCount) : '';
+    if (lateCountEl)  lateCountEl.textContent  = lateCount  ? ('подій: '+lateCount)  : '';
+    if (earlyWrap) earlyWrap.classList.toggle('open', !!earlyOpen);
+    if (lateWrap)  lateWrap.classList.toggle('open',  !!lateOpen);
 
     function buildByQuarter(list){
-      var map={}; for(var h=0;h<24;h++){ for(var m=0;m<60;m+=15){ map[Ev.pad2(h)+':'+Ev.pad2(m)]=[]; } }
-      for(var k=0;k<list.length;k++){
-        var ev=list[k]; var parts=(ev.time||'00:00').split(':'), H=+parts[0]||0, M=+parts[1]||0;
-        var key=Ev.pad2(H)+':'+Ev.pad2(Math.floor(M/15)*15); map[key].push(ev);
-      } return map;
-    }
-    var byQToday=buildByQuarter(allToday), byQNext=buildByQuarter(allNext);
-    var tlAll={}; tlAll[todayISO]=earlyTimeline; tlAll[todayISO]=todayTimeline; tlAll[nextISO]=lateTimeline;
-
-    function expandHour(dateISO,hour){
-      ['15','30','45'].forEach(function(min){
-        // var elq=(tlAll[dateISO]||document).querySelector('.slot.quarter[data-date="'+dateISO+'"][data-hour="'+hour+'"][data-min="'+min+'"]');
-        var elq=(document).querySelector('.slot.quarter[data-date="'+dateISO+'"][data-hour="'+hour+'"][data-min="'+min+'"]');
-        if(elq) elq.style.display='grid';
-      });
-    }
-    
-    function collapseHour(dateISO,hour){
-      if(quarterHas[dateISO] && quarterHas[dateISO][hour]) return;
-      ['15','30','45'].forEach(function(min){
-        var elq=(document).querySelector('.slot.quarter[data-date="'+dateISO+'"][data-hour="'+hour+'"][data-min="'+min+'"]');
-        if(elq) elq.style.display='none';
-      });
-    }
-
-    window.foldAllQuarters=function(){
-      Object.keys(tlAll).forEach(function(dateISO){
-        for(var h=0;h<24;h++){
-          var keep=quarterHas[dateISO] && quarterHas[dateISO][h];
-          ['15','30','45'].forEach(function(min){
-            var elq=tlAll[dateISO].querySelector('.slot.quarter[data-date="'+dateISO+'"][data-hour="'+h+'"][data-min="'+min+'"]');
-            if(elq) elq.style.display = keep?'grid':'none';
-          });
+      var map = {};
+      for (var h=0; h<24; h++){
+        for (var m=0; m<60; m+=15){
+          map[Ev.pad2(h)+':'+Ev.pad2(m)] = [];
         }
-      });
-    };
+      }
+      for (var k=0; k<list.length; k++){
+        var ev = list[k];
+        var parts = (ev.time||'00:00').split(':'), H = +parts[0]||0, M = +parts[1]||0;
+        var key = Ev.pad2(H)+':'+Ev.pad2(Math.floor(M/15)*15);
+        map[key].push(ev);
+      }
+      return map;
+    }
 
-    function renderGroup(tl,dateISO,startHour,endHour){
-      if(!tl) return;
-      for(var h=startHour; h<endHour; h++){
-        for(var m=0; m<60; m+=15){
-          var slot=document.createElement('div'); slot.className='slot quarter'; slot.dataset.date=dateISO; slot.dataset.hour=String(h); slot.dataset.min=String(m);
+    var byQToday = buildByQuarter(allToday);
+    var byQNext  = buildByQuarter(allNext);
 
-          slot.addEventListener('dragenter',function(e){
+    function renderGroup(tl, dateISO, startHour, endHour){
+      if (!tl) return;
+      for (var h=startHour; h<endHour; h++){
+        for (var m=0; m<60; m+=15){
+          var slot = document.createElement('div');
+          slot.className = 'slot quarter';
+          slot.dataset.date = dateISO;
+          slot.dataset.hour = String(h);
+          slot.dataset.min  = String(m);
+
+          slot.addEventListener('dragenter', function(e){
             e.preventDefault(); this.classList.add('drop-target');
-            var HH=parseInt(this.dataset.hour,10)||0; var key=this.dataset.date+'|'+HH;
-            hourHoverCount[key]=(hourHoverCount[key]||0)+1;
-            if(this.dataset.min==='0'){ expandHour(this.dataset.date,HH); }
+            var HH = parseInt(this.dataset.hour,10)||0; var key=this.dataset.date+'|'+HH;
+            hourHoverCount[key] = (hourHoverCount[key]||0) + 1;
           });
-          slot.addEventListener('dragover',function(e){ e.preventDefault(); this.classList.add('drop-target'); e.dataTransfer.dropEffect='move'; });
-          slot.addEventListener('dragleave',function(){
+          slot.addEventListener('dragover', function(e){
+            e.preventDefault(); this.classList.add('drop-target'); if (e.dataTransfer) e.dataTransfer.dropEffect='move';
+          });
+          slot.addEventListener('dragleave', function(){
             this.classList.remove('drop-target');
-            var HH=parseInt(this.dataset.hour,10)||0; var key=this.dataset.date+'|'+HH;
-            hourHoverCount[key]=Math.max((hourHoverCount[key]||1)-1,0);
-            var date=this.dataset.date;
-            setTimeout(function(){ if(hourHoverCount[key]===0 && !(quarterHas[date]&&quarterHas[date][HH])){ collapseHour(date,HH); } },60);
+            var HH = parseInt(this.dataset.hour,10)||0; var key=this.dataset.date+'|'+HH;
+            hourHoverCount[key] = Math.max((hourHoverCount[key]||1)-1,0);
           });
-          slot.addEventListener('drop',function(e){
+          slot.addEventListener('drop', function(e){
             e.preventDefault(); this.classList.remove('drop-target');
-            var HH=parseInt(this.dataset.hour,10)||0; var key=this.dataset.date+'|'+HH;
-            hourHoverCount[key]=Math.max((hourHoverCount[key]||1)-1,0);
             try{
-              var payload=e.dataTransfer.getData('text/calendar-event'); if(!payload) return;
+              var payload=e.dataTransfer && e.dataTransfer.getData('text/calendar-event'); if(!payload) return;
               var obj=JSON.parse(payload); var fromDate=obj.fromDate; var id=obj.id;
               var nh=parseInt(this.dataset.hour,10)||0; var nm=parseInt(this.dataset.min,10)||0; var newTime=Ev.pad2(nh)+':'+Ev.pad2(nm);
               var targetDate=this.dataset.date;
               if(fromDate && fromDate!==targetDate){
                 var fromArr=Data.getEventsFor(fromDate); var idx=Ev.findIndexById(fromArr,id); if(idx===-1) return;
                 var moved=fromArr.splice(idx,1)[0]; moved.time=newTime; Data.setEventsFor(fromDate,fromArr);
-                var toArr=Data.getEventsFor(targetDate); toArr.push(moved); Data.setEventsFor(targetDate,toArr);
+                renderAllCells(); var toArr=Data.getEventsFor(targetDate); toArr.push(moved); Data.setEventsFor(targetDate,toArr);
+                withStableScroll(function(){ renderAllCells(); try{ renderTodayPanel(); }catch(_){} });
                 var cFrom=findCell(fromDate); if(cFrom) renderCell(cFrom);
-              }else{
+              } else {
                 var arr=Data.getEventsFor(targetDate);
                 arr = global.CalendarApp.events.updateEventTimeInArray(arr, id, newTime);
                 Data.setEventsFor(targetDate, arr);
+                renderAllCells();
               }
               var c1=findCell(targetDate); if(c1) renderCell(c1);
               renderTodayPanel();
             }catch(err){ console.warn('drop quarter',err); }
           });
 
-          var time=document.createElement('div'); time.className='time'; time.textContent=(m===0?(Ev.pad2(h)+':00'):(':'+Ev.pad2(m))); if(m!==0) time.classList.add('qmin');
-          var items=document.createElement('div'); items.className='items';
+          var time = document.createElement('div'); time.className='time'; time.textContent=(m===0?(Ev.pad2(h)+':00'):(':'+Ev.pad2(m))); if(m!==0) time.classList.add('qmin');
+          var items= document.createElement('div'); items.className='items';
 
-          var key=Ev.pad2(h)+':'+Ev.pad2(m);
-          var arr=(dateISO===Ev.toISODate(today)? byQToday[key] : byQNext[key])||[];
-          arr.forEach(function(ev){
-            var row=document.createElement('div'); row.className='item'+(ev.urgent?' urgent':''); if (ev && ev.done) { try { row.classList.add('done'); } catch(_){ row.className += ' done'; } } row.dataset.date=dateISO; row.dataset.id=ev.id; row.setAttribute('draggable','true');
-            row.addEventListener('dragstart',function(e){ var id=e.currentTarget.dataset.id; var d=e.currentTarget.dataset.date; e.dataTransfer.effectAllowed='move'; e.dataTransfer.setData('text/calendar-event', JSON.stringify({fromDate:d,id:id})); });
-            if(ev.urgent){ var flag=document.createElement('span'); flag.className='flag-urgent'; var icon=document.createElement('span'); icon.className='icon'; icon.innerHTML ='<svg class="icon"><use href="#i-fire-clock"></use></svg>';
-          // '🔥';
-                flag.appendChild(icon); row.appendChild(flag); }
-            var dot=document.createElement('span'); dot.className='dot '+(ev.type||'evt'); row.appendChild(dot);
-            var label=(ev.time||'')+' — '+ev.title+(ev.owner?(' • '+ev.owner):''); row.appendChild(document.createTextNode(label));
-            row.addEventListener('click',function(){ openInfo(dateISO,ev.id); });
+          var key = Ev.pad2(h)+':'+Ev.pad2(m);
+          var arr = (dateISO===todayISO ? byQToday[key] : byQNext[key]) || [];
+          for (var r=0; r<arr.length; r++){
+            var ev = arr[r];
+            var row = document.createElement('div');
+            row.className = 'item' + (ev.urgent ? ' urgent' : '') + (ev && ev.done ? ' done' : '');
+            row.dataset.date = (ev && ev._startDay) ? ev._startDay : dateISO;
+            row.dataset.id   = ev.id;
+            row.setAttribute('draggable','true');
+            row.addEventListener('dragstart', function(e){
+              var id=e.currentTarget.dataset.id; var d=e.currentTarget.dataset.date;
+              if (e.dataTransfer){ e.dataTransfer.effectAllowed='move'; e.dataTransfer.setData('text/calendar-event', JSON.stringify({fromDate:d,id:id})); }
+            });
+            if (ev.urgent){
+              var flag = document.createElement('span'); flag.className='flag-urgent';
+              var icon = document.createElement('span'); icon.className='icon'; icon.innerHTML = '<svg class="icon"><use href="#i-fire-clock"></use></svg>';
+              flag.appendChild(icon); row.appendChild(flag);
+            }
+            var dot = document.createElement('span'); dot.className = 'dot '+(ev.type||'evt'); row.appendChild(dot);
+            var label = (ev.time||'')+' — '+ev.title+(ev.owner?(' • '+ev.owner):'');
+            row.appendChild(document.createTextNode(label));
+            row.addEventListener('click', function(){
+              // В Today-панелі відкриваємо Info
+              var did = this.dataset.id; openInfo(dateISO, did);
+            });
             items.appendChild(row);
-          });
+          }
 
-          if(m!==0){ var show=(quarterHas[dateISO]&&quarterHas[dateISO][h])?true:false; slot.style.display=show?'grid':'none'; }
-          slot.appendChild(time); slot.appendChild(items); tl.appendChild(slot);
+          if (m!==0){
+            var keep = quarterHas[dateISO] && quarterHas[dateISO][h];
+            slot.style.display = keep ? 'grid' : 'none';
+          }
+          slot.appendChild(time);
+          slot.appendChild(items);
+          tl.appendChild(slot);
         }
       }
     }
 
-    var byQToday=buildByQuarter(allToday);
-    var byQNext =buildByQuarter(allNext);
-
-    if(earlyOpen) renderGroup(earlyTimeline,todayISO,0,6);
-    renderGroup(todayTimeline,todayISO,6,24);
-    if(lateOpen)  renderGroup(lateTimeline,nextISO,0,6);
-  }
-
+    if (earlyOpen) renderGroup(earlyTimeline, todayISO, 0, 6);
+    renderGroup(todayTimeline, todayISO, 6, 24);
+    if (lateOpen)  renderGroup(lateTimeline,  nextISO,  0, 6);
+}
   /* ===== Ініціалізація ===== */
   function migrateEnsureIds(){
     var s = Data.readStore();
@@ -970,7 +1051,7 @@ if (ev._seg){ item.className += ' ev--'+ev._seg; }
     Data.serverLoadStore().then(function(data){
       Data._setCache( Data.ensureStoreShape(data) );
       migrateEnsureIds();
-      renderAllCells(); renderTodayPanel();
+      withStableScroll(function(){ renderAllCells(); try{ renderTodayPanel(); }catch(_){} });
     });
   }
 
