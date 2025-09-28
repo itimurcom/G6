@@ -324,3 +324,26 @@ textarea#inputDescription {
 .ev--multi.ev--start { border-right: 0; }
 .ev--multi.ev--mid   { border-left: 0; border-right: 0; }
 .ev--multi.ev--end   { border-left: 0; }
+
+/* Resize handle for multi end */
+.ev-resize-end {
+  display:inline-block;
+  width:6px; height:14px;
+  margin-left:4px;
+  border-right:4px solid currentColor;
+  opacity:0.6;
+  cursor: ew-resize;
+}
+.ev--mid .ev-resize-end, .ev--single .ev-resize-end { display:none; }
+
+
+/* Light theme overrides for multi borders */
+html.light .ev--multi,
+body.light .ev--multi,
+.theme-light .ev--multi,
+[data-theme="light"] .ev--multi {
+  border-color: #000;
+}
+@media (prefers-color-scheme: light) {
+  :root:not(.theme-dark):not([data-theme="dark"]) .ev--multi { border-color:#000; }
+}

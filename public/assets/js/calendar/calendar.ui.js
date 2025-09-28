@@ -44,6 +44,7 @@
   var inputTime    = $('inputTime');
   
   var inputEndDate = $('inputEndDate');
+  var inputSpanDays = $('inputSpanDays');
 var inputTitle   = $('inputTitle');
   var inputOwner   = $('inputOwner');
   var inputType    = $('inputType');
@@ -282,6 +283,7 @@ if (filePicker) filePicker.addEventListener('change', function(e){
     if (inputTime)   inputTime.value = Ev.defaultTime();
     
     if (inputEndDate) inputEndDate.value = '';
+    if (inputSpanDays) inputSpanDays.value = '';
 if (inputTitle)  inputTitle.value = '';
     if (inputOwner)  inputOwner.value = '';
     if (inputType)   inputType.value = 'evt';
@@ -322,7 +324,16 @@ if (inputTitle)  inputTitle.value = '';
     if(!inputTime.value || !inputTitle.value.trim() || !inputType.value) return;
 
     var ev = {
-      end_date: (inputEndDate && inputEndDate.value) ? inputEndDate.value : null,
+      // end_date derived from span days (if >0); else null
+      end_date: (function(){
+        var v = (inputSpanDays && inputSpanDays.value!=='') ? parseInt(inputSpanDays.value,10) : NaN;
+        var d = (inputDate && inputDate.value) ? inputDate.value : '';
+        if (!isNaN(v) && v>0 && d){
+          var a=d.split('-').map(Number); var o=new Date(a[0],a[1]-1,a[2]); o.setDate(o.getDate()+v);
+          return o.toISOString().slice(0,10);
+        }
+        return null;
+      })(),
       id: (overlay && overlay.dataset.id) ? overlay.dataset.id : Ev.genId(),
       time:  inputTime.value,
       title: inputTitle.value.trim(),
@@ -353,7 +364,7 @@ if (inputTitle)  inputTitle.value = '';
           var toArr=Data.getEventsFor(newDate); toArr.push(ev); Data.setEventsFor(newDate, toArr);
           var c1=findCell(origDate); if (c1) renderCell(c1);
           var c2=findCell(newDate);  if (c2) renderCell(c2);
-        }
+         renderAllCells(); renderTodayPanel(); }
       }
     } else {
       var arr=Data.getEventsFor(newDate); arr.push(ev); Data.setEventsFor(newDate, arr);
@@ -627,9 +638,9 @@ if (window.CalendarApp && window.CalendarApp.ui) {
           var fromArr=Data.getEventsFor(fromDate); var idx=Ev.findIndexById(fromArr,id); if(idx===-1) return;
           var moved=fromArr.splice(idx,1)[0]; Data.setEventsFor(fromDate,fromArr);
           var toArr=Data.getEventsFor(toDate); toArr.push(moved); Data.setEventsFor(toDate,toArr);
-          var cFrom=cells.find(function(c){return c.dataset.date===fromDate;}); if(cFrom) renderCell(cFrom);
+          renderAllCells(); renderTodayPanel(); var cFrom=cells.find(function(c){return c.dataset.date===fromDate;}); if(cFrom) renderCell(cFrom);
           renderCell(this); renderTodayPanel();
-        }catch(err){ console.warn('drop failed',err); }
+        renderAllCells(); }catch(err){ console.warn('drop failed',err); }
       });
 
       grid.appendChild(cell); cells.push(cell);
@@ -637,7 +648,49 @@ if (window.CalendarApp && window.CalendarApp.ui) {
     renderAllCells(); renderTodayPanel();
   }
 
-  function renderAllCells(){ for(var i=0;i<cells.length;i++){ renderCell(cells[i]); } }
+  function renderAllCells(){ for(var i=0;i<cells.length;i++){ renderCell(cells[i]); } if (typeof enableResizeDnDOnCells==='function'){ enableResizeDnDOnCells(); } }
+
+  // Enable resizing multi-day end via DnD payload 'text/calendar-resize-end'
+  function enableResizeDnDOnCells(){
+    for (var i=0;i<cells.length;i++){
+      (function(cell){
+        if (!cell.__resizeEnabled){
+          cell.addEventListener('dragover', function(e){
+            try {
+              if (e.dataTransfer && (e.dataTransfer.types||[]).indexOf('text/calendar-resize-end')!==-1){
+                e.preventDefault(); e.dataTransfer.dropEffect='move'; cell.classList.add('drop-target');
+              }
+            } catch(_){}
+          });
+          cell.addEventListener('dragleave', function(){ cell.classList.remove('drop-target'); });
+          cell.addEventListener('drop', function(e){
+            cell.classList.remove('drop-target');
+            try{
+              var payload = e.dataTransfer.getData('text/calendar-resize-end');
+              if (!payload) return;
+              e.preventDefault();
+              var obj = JSON.parse(payload||'{}');
+              var startDate = obj.startDate, id = obj.id;
+              var toDate = cell.dataset.date;
+              if (!startDate || !id || !toDate) return;
+              var arr = Data.getEventsFor(startDate);
+              var idx = Ev.findIndexById(arr, id);
+              if (idx===-1) return;
+              // set end_date = null if toDate == startDate, else toDate
+              arr[idx].end_date = (toDate===startDate) ? null : toDate;
+              Data.setEventsFor(startDate, arr);
+              // re-render affected range (old/new)
+              renderAllCells();
+              renderTodayPanel();
+            }catch(err){ console.warn('resize drop failed', err); }
+          });
+          cell.__resizeEnabled = true;
+        }
+      })(cells[i]);
+    }
+  }
+  enableResizeDnDOnCells();
+
   function findCell(dateISO){ for(var i=0;i<cells.length;i++){ if(cells[i].dataset.date===dateISO) return cells[i]; } return null; }
 
   
@@ -692,6 +745,7 @@ function renderCell(cell){
     for(var i=0;i<filtered.length;i++){
       var ev=filtered[i];
       var item=document.createElement('div'); item.className='event '+Ev.typeToClass(ev.type)+(ev.urgent?' urgent':''); if (ev && ev.done) { try { item.classList.add('done'); } catch(_){ item.className += ' done'; } } item.setAttribute('draggable',(ev._seg && ev._seg!=='start' && ev._seg!=='single') ? 'false' : 'true'); item.setAttribute('data-id',ev.id);
+      item.setAttribute('data-seg', (ev._seg||'single'));
       item.setAttribute('data-start', (ev._startDay||dateISO));
     item.addEventListener('dragstart',function(e){
         var d=e.currentTarget; var parent=d.closest('.cell'); var dt=e.dataTransfer; var eid=d.getAttribute('data-id'); var from=parent?parent.dataset.date:null;
@@ -721,7 +775,8 @@ function renderCell(cell){
 
       del.addEventListener('click',function(e){
         e.stopPropagation(); var eid=e.currentTarget.parentElement.getAttribute('data-id');
-        var arr=Data.getEventsFor(dateISO); var idx=Ev.findIndexById(arr,eid); if(idx>-1){ arr.splice(idx,1); Data.setEventsFor(dateISO,arr); renderCell(cell); renderTodayPanel(); }
+        var arr=Data.getEventsFor(dateISO); var idx=Ev.findIndexById(arr,eid); if(idx>-1){ arr.splice(idx,1); Data.setEventsFor(dateISO,arr); renderCell(cell); renderTodayPanel(); renderAllCells();
+    }
       });
       
       item.addEventListener('click',function(e){ e.stopPropagation(); var eid=e.currentTarget.getAttribute('data-id'); openInfo(dateISO,eid); });
@@ -735,7 +790,20 @@ function renderCell(cell){
 if (ev._seg){ item.className += ' ev--'+ev._seg; }
     if (ev._seg && ev._seg!=='start' && ev._seg!=='single'){ time.textContent=''; }
 // item.appendChild(del);
-      item.appendChild(owner);
+      if (!__isMultiSeg){ item.appendChild(owner); }
+
+      // Add resize handle for end segment
+      if (ev._seg==='end'){
+        var rz=document.createElement('span');
+        rz.className='ev-resize-end';
+        rz.setAttribute('title','Змінити кінець');
+        rz.setAttribute('draggable','true');
+        rz.addEventListener('dragstart', function(e){
+          var dt=e.dataTransfer; dt.effectAllowed='move';
+          dt.setData('text/calendar-resize-end', JSON.stringify({ startDate: (ev._startDay||dateISO), id: ev.id }));
+        });
+        item.appendChild(rz);
+      }
       item.setAttribute('title', ev.title);
       list.appendChild(item);
     }

@@ -25,14 +25,13 @@
           <input id="inputTime" name="time" type="time" required>
         </div>
       </div>
-      <!-- 1b. Кінець події (дата, опціонально) -->
+      <!-- 1b. Тривалість (днів, опц.) -->
       <div>
-        <label for="inputEndDate">Кінець події (дата, опціонально)</label>
-        <input id="inputEndDate" name="end_date" type="date">
+        <label for="inputSpanDays">Тривалість (днів, опц.)</label>
+        <input id="inputSpanDays" name="span_days" type="number" min="0" step="1" placeholder="0 = одноденна">
+        <small class="muted">0 або пусто → одноденна. N > 0 → дата завершення = дата початку + N днів.</small>
       </div>
-
-
-      <!-- 2. Назва події (повна ширина) -->
+<!-- 2. Назва події (повна ширина) -->
       <div>
         <label for="inputTitle">Назва події</label>
         <input id="inputTitle" name="title" type="text" placeholder="Напр., Статус-дзвінок" required>
