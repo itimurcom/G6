@@ -107,7 +107,6 @@
   transition: transform .04s ease;
 }
 
-.cell:hover { transform: translateY(-1px); }
 .pad { visibility: hidden; cursor: default; }
 .cell-head { display: flex; justify-content: space-between; align-items: center; gap: 8px;}
 .cell-head-plus {font-weight: 400; position:relative; top:-4px; left:-4px; font-size:larger; opacity: 40%; pointer-events: none;}

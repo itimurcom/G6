@@ -256,7 +256,7 @@ if (filePicker) filePicker.addEventListener('change', function(e){
     overlay.removeAttribute('inert');
     overlay.setAttribute('aria-hidden','false');
     overlay.classList.add('show');
-    document.body.style.overflow='hidden';
+    // document.body.style.overflow='hidden';
     setTimeout(function(){ if(inputTitle) inputTitle.focus(); },0);
   }
   function closeOverlay(){
@@ -517,7 +517,7 @@ if (window.CalendarApp && window.CalendarApp.ui) {
       setInfoModalType(ev.type);
     if (infoOverlay){
       infoOverlay.classList.add('show'); infoOverlay.setAttribute('aria-hidden','false'); infoOverlay.removeAttribute('inert');
-      document.body.style.overflow='hidden';
+      // document.body.style.overflow='hidden';
 
       var el = document.querySelector('#editEvBtn');
       el.setAttribute('data-id',id);
@@ -563,7 +563,7 @@ if (window.CalendarApp && window.CalendarApp.ui) {
       });
     }
     chatOverlay.classList.add('show'); chatOverlay.setAttribute('aria-hidden','false'); chatOverlay.removeAttribute('inert');
-    document.body.style.overflow='hidden';
+    // document.body.style.overflow='hidden';
   }
   if (btnChat)   btnChat.addEventListener('click',openChat);
   if (chatClose) chatClose.addEventListener('click',function(){ chatOverlay.classList.remove('show'); chatOverlay.setAttribute('aria-hidden','true'); chatOverlay.setAttribute('inert',''); document.body.style.overflow=''; });
