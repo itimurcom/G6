@@ -312,3 +312,15 @@ textarea#inputDescription {
   box-sizing: border-box;      /* враховує падінги/рамку */
   width:100%;
 }
+
+/* Multi-day event segments */
+.ev--start { border-top-right-radius: 0; border-bottom-right-radius: 0; }
+.ev--mid   { border-radius: 0; }
+.ev--end   { border-top-left-radius: 0; border-bottom-left-radius: 0; }
+
+
+/* Multi-day visual borders */
+.ev--multi { border: 2px solid #fff; }
+.ev--multi.ev--start { border-right: 0; }
+.ev--multi.ev--mid   { border-left: 0; border-right: 0; }
+.ev--multi.ev--end   { border-left: 0; }

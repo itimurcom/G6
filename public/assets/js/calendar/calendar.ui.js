@@ -42,7 +42,9 @@
   var modalTitle   = $('modalTitle');
   var inputDate    = $('inputDate');
   var inputTime    = $('inputTime');
-  var inputTitle   = $('inputTitle');
+  
+  var inputEndDate = $('inputEndDate');
+var inputTitle   = $('inputTitle');
   var inputOwner   = $('inputOwner');
   var inputType    = $('inputType');
   var inputUrgent  = $('inputUrgent');
@@ -256,7 +258,7 @@ if (filePicker) filePicker.addEventListener('change', function(e){
     overlay.removeAttribute('inert');
     overlay.setAttribute('aria-hidden','false');
     overlay.classList.add('show');
-    // document.body.style.overflow='hidden';
+    document.body.style.overflow='hidden';
     setTimeout(function(){ if(inputTitle) inputTitle.focus(); },0);
   }
   function closeOverlay(){
@@ -278,7 +280,9 @@ if (filePicker) filePicker.addEventListener('change', function(e){
     overlay.dataset.mode='new'; overlay.dataset.origDate=dateISO; delete overlay.dataset.id;
     if (inputDate)   inputDate.value = dateISO;
     if (inputTime)   inputTime.value = Ev.defaultTime();
-    if (inputTitle)  inputTitle.value = '';
+    
+    if (inputEndDate) inputEndDate.value = '';
+if (inputTitle)  inputTitle.value = '';
     if (inputOwner)  inputOwner.value = '';
     if (inputType)   inputType.value = 'evt';
     if (inputUrgent) inputUrgent.checked = false;
@@ -291,7 +295,7 @@ if (filePicker) filePicker.addEventListener('change', function(e){
   }
 
 
-  function openModalEdit(dateISO,id){
+  function openModalEdit(dateISO, id){
     var arr=Data.getEventsFor(dateISO); var ev=arr.find(function(e){return e.id===id;}); if(!ev) return;
     if (modalTitle) modalTitle.textContent='Редагувати подію';
     if (!overlay) return;
@@ -318,6 +322,7 @@ if (filePicker) filePicker.addEventListener('change', function(e){
     if(!inputTime.value || !inputTitle.value.trim() || !inputType.value) return;
 
     var ev = {
+      end_date: (inputEndDate && inputEndDate.value) ? inputEndDate.value : null,
       id: (overlay && overlay.dataset.id) ? overlay.dataset.id : Ev.genId(),
       time:  inputTime.value,
       title: inputTitle.value.trim(),
@@ -517,13 +522,13 @@ if (window.CalendarApp && window.CalendarApp.ui) {
       setInfoModalType(ev.type);
     if (infoOverlay){
       infoOverlay.classList.add('show'); infoOverlay.setAttribute('aria-hidden','false'); infoOverlay.removeAttribute('inert');
-      // document.body.style.overflow='hidden';
+      document.body.style.overflow='hidden';
 
       var el = document.querySelector('#editEvBtn');
       el.setAttribute('data-id',id);
-      el.addEventListener('click',function(e){ closeInfo(); e.stopPropagation(); var eid=e.currentTarget.getAttribute('data-id'); openModalEdit(dateISO,eid); });
+      el.addEventListener('click',function(e){ closeInfo(); e.stopPropagation(); var eid=e.currentTarget.getAttribute('data-id'); openModalEdit(this.getAttribute('data-start')||dateISO, eid); });
       // infoTitle
-      // item.addEventListener('click',function(e){ e.stopPropagation(); var eid=e.currentTarget.getAttribute('data-id'); openModalEdit(dateISO,eid); });
+      // item.addEventListener('click',function(e){ e.stopPropagation(); var eid=e.currentTarget.getAttribute('data-id'); openModalEdit(this.getAttribute('data-start')||dateISO, eid); });
     }
   }
 
@@ -563,7 +568,7 @@ if (window.CalendarApp && window.CalendarApp.ui) {
       });
     }
     chatOverlay.classList.add('show'); chatOverlay.setAttribute('aria-hidden','false'); chatOverlay.removeAttribute('inert');
-    // document.body.style.overflow='hidden';
+    document.body.style.overflow='hidden';
   }
   if (btnChat)   btnChat.addEventListener('click',openChat);
   if (chatClose) chatClose.addEventListener('click',function(){ chatOverlay.classList.remove('show'); chatOverlay.setAttribute('aria-hidden','true'); chatOverlay.setAttribute('inert',''); document.body.style.overflow=''; });
@@ -635,22 +640,70 @@ if (window.CalendarApp && window.CalendarApp.ui) {
   function renderAllCells(){ for(var i=0;i<cells.length;i++){ renderCell(cells[i]); } }
   function findCell(dateISO){ for(var i=0;i<cells.length;i++){ if(cells[i].dataset.date===dateISO) return cells[i]; } return null; }
 
-  function renderCell(cell){
+  
+// === Multi-day helpers ===
+function ymd(d){ return (d instanceof Date ? d.toISOString().slice(0,10) : (d||'')).slice(0,10); }
+function parseYMD(s){ var a=(s||'').split('-').map(Number); return new Date(a[0], (a[1]||1)-1, a[2]||1); }
+function addDays(d,n){ var x=new Date(d); x.setDate(x.getDate()+n); return x; }
+function segmentForDay(day, startDay, endDay){
+  var d=ymd(day), a=ymd(startDay), b=ymd(endDay||startDay);
+  if (b<a){ var t=a; a=b; b=t; }
+  if (d<a || d>b) return null;
+  if (a===b) return 'single';
+  if (d===a) return 'start';
+  if (d===b) return 'end';
+  return 'mid';
+}
+function getEventsForDayExpanded(dateISO){
+  var base = (Data.getEventsFor ? Data.getEventsFor(dateISO) : []).slice();
+  var out = base.map(function(ev){ var c=Object.assign({}, ev); c._seg = ev.end_date ? segmentForDay(dateISO, dateISO, ev.end_date) : 'single'; c._startDay=dateISO; return c; });
+  if (typeof Data._getCache === 'function'){
+    var cache = Data._getCache() || {};
+    Object.keys(cache).forEach(function(day){
+      if (day===dateISO) return;
+      var arr = cache[day] || [];
+      for (var i=0;i<arr.length;i++){
+        var ev = arr[i]; if (!ev || !ev.end_date) continue;
+        var seg = segmentForDay(dateISO, day, ev.end_date);
+        if (!seg) continue;
+        var c = Object.assign({}, ev); c._seg = seg; c._startDay = day;
+        // mid/end: hide time by default (can be overridden later)
+        if (seg!=='start' && seg!=='single') c._hideTime = true;
+        out.push(c);
+      }
+    });
+  }
+  // sort: urgent desc, then time asc, then title
+  out.sort(function(a,b){
+    var u=(b.urgent|0)-(a.urgent|0); if (u) return u;
+    var at=(a.time||''), bt=(b.time||''); var t=at.localeCompare(bt); if (t) return t;
+    return (a.title||'').localeCompare(b.title||'');
+  });
+  return out;
+}
+
+function renderCell(cell){
     var dateISO=cell.dataset.date; var list=cell.querySelector('.events'); list.innerHTML='';
-    var events=Data.getEventsFor(dateISO).slice().sort(function(a,b){ return (a.time||'').localeCompare(b.time||''); });
+    var events=getEventsForDayExpanded(dateISO);
+    
     var matcher=Ev.buildMatcher(currentType, filterText ? filterText.value : '');
     var filtered=events.filter(matcher);
 
     for(var i=0;i<filtered.length;i++){
       var ev=filtered[i];
-      var item=document.createElement('div'); item.className='event '+Ev.typeToClass(ev.type)+(ev.urgent?' urgent':''); if (ev && ev.done) { try { item.classList.add('done'); } catch(_){ item.className += ' done'; } } item.setAttribute('draggable','true'); item.setAttribute('data-id',ev.id);
-      item.addEventListener('dragstart',function(e){
+      var item=document.createElement('div'); item.className='event '+Ev.typeToClass(ev.type)+(ev.urgent?' urgent':''); if (ev && ev.done) { try { item.classList.add('done'); } catch(_){ item.className += ' done'; } } item.setAttribute('draggable',(ev._seg && ev._seg!=='start' && ev._seg!=='single') ? 'false' : 'true'); item.setAttribute('data-id',ev.id);
+      item.setAttribute('data-start', (ev._startDay||dateISO));
+    item.addEventListener('dragstart',function(e){
         var d=e.currentTarget; var parent=d.closest('.cell'); var dt=e.dataTransfer; var eid=d.getAttribute('data-id'); var from=parent?parent.dataset.date:null;
         d.classList.add('dragging'); dt.effectAllowed='move'; dt.setData('text/calendar-event', JSON.stringify({fromDate:from,id:eid}));
       });
       item.addEventListener('dragend',function(e){ e.currentTarget.classList.remove('dragging'); });
 
       var bar=document.createElement('div'); bar.className='bar';
+    
+    // -- compact content for multi-day segments: no extra badges/owner lines --
+    var __isMultiSeg = !!(ev._seg && ev._seg!=='single');
+
       var time=document.createElement('div'); time.className='event-time'; time.textContent=ev.time||'';
       var title=document.createElement('div'); title.className='event-title';
 
@@ -676,7 +729,12 @@ if (window.CalendarApp && window.CalendarApp.ui) {
       item.appendChild(bar);
       item.appendChild(time);
       item.appendChild(title);
-      // item.appendChild(del);
+      
+    
+    if (ev._seg && ev._seg!=='single'){ item.classList.add('ev--multi'); }
+if (ev._seg){ item.className += ' ev--'+ev._seg; }
+    if (ev._seg && ev._seg!=='start' && ev._seg!=='single'){ time.textContent=''; }
+// item.appendChild(del);
       item.appendChild(owner);
       item.setAttribute('title', ev.title);
       list.appendChild(item);

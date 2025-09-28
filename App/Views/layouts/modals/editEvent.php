@@ -25,6 +25,12 @@
           <input id="inputTime" name="time" type="time" required>
         </div>
       </div>
+      <!-- 1b. Кінець події (дата, опціонально) -->
+      <div>
+        <label for="inputEndDate">Кінець події (дата, опціонально)</label>
+        <input id="inputEndDate" name="end_date" type="date">
+      </div>
+
 
       <!-- 2. Назва події (повна ширина) -->
       <div>
