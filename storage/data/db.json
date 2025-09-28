@@ -1569,17 +1569,17 @@
             "description": ""
         },
         {
-            "done": true,
             "id": "e1bb193d-955e-4ebf-a5a2-e99a1874e53a",
-            "owner": "Марина",
             "time": "20:15",
             "title": "Реліз\/деплой",
+            "owner": "Марина",
             "type": "mi",
-            "urgent": false,
-            "user_id": 0,
+            "urgent": true,
+            "done": false,
             "incoming_no": "",
             "outgoing_no": "",
-            "description": ""
+            "description": "",
+            "user_id": 0
         },
         {
             "done": false,
