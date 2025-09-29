@@ -938,7 +938,23 @@ if (ev._seg){ item.className += ' ev--'+ev._seg; }      // item.appendChild(del)
     var byQToday = buildByQuarter(allToday);
     var byQNext  = buildByQuarter(allNext);
 
-    function renderGroup(tl, dateISO, startHour, endHour){
+    
+    function expandHour(dateISO, hour){
+      ['15','30','45'].forEach(function(min){
+        var elq = document.querySelector('.slot.quarter[data-date="'+dateISO+'"][data-hour="'+hour+'"][data-min="'+min+'"]');
+        if (elq) elq.style.display = 'grid';
+      });
+    }
+
+    function collapseHour(dateISO, hour){
+      if (quarterHas[dateISO] && quarterHas[dateISO][hour]) return;
+      ['15','30','45'].forEach(function(min){
+        var elq = document.querySelector('.slot.quarter[data-date="'+dateISO+'"][data-hour="'+hour+'"][data-min="'+min+'"]');
+        if (elq) elq.style.display = 'none';
+      });
+    }
+
+function renderGroup(tl, dateISO, startHour, endHour){
       if (!tl) return;
       for (var h=startHour; h<endHour; h++){
         for (var m=0; m<60; m+=15){
@@ -952,6 +968,8 @@ if (ev._seg){ item.className += ' ev--'+ev._seg; }      // item.appendChild(del)
             e.preventDefault(); this.classList.add('drop-target');
             var HH = parseInt(this.dataset.hour,10)||0; var key=this.dataset.date+'|'+HH;
             hourHoverCount[key] = (hourHoverCount[key]||0) + 1;
+          
+            if (this.dataset.min === '0') { expandHour(this.dataset.date, HH); }
           });
           slot.addEventListener('dragover', function(e){
             e.preventDefault(); this.classList.add('drop-target'); if (e.dataTransfer) e.dataTransfer.dropEffect='move';
@@ -960,9 +978,24 @@ if (ev._seg){ item.className += ' ev--'+ev._seg; }      // item.appendChild(del)
             this.classList.remove('drop-target');
             var HH = parseInt(this.dataset.hour,10)||0; var key=this.dataset.date+'|'+HH;
             hourHoverCount[key] = Math.max((hourHoverCount[key]||1)-1,0);
+            var date = this.dataset.date;
+            setTimeout(function(){
+              if (hourHoverCount[key]===0 && !(quarterHas[date] && quarterHas[date][HH])) {
+                collapseHour(date, HH);
+              }
+            }, 60);
           });
           slot.addEventListener('drop', function(e){
             e.preventDefault(); this.classList.remove('drop-target');
+            // decrement hover counter and collapse hour if needed
+            var HH = parseInt(this.dataset.hour,10)||0; var key=this.dataset.date+'|'+HH;
+            hourHoverCount[key] = Math.max((hourHoverCount[key]||1)-1,0);
+            var __date = this.dataset.date;
+            setTimeout(function(){
+              if (hourHoverCount[key]===0 && !(quarterHas[__date] && quarterHas[__date][HH])) {
+                collapseHour(__date, HH);
+              }
+            }, 60);
             try{
               var payload=e.dataTransfer && e.dataTransfer.getData('text/calendar-event'); if(!payload) return;
               var obj=JSON.parse(payload); var fromDate=obj.fromDate; var id=obj.id;
