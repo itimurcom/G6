@@ -29,7 +29,7 @@
       <div>
         <label for="inputSpanDays">Тривалість (днів, опц.)</label>
         <input id="inputSpanDays" name="span_days" type="number" min="0" step="1" placeholder="0 = одноденна">
-        <small class="muted">0 або пусто → одноденна. N > 0 → дата завершення = дата початку + N днів.</small>
+        <!-- <small class="muted">0 або пусто → одноденна. N > 0 → дата завершення = дата початку + N днів.</small> -->
       </div>
 <!-- 2. Назва події (повна ширина) -->
       <div>

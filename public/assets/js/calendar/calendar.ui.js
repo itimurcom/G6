@@ -314,10 +314,11 @@ try{ __lastFocusEl = document.activeElement; }catch(_){}
     var ed = ev.end_date || '';
     if (ed){
       try{
-        var ds=new Date(dateISO+'T00:00:00');
-        var de=new Date(ed+'T00:00:00');
+        var __a=dateISO.split('-').map(Number); var __b=ed.split('-').map(Number);
+        var ds=new Date(Date.UTC(__a[0],__a[1]-1,__a[2]));
+        var de=new Date(Date.UTC(__b[0],__b[1]-1,__b[2]));
         var diff=Math.round((de-ds)/86400000);
-        inputSpanDays.value = (diff>0) ? String(diff) : '';
+        inputSpanDays.value = (diff>=1) ? String(diff+1) : '';
       } catch(_){ inputSpanDays.value=''; }
     }
   }
@@ -361,8 +362,10 @@ if (modal) modal.addEventListener('submit', function(e){
       end_date: (function(){
         var v = (inputSpanDays && inputSpanDays.value!=='') ? parseInt(inputSpanDays.value,10) : NaN;
         var d = (inputDate && inputDate.value) ? inputDate.value : '';
-        if (!isNaN(v) && v>0 && d){
-          var a=d.split('-').map(Number); var o=new Date(a[0],a[1]-1,a[2]); o.setDate(o.getDate()+v);
+        if (!isNaN(v) && v>1 && d){
+          var a=d.split('-').map(Number);
+          var o=new Date(Date.UTC(a[0],a[1]-1,a[2]));
+          o.setUTCDate(o.getUTCDate()+(v-1));
           return o.toISOString().slice(0,10);
         }
         return null;
@@ -796,19 +799,13 @@ function getEventsForDayExpanded(dateISO){
       }
     });
   }
-  // sort: time asc (numeric), then urgent desc, then title
-out.sort(function(a,b){
-  function toMinutes(t){
-    var p=(String(t||'00:00')).split(':');
-    var h=+p[0]||0, m=+p[1]||0;
-    return h*60+m;
-  }
-  var am=toMinutes(a.time), bm=toMinutes(b.time);
-  if (am!==bm) return am-bm;
-  var u=(b.urgent|0)-(a.urgent|0); if (u) return u;
-  return (a.title||'').localeCompare(b.title||'');
-});
-return out;
+  // sort: urgent desc, then time asc, then title
+  out.sort(function(a,b){
+    var u=(b.urgent|0)-(a.urgent|0); if (u) return u;
+    var at=(a.time||''), bt=(b.time||''); var t=at.localeCompare(bt); if (t) return t;
+    return (a.title||'').localeCompare(b.title||'');
+  });
+  return out;
 }
 
 function renderCell(cell){
@@ -944,23 +941,7 @@ if (ev._seg){ item.className += ' ev--'+ev._seg; }      // item.appendChild(del)
     var byQToday = buildByQuarter(allToday);
     var byQNext  = buildByQuarter(allNext);
 
-    
-// Interactive hour expand/collapse during DnD on the Today panel
-function expandHour(dateISO, hour){
-  ['15','30','45'].forEach(function(min){
-    var elq = document.querySelector('.slot.quarter[data-date="'+dateISO+'"][data-hour="'+hour+'"][data-min="'+min+'"]');
-    if (elq) elq.style.display = 'grid';
-  });
-}
-function collapseHour(dateISO, hour){
-  // keep open if the hour has quarter events
-  if (quarterHas[dateISO] && quarterHas[dateISO][hour]) return;
-  ['15','30','45'].forEach(function(min){
-    var elq = document.querySelector('.slot.quarter[data-date="'+dateISO+'"][data-hour="'+hour+'"][data-min="'+min+'"]');
-    if (elq) elq.style.display = 'none';
-  });
-}
-function renderGroup(tl, dateISO, startHour, endHour){
+    function renderGroup(tl, dateISO, startHour, endHour){
       if (!tl) return;
       for (var h=startHour; h<endHour; h++){
         for (var m=0; m<60; m+=15){
@@ -974,7 +955,6 @@ function renderGroup(tl, dateISO, startHour, endHour){
             e.preventDefault(); this.classList.add('drop-target');
             var HH = parseInt(this.dataset.hour,10)||0; var key=this.dataset.date+'|'+HH;
             hourHoverCount[key] = (hourHoverCount[key]||0) + 1;
-            if (this.dataset.min === '0') { expandHour(this.dataset.date, HH); }
           });
           slot.addEventListener('dragover', function(e){
             e.preventDefault(); this.classList.add('drop-target'); if (e.dataTransfer) e.dataTransfer.dropEffect='move';
@@ -983,17 +963,9 @@ function renderGroup(tl, dateISO, startHour, endHour){
             this.classList.remove('drop-target');
             var HH = parseInt(this.dataset.hour,10)||0; var key=this.dataset.date+'|'+HH;
             hourHoverCount[key] = Math.max((hourHoverCount[key]||1)-1,0);
-            var date = this.dataset.date;
-            setTimeout(function(){
-              if (hourHoverCount[key]===0 && !(quarterHas[date] && quarterHas[date][HH])) { collapseHour(date, HH); }
-            }, 60);
           });
           slot.addEventListener('drop', function(e){
             e.preventDefault(); this.classList.remove('drop-target');
-            var HH = parseInt(this.dataset.hour,10)||0; var key=this.dataset.date+'|'+HH;
-            hourHoverCount[key] = Math.max((hourHoverCount[key]||1)-1,0);
-            var __date = this.dataset.date;
-            setTimeout(function(){ if (hourHoverCount[key]===0 && !(quarterHas[__date] && quarterHas[__date][HH])) { collapseHour(__date, HH); } }, 60);
             try{
               var payload=e.dataTransfer && e.dataTransfer.getData('text/calendar-event'); if(!payload) return;
               var obj=JSON.parse(payload); var fromDate=obj.fromDate; var id=obj.id;
@@ -1053,10 +1025,6 @@ function renderGroup(tl, dateISO, startHour, endHour){
             items.appendChild(row);
           }
 
-          if (m!==0){
-            var keep = quarterHas[dateISO] && quarterHas[dateISO][h];
-            slot.style.display = keep ? 'grid' : 'none';
-          }
           if (m!==0){
             var keep = quarterHas[dateISO] && quarterHas[dateISO][h];
             slot.style.display = keep ? 'grid' : 'none';
