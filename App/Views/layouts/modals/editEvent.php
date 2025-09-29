@@ -14,23 +14,21 @@
     </header>
 
     <div class="content">
-      <!-- 1. Дата | Час -->
-      <div class="row">
+      <!-- 1. Дата | Дні | Час -->
+      <div class="row col3">
         <div>
           <label for="inputDate">Дата</label>
           <input id="inputDate" name="date" type="date" required>
         </div>
+      <div>
+        <label for="inputSpanDays">Тривалість (днів, опц.)</label>
+        <input id="inputSpanDays" name="span_days" type="number" min="1" step="1" placeholder="1 = одноденна">
+      </div>
         <div>
           <label for="inputTime">Час</label>
           <input id="inputTime" name="time" type="time" required>
         </div>
-      </div>
-      <!-- 1b. Тривалість (днів, опц.) -->
-      <div>
-        <label for="inputSpanDays">Тривалість (днів, опц.)</label>
-        <input id="inputSpanDays" name="span_days" type="number" min="0" step="1" placeholder="0 = одноденна">
-        <!-- <small class="muted">0 або пусто → одноденна. N > 0 → дата завершення = дата початку + N днів.</small> -->
-      </div>
+        </div>
 <!-- 2. Назва події (повна ширина) -->
       <div>
         <label for="inputTitle">Назва події</label>

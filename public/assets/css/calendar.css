@@ -246,6 +246,7 @@
 .modal .content { position: relative; padding: 16px 18px; display: grid; gap: 12px; overflow: auto; background: var(--bg);}
 .modal label { font-size: 13px; color: var(--muted); font-weight: 700; }
 .modal .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.modal .row.col3 {grid-template-columns: 1fr 1fr 1fr;}
 .modal footer {
   display: flex; justify-content: space-between; gap: 10px;
   padding: 14px 18px 18px; border-top: 1px solid var(--border);
