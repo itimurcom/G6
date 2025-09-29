@@ -278,7 +278,7 @@ if (filePicker) filePicker.addEventListener('change', function(e){
       try{ __lastFocusEl && __lastFocusEl.focus && __lastFocusEl.focus({preventScroll:true}); }catch(_){}
     });
   }
-  window.addEventListener('keydown',function(e){ if(e.key==='Escape') closeOverlay(); });
+  window.addEventListener('keydown',function(e){ if(e.key==='Escape'){ try{ closeOverlay(); }catch(_){ } try{ closeInfo(); }catch(_){ } } });
 
   function openModalNew(dateISO){
   try{ __lastFocusEl = document.activeElement; }catch(_){}
@@ -309,20 +309,23 @@ try{ __lastFocusEl = document.activeElement; }catch(_){}
   var ev  = arr.find(function(e){ return e.id===id; });
   if (!ev) return;
 
-  // Prefill span days (difference between end_date and start date)
+  // Prefill span days (inclusive, UTC)
   if (inputSpanDays){
     var ed = ev.end_date || '';
-    if (ed){
-      try{
-        var __a=dateISO.split('-').map(Number); var __b=ed.split('-').map(Number);
+    try{
+      if (ed){
+        var __a=dateISO.split('-').map(Number);
+        var __b=ed.split('-').map(Number);
         var ds=new Date(Date.UTC(__a[0],__a[1]-1,__a[2]));
         var de=new Date(Date.UTC(__b[0],__b[1]-1,__b[2]));
-        var diff=Math.round((de-ds)/86400000);
-        inputSpanDays.value = (diff>=1) ? String(diff+1) : '';
-      } catch(_){ inputSpanDays.value=''; }
-    }
+        var diff = Math.round((de-ds)/86400000) + 1; // inclusive
+        inputSpanDays.value = (diff>0) ? String(diff) : '1';
+      } else {
+        inputSpanDays.value = '1';
+      }
+    } catch(_){ inputSpanDays.value = '1'; }
   }
-    try{ __lastFocusEl = document.activeElement; }catch(_){}
+try{ __lastFocusEl = document.activeElement; }catch(_){}
     var arr=Data.getEventsFor(dateISO); var ev=arr.find(function(e){return e.id===id;}); if(!ev) return;
     if (modalTitle) modalTitle.textContent='Редагувати подію';
     if (!overlay) return;
@@ -612,7 +615,7 @@ if (window.CalendarApp && window.CalendarApp.ui) {
     var todayISO = Ev.toISODate(today);
     var list = Data.getEventsFor(todayISO).filter(function(e){
       return (e.title||'').toLowerCase().includes('вкз');
-    }).sort(function(a,b){return (a.time||'').localeCompare(b.time||'');});
+    }).sort(function(a,b){ function toM(t){ var p=String(t||'00:00').split(':'); var h=+p[0]||0, m=+p[1]||0; return h*60+m; } var am=toM(a.time), bm=toM(b.time); if (am!==bm) return am-bm; var u=(b.urgent|0)-(a.urgent|0); if (u) return u; return (a.title||'').localeCompare(b.title||''); });
     chatContent.innerHTML='';
     if(list.length===0){ chatContent.textContent='Події «ВКЗ» на сьогодні не знайдені.'; }
     else{
@@ -799,13 +802,15 @@ function getEventsForDayExpanded(dateISO){
       }
     });
   }
-  // sort: urgent desc, then time asc, then title
+  // sort: time asc (numeric), then urgent desc, then title
   out.sort(function(a,b){
+    function toM(t){ var p=String(t||'00:00').split(':'); var h=+p[0]||0, m=+p[1]||0; return h*60+m; }
+    var am=toM(a.time), bm=toM(b.time);
+    if (am!==bm) return am-bm;
     var u=(b.urgent|0)-(a.urgent|0); if (u) return u;
-    var at=(a.time||''), bt=(b.time||''); var t=at.localeCompare(bt); if (t) return t;
     return (a.title||'').localeCompare(b.title||'');
   });
-  return out;
+return out;
 }
 
 function renderCell(cell){
@@ -898,10 +903,10 @@ if (ev._seg){ item.className += ' ev--'+ev._seg; }      // item.appendChild(del)
     var matcher  = Ev.buildMatcher(currentType, filterText ? filterText.value : '');
     var allToday = getEventsForDayExpanded(todayISO)
       .filter(matcher)
-      .sort(function(a,b){ return (a.time||'').localeCompare(b.time||''); });
+      .sort(function(a,b){ function toM(t){ var p=String(t||'00:00').split(':'); var h=+p[0]||0, m=+p[1]||0; return h*60+m; } var am=toM(a.time), bm=toM(b.time); if (am!==bm) return am-bm; var u=(b.urgent|0)-(a.urgent|0); if (u) return u; return (a.title||'').localeCompare(b.title||''); });
     var allNext  = getEventsForDayExpanded(nextISO)
       .filter(matcher)
-      .sort(function(a,b){ return (a.time||'').localeCompare(b.time||''); });
+      .sort(function(a,b){ function toM(t){ var p=String(t||'00:00').split(':'); var h=+p[0]||0, m=+p[1]||0; return h*60+m; } var am=toM(a.time), bm=toM(b.time); if (am!==bm) return am-bm; var u=(b.urgent|0)-(a.urgent|0); if (u) return u; return (a.title||'').localeCompare(b.title||''); });
 
     quarterHas[todayISO] = {}; quarterHas[nextISO] = {};
 
