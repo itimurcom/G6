@@ -797,19 +797,18 @@ function getEventsForDayExpanded(dateISO){
     });
   }
   // sort: time asc (numeric), then urgent desc, then title
-  out.sort(function(a,b){
-    function toMinutes(t){
-      var p=(String(t||'00:00')).split(':');
-      var h=+p[0]||0, m=+p[1]||0;
-      return h*60+m;
-    }
-    var am = toMinutes(a.time), bm = toMinutes(b.time);
-    if (am !== bm) return am - bm;
-    var u = (b.urgent|0) - (a.urgent|0);
-    if (u) return u;
-    return (a.title||'').localeCompare(b.title||'');
-  });
-  return out;
+out.sort(function(a,b){
+  function toMinutes(t){
+    var p=(String(t||'00:00')).split(':');
+    var h=+p[0]||0, m=+p[1]||0;
+    return h*60+m;
+  }
+  var am=toMinutes(a.time), bm=toMinutes(b.time);
+  if (am!==bm) return am-bm;
+  var u=(b.urgent|0)-(a.urgent|0); if (u) return u;
+  return (a.title||'').localeCompare(b.title||'');
+});
+return out;
 }
 
 function renderCell(cell){
@@ -946,21 +945,21 @@ if (ev._seg){ item.className += ' ev--'+ev._seg; }      // item.appendChild(del)
     var byQNext  = buildByQuarter(allNext);
 
     
-    // Restore interactive hour expand/collapse during DnD for Today panel
-    function expandHour(dateISO, hour){
-      ['15','30','45'].forEach(function(min){
-        var elq = document.querySelector('.slot.quarter[data-date="'+dateISO+'"][data-hour="'+hour+'"][data-min="'+min+'"]');
-        if (elq) elq.style.display = 'grid';
-      });
-    }
-    function collapseHour(dateISO, hour){
-      // keep open if the hour has quarter events
-      if (quarterHas[dateISO] && quarterHas[dateISO][hour]) return;
-      ['15','30','45'].forEach(function(min){
-        var elq = document.querySelector('.slot.quarter[data-date="'+dateISO+'"][data-hour="'+hour+'"][data-min="'+min+'"]');
-        if (elq) elq.style.display = 'none';
-      });
-    }
+// Interactive hour expand/collapse during DnD on the Today panel
+function expandHour(dateISO, hour){
+  ['15','30','45'].forEach(function(min){
+    var elq = document.querySelector('.slot.quarter[data-date="'+dateISO+'"][data-hour="'+hour+'"][data-min="'+min+'"]');
+    if (elq) elq.style.display = 'grid';
+  });
+}
+function collapseHour(dateISO, hour){
+  // keep open if the hour has quarter events
+  if (quarterHas[dateISO] && quarterHas[dateISO][hour]) return;
+  ['15','30','45'].forEach(function(min){
+    var elq = document.querySelector('.slot.quarter[data-date="'+dateISO+'"][data-hour="'+hour+'"][data-min="'+min+'"]');
+    if (elq) elq.style.display = 'none';
+  });
+}
 function renderGroup(tl, dateISO, startHour, endHour){
       if (!tl) return;
       for (var h=startHour; h<endHour; h++){
@@ -1026,9 +1025,15 @@ function renderGroup(tl, dateISO, startHour, endHour){
             var ev = arr[r];
             var row = document.createElement('div');
             row.className = 'item' + (ev.urgent ? ' urgent' : '') + (ev && ev.done ? ' done' : '');
-            row.dataset.date = (ev && ev._startDay) ? ev._startDay : dateISO;
-            row.dataset.id   = ev.id;
+            var seg  = (ev && ev._seg) ? ev._seg : 'single';
+            var sday = (ev && ev._startDay) ? ev._startDay : dateISO;
+            row.dataset.date  = sday;
+            row.dataset.id    = ev.id;
+            row.dataset.start = sday;
+            row.dataset.seg   = seg;
             row.setAttribute('draggable','true');
+            if (seg !== 'single') row.classList.add('ev--multi');
+            row.classList.add('ev--' + seg);
             row.addEventListener('dragstart', function(e){
               var id=e.currentTarget.dataset.id; var d=e.currentTarget.dataset.date;
               if (e.dataTransfer){ e.dataTransfer.effectAllowed='move'; e.dataTransfer.setData('text/calendar-event', JSON.stringify({fromDate:d,id:id})); }
@@ -1043,11 +1048,15 @@ function renderGroup(tl, dateISO, startHour, endHour){
             row.appendChild(document.createTextNode(label));
             row.addEventListener('click', function(){
               // В Today-панелі відкриваємо Info
-              var did = this.dataset.id; openInfo(dateISO, did);
+              var did = this.dataset.id; var sday = this.dataset.start || this.dataset.date || dateISO; openInfo(sday, did);
             });
             items.appendChild(row);
           }
 
+          if (m!==0){
+            var keep = quarterHas[dateISO] && quarterHas[dateISO][h];
+            slot.style.display = keep ? 'grid' : 'none';
+          }
           if (m!==0){
             var keep = quarterHas[dateISO] && quarterHas[dateISO][h];
             slot.style.display = keep ? 'grid' : 'none';

@@ -320,7 +320,7 @@ textarea#inputDescription {
 
 
 /* Multi-day visual borders */
-.ev--multi { border: 1px dashed #ffffff70; }
+.ev--multi { border: 1px dashed #ffffff60; }
 .ev--multi.ev--start { border-right: 0; }
 .ev--multi.ev--mid   { border-left: 0; border-right: 0; }
 .ev--multi.ev--end   { border-left: 0; }
