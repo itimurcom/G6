@@ -1,4 +1,4 @@
-/* calendar.ui.js — інтерфейс: DOM, рендер, модалки, таймлайн, чат, індикатор */
+/* calendar.ui.toast.js — індикатор */
 (function (global) {
   "use strict";
   
@@ -90,8 +90,6 @@
   }
 
   // Експортуємо індикатор для data-модуля
-  global.CalendarApp = global.CalendarApp || {};
-  global.CalendarApp.ui = global.CalendarApp.ui || {};
   global.CalendarApp.ui.showSaving = showSaving;
   global.CalendarApp.ui.hideSaving = hideSaving;
 })(window);
