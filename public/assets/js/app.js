@@ -39,6 +39,8 @@
     
     console.debug('UI ready (v2.3)');
   }
+
+
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);
   } else {
@@ -103,3 +105,6 @@ function toUADisplayDate(dateLike){
   var d = new Date(dateLike);
   return isNaN(d) ? String(dateLike || '') : formatDateUA(d);
 }
+
+  // DOM посилання
+  function $(id){ return document.getElementById(id); }

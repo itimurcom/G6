@@ -92,7 +92,7 @@
         {
             "end_date": null,
             "id": "841291b6-3245-49aa-9587-3c63815270e5",
-            "time": "03:30",
+            "time": "02:30",
             "title": "ВКЗ ЖЕСТЬ  іваіваіва",
             "owner": "Тім",
             "type": "other",
@@ -102,37 +102,11 @@
             "outgoing_no": "",
             "description": "",
             "user_id": 0
-        },
+        }
+    ],
+    "2025-09-30": [
         {
-            "end_date": null,
-            "id": "745b5167-36e2-4c32-b214-7658d7fa7e59",
-            "time": "18:00",
-            "title": "Донесення щодо ВКЗ на КДШВ",
-            "owner": "Василь з Адмінки",
-            "type": "nas",
-            "urgent": false,
-            "done": false,
-            "incoming_no": "",
-            "outgoing_no": "",
-            "description": "",
-            "user_id": 0
-        },
-        {
-            "end_date": null,
-            "id": "ab5721b3-8778-4c69-a46e-b43983cd7b35",
-            "time": "16:15",
-            "title": "ВКЗ Відправка листа на КДШВ ТЕСТ",
-            "owner": "Максим Юрійович",
-            "type": "evt",
-            "urgent": false,
-            "done": false,
-            "incoming_no": "",
-            "outgoing_no": "",
-            "description": "",
-            "user_id": 0
-        },
-        {
-            "end_date": "2025-10-06",
+            "end_date": "2025-10-08",
             "id": "6c412b5f-c988-4fce-a535-21800caafb7d",
             "time": "15:05",
             "title": "Такой ось подій ВКЗ",
@@ -146,9 +120,38 @@
             "user_id": 0
         }
     ],
-    "2025-09-30": [],
-    "2025-10-01": [],
-    "2025-10-02": [],
+    "2025-10-01": [
+        {
+            "end_date": "2025-10-02",
+            "id": "745b5167-36e2-4c32-b214-7658d7fa7e59",
+            "time": "18:30",
+            "title": "Донесення щодо ВКЗ на КДШВ",
+            "owner": "Василь з Адмінки",
+            "type": "nas",
+            "urgent": false,
+            "done": false,
+            "incoming_no": "",
+            "outgoing_no": "",
+            "description": "",
+            "user_id": 0
+        }
+    ],
+    "2025-10-02": [
+        {
+            "end_date": null,
+            "id": "ab5721b3-8778-4c69-a46e-b43983cd7b35",
+            "time": "15:45",
+            "title": "ВКЗ Відправка листа на КДШВ ТЕСТ",
+            "owner": "Максим Юрійович",
+            "type": "evt",
+            "urgent": false,
+            "done": false,
+            "incoming_no": "",
+            "outgoing_no": "",
+            "description": "",
+            "user_id": 0
+        }
+    ],
     "2025-10-03": [],
     "2025-10-04": [],
     "2025-10-05": [],

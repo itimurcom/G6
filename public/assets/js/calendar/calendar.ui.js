@@ -11,78 +11,38 @@
   var state={year:today.getFullYear(),month:today.getMonth()};
   var currentType='all';
 
-  // DOM посилання
-  function $(id){ return document.getElementById(id); }
-  var monthLabel     = $('monthLabel');
-  var todayLabel     = $('todayLabel');
-  var todayPanelDate = $('todayPanelDate');
-  var weekdaysEl     = $('weekdays');
-  var grid           = $('grid');
 
-  var filterText      = $('filterText');
-  var btnClearFilters = $('btnClearFilters');
-  var btnTypeMi       = $('btnTypeMi');
-  var btnTypeNas      = $('btnTypeNas');
-  var btnTypeEvt      = $('btnTypeEvt');
-  var btnTypeOther    = $('btnTypeOther');
-  var btnTypeReset    = $('btnTypeReset');
+    var todayLabel     = $('todayLabel'); // +
+    var todayPanelDate = $('todayPanelDate'); // +
+  
+  var filterText      = $('filterText'); // 12
 
-  var btnPrev = $('btnPrev');
-  var btnNext = $('btnNext');
-  var btnToday= $('btnToday');
   var quickFilters = $('quickFilters');
 
-  var btnExport = $('btnExport');
-  var btnImport = $('btnImport');
-  var filePicker= $('filePicker');
-
   // Модалка редагування
-  var overlay      = $('eventOverlay');
-  var modal        = $('eventModal');
-  var modalTitle   = $('modalTitle');
-  var inputDate    = $('inputDate');
-  var inputTime    = $('inputTime');
-  
-  var inputEndDate = $('inputEndDate');
-  var inputSpanDays = $('inputSpanDays');
-var inputTitle   = $('inputTitle');
-  var inputOwner   = $('inputOwner');
-  var inputType    = $('inputType');
-  var inputUrgent  = $('inputUrgent');
-  var urgentSwitch = $('urgentSwitch');
-  var inputDone    = $('inputDone');
-  var doneSwitch   = $('doneSwitch');
-  var btnClose     = $('btnClose');
-  var btnCancel    = $('btnCancel');
-  var editModal    = overlay ? overlay.querySelector('.modal') : null;
+  var overlay      = $('eventOverlay'); // 29
+  var modal        = $('eventModal'); // 19
+
+  var inputDate    = $('inputDate'); // 11
+  var inputTime    = $('inputTime'); // 9
+  var inputSpanDays = $('inputSpanDays'); // 11
+  var inputTitle   = $('inputTitle'); // 11
+
+  var inputOwner   = $('inputOwner'); //8
+  var inputType    = $('inputType'); // 16
+  var inputUrgent  = $('inputUrgent'); // 12
+  var inputDone    = $('inputDone'); // 10
+
+  var editModal    = overlay ? overlay.querySelector('.modal') : null; // 7
 
   // New optional fields
-  var inputIncoming     = $('inputIncoming');    // Вхідний номер
-  var inputOutgoing     = $('inputOutgoing');    // Вихідний номер
-  var inputDescription  = $('inputDescription'); // Опис (textarea)
+  var inputIncoming     = $('inputIncoming');    // Вхідний номер // 8
+  var inputOutgoing     = $('inputOutgoing');    // Вихідний номер // 8
+  var inputDescription  = $('inputDescription'); // Опис (textarea) // 8
 
   // Інфо-модалка
-  var infoOverlay = $('infoOverlay');
-  var infoContent = $('infoContent');
-  var infoClose   = $('infoClose');
-  var infoOk      = $('infoOk');
+  var infoOverlay = $('infoOverlay'); // 13
   var infoModal   = infoOverlay ? infoOverlay.querySelector('.modal') : null;
-
-  // Таймлайн «Сьогодні»
-  var earlyWrap     = $('earlyWrap');
-  var lateWrap      = $('lateWrap');
-  var btnEarly      = $('btnEarly');
-  var btnLate       = $('btnLate');
-  var earlyTimeline = $('earlyTimeline');
-  var todayTimeline = $('todayTimeline');
-  var lateTimeline  = $('lateTimeline');
-
-  // Чат
-  var btnChat     = $('btnChat');
-  var chatOverlay = $('chatOverlay');
-  var chatClose   = $('chatClose');
-  var chatOk      = $('chatOk');
-  var chatContent = $('chatContent');
 
   // Форматери
   var monthFmt        = new Intl.DateTimeFormat(locale,{month:'long'});
@@ -91,82 +51,15 @@ var inputTitle   = $('inputTitle');
 
   if (todayLabel)     todayLabel.textContent     = longHeaderFmt.format(today).replace('.','');
   if (todayPanelDate) todayPanelDate.textContent = longHeaderFmt.format(today).replace('.','');
-/* ===== Тост (індикатор) — внизу екрана ===== */
-  function ensureSaveToast(){
-    var t = $('saveToast');
-    if (!t){
-      t = document.createElement('div');
-      t.id='saveToast';
-      t.setAttribute('role','status');
-      t.setAttribute('aria-live','polite');
-      t.style.cssText = [
-        'position:fixed',
-        'bottom:16px',        
-        'left:50%',
-        'transform:translateX(-50%) translateY(8px)',
-        'z-index:99999',
-        'display:inline-flex',
-        'align-items:center',
-        'gap:8px',
-        'padding:8px 12px',
-        'border:1px solid var(--border)',
-        'background:var(--event-bg)',
-        'color:var(--fg)',
-        'border-radius:999px',
-        'font-size:13px',
-        'font-weight:800',
-        'box-shadow:0 8px 20px rgba(0,0,0,.12)',
-        'opacity:0',
-        'pointer-events:none',
-        'transition:opacity .25s ease, transform .25s ease, background-color .2s ease, color .2s ease, border-color .2s ease'
-      ].join(';');
-      var ico=document.createElement('span'); ico.id='saveToastIcon'; ico.textContent='⏳';
-      var txt=document.createElement('span'); txt.id='saveToastText'; txt.textContent='Збереження…';
-      t.appendChild(ico); t.appendChild(txt);
-      document.body.appendChild(t);
-    }
-    return t;
-  }
-  function setToastAnchor(){
-    var t = ensureSaveToast();
-    var hasBottom = !!document.querySelector('.bottom-actions');
-    t.style.bottom = '16px';
-  }
-
-  function setToastMode(mode){
-    var t=ensureSaveToast(); var ico=$('saveToastIcon');
-    t.style.borderColor = 'var(--border)';
-    t.style.boxShadow   = '0 8px 20px rgba(0,0,0,.12)';
-    t.style.color       = 'var(--fg)';
-    t.style.background  = 'var(--event-bg)';
-    if (mode==='saving'){ ico.textContent='⏳'; }
-    else if (mode==='ok'){
-      if (typeof global.refresh == 'function') {
-      global.refresh();
-      }
-      t.style.background='var(--type-evt)'; t.style.borderColor='var(--type-evt)'; t.style.color='#fff'; t.style.boxShadow='0 8px 24px rgba(34,197,94,.28)'; ico.textContent='✅';
-    } else if (mode==='err'){
-      t.style.background='var(--urgent)'; t.style.borderColor='var(--urgent)'; t.style.color='#fff'; t.style.boxShadow='0 8px 24px rgba(239,68,68,.28)'; ico.textContent='⚠️';
-    }
-  }
-  function toastShow(){ var t=ensureSaveToast(); t.style.opacity='1'; t.style.transform='translateX(-50%) translateY(0)'; }
-  function toastHide(){ var t=ensureSaveToast(); t.style.opacity='0'; t.style.transform='translateX(-50%) translateY(8px)'; }
-  function showSaving(msg){ ensureSaveToast(); setToastAnchor(); setToastMode('saving'); $('saveToastText').textContent = msg || 'Збереження…'; toastShow(); }
-  function hideSaving(ok){
-    ensureSaveToast();
-    if (ok===true){ setToastMode('ok'); $('saveToastText').textContent='Збережено'; setTimeout(toastHide,950); }
-    else if (ok===false){ setToastMode('err'); $('saveToastText').textContent='Помилка збереження'; setTimeout(toastHide,1600); }
-    else { toastHide(); }
-  }
-
-  // Експортуємо індикатор для data-модуля
-  global.CalendarApp = global.CalendarApp || {};
-  global.CalendarApp.ui = global.CalendarApp.ui || {};
-  global.CalendarApp.ui.showSaving = showSaving;
-  global.CalendarApp.ui.hideSaving = hideSaving;
 
   /* ===== Фільтри типів/пошуку ===== */
   function updateTypeButtons(){
+    var btnTypeMi       = $('btnTypeMi');
+    var btnTypeNas      = $('btnTypeNas');
+    var btnTypeEvt      = $('btnTypeEvt');
+    var btnTypeOther    = $('btnTypeOther');
+    var btnTypeReset    = $('btnTypeReset');
+
     if (!btnTypeMi) return;
     btnTypeMi.classList.toggle('active',currentType==='mi');
     btnTypeNas.classList.toggle('active',currentType==='nas');
@@ -175,6 +68,12 @@ var inputTitle   = $('inputTitle');
     if (btnTypeReset) btnTypeReset.style.display=(currentType==='all')?'none':'inline-grid';
   }
   function setTypeFilter(t){ currentType=t||'all'; updateTypeButtons(); withStableScroll(function(){ renderAllCells(); try{ renderTodayPanel(); }catch(_){} }); }
+    var btnClearFilters = $('btnClearFilters');
+    var btnTypeMi       = $('btnTypeMi');
+    var btnTypeNas      = $('btnTypeNas');
+    var btnTypeEvt      = $('btnTypeEvt');
+    var btnTypeOther    = $('btnTypeOther');
+    var btnTypeReset    = $('btnTypeReset');
 
   if (btnTypeMi)    btnTypeMi.addEventListener('click',function(){ setTypeFilter('mi'); });
   if (btnTypeNas)   btnTypeNas.addEventListener('click',function(){ setTypeFilter('nas'); });
@@ -192,11 +91,20 @@ var inputTitle   = $('inputTitle');
   });
 
   /* ===== Навігація місяців ===== */
-  function changeMonth(delta){
+  function changeMonth(delta) {
     var m=state.month+delta, y=state.year;
     if(m<0){m+=12;y--;} if(m>11){m-=12;y++;}
     state.month=m; state.year=y; renderCalendar();
   }
+
+    var btnPrev = $('btnPrev');
+    var btnNext = $('btnNext');
+    var btnToday= $('btnToday');
+    var btnExport = $('btnExport');
+    var btnImport = $('btnImport');
+    var filePicker= $('filePicker');
+    var btnClose     = $('btnClose');
+    var btnCancel    = $('btnCancel');
   if (btnPrev)  btnPrev.addEventListener('click',function(){ changeMonth(-1); });
   if (btnNext)  btnNext.addEventListener('click',function(){ changeMonth(1); });
   if (btnToday) btnToday.addEventListener('click',function(){ state.year=today.getFullYear(); state.month=today.getMonth(); renderCalendar(); });
@@ -244,11 +152,15 @@ if (filePicker) filePicker.addEventListener('change', function(e){
     editModal.classList.add(t==='mi'?'type-mi':t==='nas'?'type-nas':t==='evt'?'type-evt':'type-other');
   }
   function applyUrgentClass(){
+    var urgentSwitch = $('urgentSwitch');
+
     if (!editModal || !urgentSwitch || !inputUrgent) return;
     editModal.classList.remove('urgent');
     urgentSwitch.classList.toggle('active', !!inputUrgent.checked);
   }
   function applyDoneClass(){
+    var doneSwitch   = $('doneSwitch');
+
     if (!editModal || !doneSwitch || !inputDone) return;
     doneSwitch.classList.toggle('active', !!inputDone.checked);
   }
@@ -281,6 +193,9 @@ if (filePicker) filePicker.addEventListener('change', function(e){
   window.addEventListener('keydown',function(e){ if(e.key==='Escape'){ try{ closeOverlay(); }catch(_){ } try{ closeInfo(); }catch(_){ } } });
 
   function openModalNew(dateISO){
+    var modalTitle   = $('modalTitle');
+    var inputEndDate = $('inputEndDate');
+
   try{ __lastFocusEl = document.activeElement; }catch(_){}
     if (!overlay) return;
     if (modalTitle) modalTitle.textContent='Нова подія';
@@ -301,7 +216,10 @@ if (inputTitle)  inputTitle.value = '';
     
     setEditModalType(inputType ? inputType.value : 'evt'); applyUrgentClass(); showOverlay();
   }
+
   function openModalEdit(dateISO, id){
+    var modalTitle   = $('modalTitle');
+
 try{ __lastFocusEl = document.activeElement; }catch(_){}
   if (!overlay) return;
   // Find event strictly from its start day
@@ -561,6 +479,8 @@ if (window.CalendarApp && window.CalendarApp.ui) {
   }
 
   function openInfo(dateISO,id){ 
+    var infoContent = $('infoContent');
+
     var arr=Data.getEventsFor(dateISO); var ev=arr.find(function(e){return e.id===id;}); if(!ev) return;
     var html=
               '<div class="row">' +
@@ -606,11 +526,20 @@ if (window.CalendarApp && window.CalendarApp.ui) {
     // [css стрибки] no-op: restore not needed
   }
 
+  var infoClose   = $('infoClose');
+  var infoOk      = $('infoOk');
   if (infoClose) infoClose.addEventListener('click',function(){ closeInfo(); });
   if (infoOk)    infoOk.addEventListener('click',function(){ closeInfo(); });
 
   /* ===== Чат (демо «ВКЗ») ===== */
   function openChat(){
+    // Чат
+    var btnChat     = $('btnChat');
+    var chatOverlay = $('chatOverlay');
+    var chatClose   = $('chatClose');
+    var chatOk      = $('chatOk');
+    var chatContent = $('chatContent');
+
     if (!chatOverlay || !chatContent) return;
     var todayISO = Ev.toISODate(today);
     var list = Data.getEventsFor(todayISO).filter(function(e){
@@ -636,10 +565,11 @@ if (window.CalendarApp && window.CalendarApp.ui) {
     }
     chatOverlay.classList.add('show'); chatOverlay.setAttribute('aria-hidden','false'); chatOverlay.removeAttribute('inert');
     // [css стрибки] overflow hidden disabled;
-  }
   if (btnChat)   btnChat.addEventListener('click',openChat);
   if (chatClose) chatClose.addEventListener('click', function(){ chatOverlay.classList.remove('show'); chatOverlay.setAttribute('aria-hidden','true'); chatOverlay.setAttribute('inert',''); });
-if (chatOk) chatOk.addEventListener('click', function(){ chatOverlay.classList.remove('show'); chatOverlay.setAttribute('aria-hidden','true'); chatOverlay.setAttribute('inert',''); });
+  if (chatOk) chatOk.addEventListener('click', function(){ chatOverlay.classList.remove('show'); chatOverlay.setAttribute('aria-hidden','true'); chatOverlay.setAttribute('inert',''); });
+  }
+
 /* ===== Фокус та стабільний скрол ===== */
 var __lastFocusEl = null;
 function withStableScroll(fn){
@@ -651,9 +581,13 @@ function withStableScroll(fn){
   var cells=[], quarterHas={}, hourHoverCount={}, earlyOpen=false, lateOpen=false;
 
   function renderCalendar(){
+    var monthLabel     = $('monthLabel');
+    var weekdaysEl     = $('weekdays');
+    var grid           = $('grid');
+
     if (!grid) return;
     var monthName=monthFmt.format(new Date(state.year,state.month,1));
-    if (monthLabel) monthLabel.textContent = (monthName.charAt(0).toUpperCase()+monthName.slice(1))+' '+state.year;
+    if (monthLabel)  monthLabel.textContent = (monthName.charAt(0).toUpperCase()+monthName.slice(1))+' '+state.year;
 
     if (weekdaysEl && weekdaysEl.children.length===0){
       var mondayAnchor=new Date(Date.UTC(2021,10,1));
@@ -883,11 +817,18 @@ if (ev._seg){ item.className += ' ev--'+ev._seg; }      // item.appendChild(del)
   }
 /* ===== Таймлайн «Сьогодні» ===== */
 ;(function(){ try{
+  var btnEarly      = $('btnEarly');
+  var btnLate       = $('btnLate');
+
   if (typeof btnEarly!=='undefined' && btnEarly) btnEarly.addEventListener('click',function(){ earlyOpen=!earlyOpen; renderTodayPanel(); });
   if (typeof btnLate!=='undefined' && btnLate)  btnLate.addEventListener('click',function(){ lateOpen=!lateOpen; renderTodayPanel(); });
 } catch(_){ /* no-op */ } })();
 
   function renderTodayPanel(){
+    var earlyTimeline = $('earlyTimeline');
+    var todayTimeline = $('todayTimeline');
+    var lateTimeline  = $('lateTimeline');
+
     if (!todayTimeline) return;
     try {
       earlyTimeline.innerHTML = '';
@@ -924,6 +865,9 @@ if (ev._seg){ item.className += ' ev--'+ev._seg; }      // item.appendChild(del)
     var earlyCountEl = $('earlyCount'), lateCountEl = $('lateCount');
     if (earlyCountEl) earlyCountEl.textContent = earlyCount ? ('подій: '+earlyCount) : '';
     if (lateCountEl)  lateCountEl.textContent  = lateCount  ? ('подій: '+lateCount)  : '';
+
+    var earlyWrap     = $('earlyWrap');
+    var lateWrap      = $('lateWrap');
     if (earlyWrap) earlyWrap.classList.toggle('open', !!earlyOpen);
     if (lateWrap)  lateWrap.classList.toggle('open',  !!lateOpen);
 
