@@ -17,8 +17,10 @@ class HomeController extends Controller
             'extra_js' => [
                 '/assets/js/calendar/calendar.events.js',
                 '/assets/js/calendar/calendar.data.js',
-                '/assets/js/calendar/calendar.ui.core.js',
+                
                 '/assets/js/calendar/calendar.ui.js',
+                '/assets/js/calendar/calendar.ui.core.js',
+                
                 '/assets/js/planning.js',          
             ]
         ]);
