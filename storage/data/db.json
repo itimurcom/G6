@@ -46,51 +46,8 @@
     "2025-09-28": [],
     "2025-09-29": [],
     "2025-09-30": [],
-    "2025-10-01": [
-        {
-            "end_date": "2025-10-03",
-            "id": "6c412b5f-c988-4fce-a535-21800caafb7d",
-            "time": "15:05",
-            "title": "Такой ось подій ВКЗ",
-            "owner": "Вася",
-            "type": "other",
-            "urgent": false,
-            "done": false,
-            "incoming_no": "1",
-            "outgoing_no": "2",
-            "description": "ваіваіва\n\nf\nf\nsd\nfs\ndf\nsd\nfs\ndf\nsd\nfs\ndf\nsd",
-            "user_id": 0
-        }
-    ],
+    "2025-10-01": [],
     "2025-10-02": [
-        {
-            "end_date": null,
-            "id": "ab5721b3-8778-4c69-a46e-b43983cd7b35",
-            "time": "15:45",
-            "title": "ВКЗ Відправка листа на КДШВ ТЕСТ",
-            "owner": "Максим Юрійович",
-            "type": "evt",
-            "urgent": false,
-            "done": false,
-            "incoming_no": "",
-            "outgoing_no": "",
-            "description": "",
-            "user_id": 0
-        },
-        {
-            "end_date": null,
-            "id": "745b5167-36e2-4c32-b214-7658d7fa7e59",
-            "time": "18:30",
-            "title": "Донесення щодо ВКЗ на КДШВ",
-            "owner": "Василь з Адмінки",
-            "type": "nas",
-            "urgent": false,
-            "done": false,
-            "incoming_no": "",
-            "outgoing_no": "",
-            "description": "",
-            "user_id": 0
-        },
         {
             "end_date": null,
             "id": "cbfc93e4-bc78-4e95-b4e6-662c6b0a2beb",
@@ -118,9 +75,51 @@
             "outgoing_no": "",
             "description": "",
             "user_id": 0
+        },
+        {
+            "end_date": "2025-10-04",
+            "id": "6c412b5f-c988-4fce-a535-21800caafb7d",
+            "time": "10:15",
+            "title": "Такой ось подій ВКЗ",
+            "owner": "Вася",
+            "type": "other",
+            "urgent": false,
+            "done": false,
+            "incoming_no": "1",
+            "outgoing_no": "2",
+            "description": "ваіваіва\n\nf\nf\nsd\nfs\ndf\nsd\nfs\ndf\nsd\nfs\ndf\nsd",
+            "user_id": 0
+        },
+        {
+            "end_date": null,
+            "id": "745b5167-36e2-4c32-b214-7658d7fa7e59",
+            "time": "18:30",
+            "title": "Донесення щодо ВКЗ на КДШВ",
+            "owner": "Василь з Адмінки",
+            "type": "nas",
+            "urgent": false,
+            "done": false,
+            "incoming_no": "",
+            "outgoing_no": "",
+            "description": "",
+            "user_id": 0
         }
     ],
     "2025-10-03": [
+        {
+            "end_date": null,
+            "id": "ab5721b3-8778-4c69-a46e-b43983cd7b35",
+            "time": "15:45",
+            "title": "ВКЗ Відправка листа на КДШВ ТЕСТ",
+            "owner": "Максим Юрійович",
+            "type": "evt",
+            "urgent": false,
+            "done": false,
+            "incoming_no": "",
+            "outgoing_no": "",
+            "description": "",
+            "user_id": 0
+        },
         {
             "end_date": null,
             "id": "e_5c760929b85f684b",
