@@ -52,6 +52,13 @@
   if (todayLabel)     todayLabel.textContent     = longHeaderFmt.format(today).replace('.','');
   if (todayPanelDate) todayPanelDate.textContent = longHeaderFmt.format(today).replace('.','');
 
+  var renderAllFn = function(){
+      console.log('renderAllFn call');
+      updateTypeButtons();
+      renderAllCells();
+      renderTodayPanel();
+      }
+
   /* ===== Фільтри типів/пошуку ===== */
   function updateTypeButtons(){
     var btnTypeMi       = $('btnTypeMi');
@@ -66,8 +73,13 @@
     btnTypeEvt.classList.toggle('active',currentType==='evt');
     btnTypeOther.classList.toggle('active',currentType==='other');
     if (btnTypeReset) btnTypeReset.style.display=(currentType==='all')?'none':'inline-grid';
-  }
-  function setTypeFilter(t){ currentType=t||'all'; updateTypeButtons(); withStableScroll(function(){ renderAllCells(); try{ renderTodayPanel(); }catch(_){} }); }
+    }
+
+  function setTypeFilter(t){
+      currentType=t||'all';
+      withStableScroll(renderAllFn);
+    }
+
     var btnClearFilters = $('btnClearFilters');
     var btnTypeMi       = $('btnTypeMi');
     var btnTypeNas      = $('btnTypeNas');
@@ -80,21 +92,24 @@
   if (btnTypeEvt)   btnTypeEvt.addEventListener('click',function(){ setTypeFilter('evt'); });
   if (btnTypeOther) btnTypeOther.addEventListener('click',function(){ setTypeFilter('other'); });
   if (btnTypeReset) btnTypeReset.addEventListener('click',function(){ setTypeFilter('all'); });
-  if (filterText)   filterText.addEventListener('input',function(){ withStableScroll(function(){ renderAllCells(); try{ renderTodayPanel(); }catch(_){} }); });
+  if (filterText)   filterText.addEventListener('input',function(){ 
+      withStableScroll(renderAllFn);
+    });
   if (btnClearFilters) btnClearFilters.addEventListener('click',function(){ if(filterText) filterText.value=''; setTypeFilter('all'); });
   if (quickFilters) quickFilters.addEventListener('click',function(e){
     var b=e.target && e.target.closest ? e.target.closest('button[data-type]') : null;
     if(!b) return;
     setTypeFilter(b.getAttribute('data-type'));
     if (filterText) filterText.value = b.getAttribute('data-text') || '';
-    withStableScroll(function(){ renderAllCells(); try{ renderTodayPanel(); }catch(_){} });
+    withStableScroll(renderAllFn);
   });
 
   /* ===== Навігація місяців ===== */
   function changeMonth(delta) {
     var m=state.month+delta, y=state.year;
     if(m<0){m+=12;y--;} if(m>11){m-=12;y++;}
-    state.month=m; state.year=y; renderCalendar();
+    state.month=m; state.year=y;
+    renderCalendar(); // TODO: додати ренлдер TODAY?
   }
 
     var btnPrev = $('btnPrev');
@@ -105,6 +120,7 @@
     var filePicker= $('filePicker');
     var btnClose     = $('btnClose');
     var btnCancel    = $('btnCancel');
+
   if (btnPrev)  btnPrev.addEventListener('click',function(){ changeMonth(-1); });
   if (btnNext)  btnNext.addEventListener('click',function(){ changeMonth(1); });
   if (btnToday) btnToday.addEventListener('click',function(){ state.year=today.getFullYear(); state.month=today.getMonth(); renderCalendar(); });
@@ -138,7 +154,7 @@ if (filePicker) filePicker.addEventListener('change', function(e){
       var parsed = JSON.parse(text);
       Data._setCache( Data.ensureStoreShape(parsed) );
       return Data.serverSaveStore(Data._getCache()).then(function(){
-        withStableScroll(function(){ renderAllCells(); try{ renderTodayPanel(); }catch(_){} });
+        withStableScroll(renderAllFn);
       });
     }catch(err){
       alert('Не вдалося імпортувати файл. Перевірте формат JSON.');
@@ -221,6 +237,7 @@ if (inputTitle)  inputTitle.value = '';
     var modalTitle   = $('modalTitle');
 
 try{ __lastFocusEl = document.activeElement; }catch(_){}
+
   if (!overlay) return;
   // Find event strictly from its start day
   var arr = Data.getEventsFor(dateISO) || [];
@@ -533,11 +550,7 @@ if (window.CalendarApp && window.CalendarApp.ui) {
 
 /* ===== Фокус та стабільний скрол ===== */
 var __lastFocusEl = null;
-function withStableScroll(fn){
-  var x = window.scrollX, y = window.scrollY;
-  try { fn && fn(); } catch(e){ console.warn('withStableScroll failed', e); }
-  try { window.scrollTo(x, y); } catch(_){}
-}
+
 /* ===== Рендер календаря ===== */
   var cells=[], quarterHas={}, hourHoverCount={}, earlyOpen=false, lateOpen=false;
 
@@ -611,14 +624,15 @@ function withStableScroll(fn){
           var fromArr=Data.getEventsFor(fromDate); var idx=Ev.findIndexById(fromArr,id); if(idx===-1) return;
           var moved=fromArr.splice(idx,1)[0]; Data.setEventsFor(fromDate,fromArr);
           renderAllCells(); var toArr=Data.getEventsFor(toDate); toArr.push(moved); Data.setEventsFor(toDate,toArr);
-          withStableScroll(function(){ renderAllCells(); try{ renderTodayPanel(); }catch(_){} }); withStableScroll(function(){ renderAllCells(); try{ renderTodayPanel(); }catch(_){} }); var cFrom=cells.find(function(c){return c.dataset.date===fromDate;}); if(cFrom) renderCell(cFrom);
+          withStableScroll(renderAllFn);
+          var cFrom=cells.find(function(c){return c.dataset.date===fromDate;}); if(cFrom) renderCell(cFrom);
           renderCell(this); renderTodayPanel();
         renderAllCells(); }catch(err){ console.warn('drop failed',err); }
       });
 
       grid.appendChild(cell); cells.push(cell);
     }
-    withStableScroll(function(){ renderAllCells(); try{ renderTodayPanel(); }catch(_){} });
+    withStableScroll(renderAllFn);
   }
 
   function renderAllCells(){ for(var i=0;i<cells.length;i++){ renderCell(cells[i]); } if (typeof enableResizeDnDOnCells==='function'){ enableResizeDnDOnCells(); } }
@@ -758,7 +772,10 @@ item.addEventListener('dragend',function(e){ e.currentTarget.classList.remove('d
 
       del.addEventListener('click',function(e){
         e.stopPropagation(); var eid=e.currentTarget.parentElement.getAttribute('data-id');
-        var arr=Data.getEventsFor(dateISO); var idx=Ev.findIndexById(arr,eid); if(idx>-1){ arr.splice(idx,1); Data.setEventsFor(dateISO,arr); withStableScroll(function(){ renderAllCells(); try{ renderTodayPanel(); }catch(_){} }); renderCell(cell); renderTodayPanel(); renderAllCells(); renderAllCells();
+        var arr=Data.getEventsFor(dateISO); var idx=Ev.findIndexById(arr,eid); if(idx>-1){ arr.splice(idx,1); Data.setEventsFor(dateISO,arr);
+          withStableScroll(renderAllFn);
+          renderCell(cell);
+          withStableScroll(renderAllFn);
     }
       });
       
@@ -903,7 +920,7 @@ function renderGroup(tl, dateISO, startHour, endHour){
                 var fromArr=Data.getEventsFor(fromDate); var idx=Ev.findIndexById(fromArr,id); if(idx===-1) return;
                 var moved=fromArr.splice(idx,1)[0]; moved.time=newTime; Data.setEventsFor(fromDate,fromArr);
                 renderAllCells(); var toArr=Data.getEventsFor(targetDate); toArr.push(moved); Data.setEventsFor(targetDate,toArr);
-                withStableScroll(function(){ renderAllCells(); try{ renderTodayPanel(); }catch(_){} });
+                withStableScroll(renderAllFn);
                 var cFrom=findCell(fromDate); if(cFrom) renderCell(cFrom);
               } else {
                 var arr=Data.getEventsFor(targetDate);
@@ -988,7 +1005,7 @@ function renderGroup(tl, dateISO, startHour, endHour){
     Data.serverLoadStore().then(function(data){
       Data._setCache( Data.ensureStoreShape(data) );
       migrateEnsureIds();
-      withStableScroll(function(){ renderAllCells(); try{ renderTodayPanel(); }catch(_){} });
+      withStableScroll(renderAllFn);
     });
   }
 
