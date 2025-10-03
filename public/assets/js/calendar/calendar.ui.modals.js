@@ -7,13 +7,28 @@
   
   var locale='uk-UA';
   var weekdayShortFmt = new Intl.DateTimeFormat(locale,{weekday:'short'});
-  var infoModal   = infoOverlay ? infoOverlay.querySelector('.modal') : null;
-  
 
+  var inputDate     = $('inputDate');
+  var inputTime     = $('inputTime');
+  var inputSpanDays = $('inputSpanDays');
+  var inputTitle    = $('inputTitle');
 
-  var infoClose   = $('infoClose');
-  var infoOk      = $('infoOk');
-    // Модалка редагування
+  var inputOwner    = $('inputOwner');
+  var inputType     = $('inputType');
+  var inputUrgent   = $('inputUrgent');
+  var inputDone     = $('inputDone');
+
+  var inputIncoming     = $('inputIncoming');    // Вхідний номер // 8
+  var inputOutgoing     = $('inputOutgoing');    // Вихідний номер // 8
+  var inputDescription  = $('inputDescription'); // Опис (textarea) // 8
+
+  // Інфо-модалка
+  var infoOverlay   = $('infoOverlay'); // 13  
+  var infoModal     = infoOverlay ? infoOverlay.querySelector('.modal') : null;
+  var infoClose     = $('infoClose');
+  var infoOk        = $('infoOk');
+
+  // Модалка редагування
   var overlay      = $('eventOverlay'); // 29
   var modal        = $('eventModal'); // 19
   var editModal    = overlay ? overlay.querySelector('.modal') : null; // 7

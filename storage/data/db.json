@@ -115,7 +115,7 @@
             "owner": "Максим Юрійович",
             "type": "evt",
             "urgent": false,
-            "done": false,
+            "done": true,
             "incoming_no": "",
             "outgoing_no": "",
             "description": "",

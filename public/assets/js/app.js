@@ -111,7 +111,7 @@ function toUADisplayDate(dateLike){
   function $(id){ return document.getElementById(id); }
 
   function withStableScroll(fn){
-  var x = window.scrollX, y = window.scrollY;
-  try { fn && fn(); } catch(e){ console.warn('withStableScroll failed', e); }
-  try { window.scrollTo(x, y); } catch(_){}
+    var x = window.scrollX, y = window.scrollY;
+    try { fn && fn(); } catch(e){ console.warn('withStableScroll failed', e); }
+    try { window.scrollTo(x, y); } catch(_){}
 }

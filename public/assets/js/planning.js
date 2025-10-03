@@ -2,6 +2,15 @@
 (function (global) {
   "use strict";
 
+    // global.PlanningToday = global.PlanningToday || {};
+  global.CalendarApp                = global.CalendarApp || {};
+  global.CalendarApp.ui             = global.CalendarApp.ui || {};
+  global.CalendarApp.ui.renderAllFn = refreshPlanning;
+  
+  var Data   = (global.CalendarApp && global.CalendarApp.data)   || {};
+  var Ev     = (global.CalendarApp && global.CalendarApp.events) || {};
+  
+
   // ---------- wait for Calendar UI (exported by loader bundle) ----------
   function waitForCalendarUI() {
     return new Promise(function (resolve) {
@@ -343,7 +352,4 @@
     }
   }
 
-  global.PlanningToday = global.PlanningToday || {};
-  global.PlanningToday.refresh = refreshPlanning;
-  global.refresh = refreshPlanning;
 })(window);

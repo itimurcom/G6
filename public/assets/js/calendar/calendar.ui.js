@@ -20,27 +20,6 @@
 
   var quickFilters = $('quickFilters');
 
-
-  var inputDate    = $('inputDate'); // 11
-  var inputTime    = $('inputTime'); // 9
-  var inputSpanDays = $('inputSpanDays'); // 11
-  var inputTitle   = $('inputTitle'); // 11
-
-  var inputOwner   = $('inputOwner'); //8
-  var inputType    = $('inputType'); // 16
-  var inputUrgent  = $('inputUrgent'); // 12
-  var inputDone    = $('inputDone'); // 10
-
-
-
-  // New optional fields
-  var inputIncoming     = $('inputIncoming');    // Вхідний номер // 8
-  var inputOutgoing     = $('inputOutgoing');    // Вихідний номер // 8
-  var inputDescription  = $('inputDescription'); // Опис (textarea) // 8
-
-  // Інфо-модалка
-  var infoOverlay = $('infoOverlay'); // 13
-
   // Форматери
   var monthFmt        = new Intl.DateTimeFormat(locale,{month:'long'});
   
