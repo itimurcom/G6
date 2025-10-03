@@ -19,8 +19,8 @@ class HomeController extends Controller
                 '/assets/js/calendar/calendar.data.js',
                 
                 '/assets/js/calendar/calendar.ui.js',
-                '/assets/js/calendar/calendar.ui.core.js',
-                
+                '/assets/js/calendar/calendar.ui.toast.js',
+                '/assets/js/calendar/calendar.ui.modals.js',
                 '/assets/js/planning.js',          
             ]
         ]);

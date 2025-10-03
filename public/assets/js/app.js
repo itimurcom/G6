@@ -3,6 +3,7 @@
   'use strict';
   var THEME_KEY   = 'ui-theme';
   var mqMobile    = window.matchMedia('(max-width: 900px)');
+
   function prefersDark(){ return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches; }
   function readTheme(){ return localStorage.getItem(THEME_KEY) || (prefersDark() ? 'dark' : 'light'); }
   function saveTheme(t){ localStorage.setItem(THEME_KEY, t); }

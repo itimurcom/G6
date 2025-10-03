@@ -4,24 +4,22 @@
 
   var Data   = (global.CalendarApp && global.CalendarApp.data)   || {};
   var Ev     = (global.CalendarApp && global.CalendarApp.events) || {};
-
+  
   /* ===== Стан інтерфейсу ===== */
   var locale='uk-UA';
   var today=new Date();
   var state={year:today.getFullYear(),month:today.getMonth()};
+  var weekdayShortFmt = new Intl.DateTimeFormat(locale,{weekday:'short'});
   var currentType='all';
 
 
-    var todayLabel     = $('todayLabel'); // +
-    var todayPanelDate = $('todayPanelDate'); // +
+  var todayLabel     = $('todayLabel'); // +
+  var todayPanelDate = $('todayPanelDate'); // +
   
   var filterText      = $('filterText'); // 12
 
   var quickFilters = $('quickFilters');
 
-  // Модалка редагування
-  var overlay      = $('eventOverlay'); // 29
-  var modal        = $('eventModal'); // 19
 
   var inputDate    = $('inputDate'); // 11
   var inputTime    = $('inputTime'); // 9
@@ -33,7 +31,7 @@
   var inputUrgent  = $('inputUrgent'); // 12
   var inputDone    = $('inputDone'); // 10
 
-  var editModal    = overlay ? overlay.querySelector('.modal') : null; // 7
+
 
   // New optional fields
   var inputIncoming     = $('inputIncoming');    // Вхідний номер // 8
@@ -42,18 +40,17 @@
 
   // Інфо-модалка
   var infoOverlay = $('infoOverlay'); // 13
-  var infoModal   = infoOverlay ? infoOverlay.querySelector('.modal') : null;
 
   // Форматери
   var monthFmt        = new Intl.DateTimeFormat(locale,{month:'long'});
-  var weekdayShortFmt = new Intl.DateTimeFormat(locale,{weekday:'short'});
+  
   var longHeaderFmt   = new Intl.DateTimeFormat(locale,{weekday:'short',day:'numeric',month:'long',year:'numeric'});
 
   if (todayLabel)     todayLabel.textContent     = longHeaderFmt.format(today).replace('.','');
   if (todayPanelDate) todayPanelDate.textContent = longHeaderFmt.format(today).replace('.','');
 
   var renderAllFn = function(){
-      console.log('renderAllFn call');
+      // console.log('renderAllFn call');
       updateTypeButtons();
       renderAllCells();
       renderTodayPanel();
@@ -109,7 +106,7 @@
     var m=state.month+delta, y=state.year;
     if(m<0){m+=12;y--;} if(m>11){m-=12;y++;}
     state.month=m; state.year=y;
-    renderCalendar(); // TODO: додати ренлдер TODAY?
+    renderCalendar(); // тут тільки календар!
   }
 
     var btnPrev = $('btnPrev');
@@ -123,222 +120,14 @@
   if (btnPrev)  btnPrev.addEventListener('click',function(){ changeMonth(-1); });
   if (btnNext)  btnNext.addEventListener('click',function(){ changeMonth(1); });
   if (btnToday) btnToday.addEventListener('click',function(){ state.year=today.getFullYear(); state.month=today.getMonth(); renderCalendar(); });
-  if (btnClose)  btnClose.addEventListener('click',function(){ closeOverlay(); });
-  if (btnCancel) btnCancel.addEventListener('click',function(){ closeOverlay(); });
+  
   window.addEventListener('keydown',function(e){
     if (['INPUT','SELECT','TEXTAREA'].includes(e.target && e.target.tagName)) return;
     if (e.key==='ArrowLeft') changeMonth(-1);
     if (e.key==='ArrowRight') changeMonth(1);
   });
 
-
-
-
-/* ===== Модалки ===== */
-  function setEditModalType(t){
-    if (!editModal) return;
-    editModal.classList.remove('type-mi','type-nas','type-evt','type-other');
-    editModal.classList.add(t==='mi'?'type-mi':t==='nas'?'type-nas':t==='evt'?'type-evt':'type-other');
-  }
-  function applyUrgentClass(){
-    var urgentSwitch = $('urgentSwitch');
-
-    if (!editModal || !urgentSwitch || !inputUrgent) return;
-    editModal.classList.remove('urgent');
-    urgentSwitch.classList.toggle('active', !!inputUrgent.checked);
-  }
-  function applyDoneClass(){
-    var doneSwitch   = $('doneSwitch');
-
-    if (!editModal || !doneSwitch || !inputDone) return;
-    doneSwitch.classList.toggle('active', !!inputDone.checked);
-  }
-  if (inputType)   inputType.addEventListener('change',function(){ setEditModalType(inputType.value); });
-  if (inputUrgent) inputUrgent.addEventListener('change',applyUrgentClass);
-  if (inputDone)   inputDone.addEventListener('change',applyDoneClass);
-
-  function showOverlay(){
-    if (!overlay) return;
-    overlay.removeAttribute('inert');
-    overlay.setAttribute('aria-hidden','false');
-    overlay.classList.add('show');
-    // [css стрибки] overflow hidden disabled;
-    setTimeout(function(){ if(inputTitle) inputTitle.focus(); },0);
-  }
-  function closeOverlay(){
-    if (!overlay) return;
-    // Blur anything inside the overlay to avoid scroll jumps
-    if (overlay.contains(document.activeElement)) { try{ document.activeElement.blur(); }catch(_){ } }
-    var x = window.scrollX, y = window.scrollY;
-    overlay.classList.remove('show');
-    overlay.setAttribute('aria-hidden','true');
-    overlay.setAttribute('inert','');
-    // return focus back to the opener without scrolling
-    requestAnimationFrame(function(){
-      try{ window.scrollTo(x,y); }catch(_){}
-      try{ __lastFocusEl && __lastFocusEl.focus && __lastFocusEl.focus({preventScroll:true}); }catch(_){}
-    });
-  }
   window.addEventListener('keydown',function(e){ if(e.key==='Escape'){ try{ closeOverlay(); }catch(_){ } try{ closeInfo(); }catch(_){ } } });
-
-  function openModalNew(dateISO){
-    var modalTitle   = $('modalTitle');
-    var inputEndDate = $('inputEndDate');
-
-  try{ __lastFocusEl = document.activeElement; }catch(_){}
-    if (!overlay) return;
-    if (modalTitle) modalTitle.textContent='Нова подія';
-    overlay.dataset.mode='new'; overlay.dataset.origDate=dateISO; delete overlay.dataset.id;
-    if (inputDate)   inputDate.value = dateISO;
-    if (inputTime)   inputTime.value = Ev.defaultTime();
-    
-    if (inputEndDate) inputEndDate.value = '';
-    if (inputSpanDays) inputSpanDays.value = '';
-if (inputTitle)  inputTitle.value = '';
-    if (inputOwner)  inputOwner.value = '';
-    if (inputType)   inputType.value = 'evt';
-    if (inputUrgent) inputUrgent.checked = false;
-    
-    if (inputIncoming)     inputIncoming.value = '';
-    if (inputOutgoing)     inputOutgoing.value = '';
-    if (inputDescription)  inputDescription.value = '';
-    
-    setEditModalType(inputType ? inputType.value : 'evt'); applyUrgentClass(); showOverlay();
-  }
-
-  function openModalEdit(dateISO, id){
-    var modalTitle   = $('modalTitle');
-
-try{ __lastFocusEl = document.activeElement; }catch(_){}
-
-  if (!overlay) return;
-  // Find event strictly from its start day
-  var arr = Data.getEventsFor(dateISO) || [];
-  var ev  = arr.find(function(e){ return e.id===id; });
-  if (!ev) return;
-
-  // Prefill span days (inclusive, UTC)
-  if (inputSpanDays){
-    var ed = ev.end_date || '';
-    try{
-      if (ed){
-        var __a=dateISO.split('-').map(Number);
-        var __b=ed.split('-').map(Number);
-        var ds=new Date(Date.UTC(__a[0],__a[1]-1,__a[2]));
-        var de=new Date(Date.UTC(__b[0],__b[1]-1,__b[2]));
-        var diff = Math.round((de-ds)/86400000) + 1; // inclusive
-        inputSpanDays.value = (diff>0) ? String(diff) : '1';
-      } else {
-        inputSpanDays.value = '1';
-      }
-    } catch(_){ inputSpanDays.value = '1'; }
-  }
-try{ __lastFocusEl = document.activeElement; }catch(_){}
-    var arr=Data.getEventsFor(dateISO); var ev=arr.find(function(e){return e.id===id;}); if(!ev) return;
-    if (modalTitle) modalTitle.textContent='Редагувати подію';
-    if (!overlay) return;
-    overlay.dataset.mode='edit'; overlay.dataset.origDate=dateISO; overlay.dataset.id=id;
-    if (inputDate)   inputDate.value = dateISO;
-    if (inputTime)   inputTime.value = ev.time || '';
-    if (inputTitle)  inputTitle.value = ev.title || '';
-    if (inputOwner)  inputOwner.value = ev.owner || '';
-    if (inputType)   inputType.value = ev.type || 'evt';
-    if (inputUrgent) inputUrgent.checked = !!ev.urgent;
-    if (inputDone)   inputDone.checked   = !!ev.done;
-    
-    if (inputIncoming)     inputIncoming.value = ev.incoming_no || '';
-    if (inputOutgoing)     inputOutgoing.value = ev.outgoing_no || '';
-    if (inputDescription)  inputDescription.value = ev.description || '';
-
-    setEditModalType(inputType ? inputType.value : 'evt'); applyUrgentClass(); showOverlay();
-  }
-
-  
-if (modal) modal.addEventListener('submit', function(e){
-    e.preventDefault();
-
-    // Native validity: if invalid, show browser hints and keep modal open
-    try {
-      if (modal && typeof modal.checkValidity === 'function' && !modal.checkValidity()) {
-        if (typeof modal.reportValidity === 'function') modal.reportValidity();
-        return;
-      }
-    } catch(_){}
-
-    var newDate = inputDate ? inputDate.value : '';
-    if (!newDate) return;
-
-    // Build event payload
-    var ev = {
-      end_date: (function(){
-        var v = (inputSpanDays && inputSpanDays.value!=='') ? parseInt(inputSpanDays.value,10) : NaN;
-        var d = (inputDate && inputDate.value) ? inputDate.value : '';
-        if (!isNaN(v) && v>1 && d){
-          var a=d.split('-').map(Number);
-          var o=new Date(Date.UTC(a[0],a[1]-1,a[2]));
-          o.setUTCDate(o.getUTCDate()+(v-1));
-          return o.toISOString().slice(0,10);
-        }
-        return null;
-      })(),
-      id: (overlay && overlay.dataset.id) ? overlay.dataset.id : Ev.genId(),
-      time:  (inputTime && inputTime.value) ? inputTime.value : '',
-      title: (inputTitle && inputTitle.value) ? inputTitle.value.trim() : '',
-      owner: (inputOwner && inputOwner.value || '').trim(),
-      type:  (inputType && inputType.value) ? inputType.value : 'evt',
-      urgent: !!(inputUrgent && inputUrgent.checked),
-      done:   !!(inputDone && inputDone.checked),
-      incoming_no: (inputIncoming    && inputIncoming.value    || '').trim(),
-      outgoing_no: (inputOutgoing    && inputOutgoing.value    || '').trim(),
-      description: (inputDescription && inputDescription.value || '').trim()
-    };
-
-    // Minimal guards
-    if (!ev.title) return;
-    if (!ev.type) ev.type = 'evt';
-
-    var mode     = overlay ? overlay.dataset.mode : 'new';
-    var origDate = overlay ? overlay.dataset.origDate : newDate;
-
-    try {
-      if (mode==='edit'){
-        var fromArr = Data.getEventsFor(origDate);
-        var idx     = Ev.findIndexById(fromArr, ev.id);
-        if (idx>-1){
-          if (newDate===origDate){
-            fromArr[idx] = ev;
-            Data.setEventsFor(origDate, fromArr);
-          } else {
-            fromArr.splice(idx,1);
-            Data.setEventsFor(origDate, fromArr);
-            var toArr = Data.getEventsFor(newDate);
-            toArr.push(ev);
-            Data.setEventsFor(newDate, toArr);
-          }
-        }
-      } else {
-        var arr = Data.getEventsFor(newDate);
-        arr.push(ev);
-        Data.setEventsFor(newDate, arr);
-      }
-      // Rerender everything in a stable scroll frame
-      withStableScroll(function(){
-        try {
-          renderAllCells();
-          if (typeof renderTodayPanel === 'function') renderTodayPanel();
-        } catch(_){}
-      });
-    } catch(err){
-      console.warn('submit/save failed', err);
-      // If saving failed, keep modal open so user sees state
-      return;
-    }
-
-    // Close the modal AFTER successful save/rerender
-    closeOverlay();
-  });
-/* ===== Позначення подій як виконаних (close_user_id/close_time) ===== */
-
 // Ensure close fields exist on every event (in-place)
 function migrateEnsureCloseFields(dayMap) {
   if (!dayMap || typeof dayMap !== 'object') return;
@@ -461,65 +250,6 @@ if (window.CalendarApp && window.CalendarApp.ui) {
   window.CalendarApp.ui.closeEventById = closeEventById;
   window.CalendarApp.ui.reopenEventById = reopenEventById;
 }
-/* ===== Інфо ===== */
-  function setInfoModalType(t){
-    if (!infoModal) return;
-    infoModal.classList.remove('type-mi','type-nas','type-evt','type-other');
-    infoModal.classList.add(t==='mi'?'type-mi':t==='nas'?'type-nas':t==='evt'?'type-evt':'type-other');
-  }
-
-  function openInfo(dateISO,id){ 
-    var infoContent = $('infoContent');
-
-    var arr=Data.getEventsFor(dateISO); var ev=arr.find(function(e){return e.id===id;}); if(!ev) return;
-    var html=
-              '<div class="row">' +
-                '<div><strong>Дата:</strong> '+Ev.formatISO(dateISO)+' ('+weekdayShortFmt.format(new Date(dateISO))+')</div>'+
-                '<div><strong>Час:</strong> '+(ev.time||'')+'</div>'+
-              '</div>' +
-
-              '<div class="row">' +
-                '<div><strong>Тип:</strong> '+Ev.labelForType(ev.type)+'</div>'+
-                '<div style="position:relative;margin-right:1em;">' +
-                  '<strong>Виконана:</strong> '+(ev.done?'так':'ні') +
-                  (ev.urgent ? '<span style="top:-36px;" class="flag-urgent"><span class="icon"><svg class="icon"><use href="#i-fire-clock"></use></svg></span></span>' : '') +
-                  // '<span class="urgent-icon">🔥</span>' + 
-                '</div>' +
-              '</div>' +
-              '<div><strong>Назва:</strong> '+Ev.escapeHtml(ev.title||'')+'</div>'+
-              '<div><strong>Відповідальний:</strong> '+Ev.escapeHtml(ev.owner||'—')+'</div>'+
-              
-              '<div><strong>Терміновість:</strong> '+(ev.urgent?'так':'ні')+'</div>' +
-
-              (ev.incoming_no ? '<div><strong>Вхідний №:</strong> '+Ev.escapeHtml(ev.incoming_no||'—')+'</div>' : '') +
-              (ev.outgoing_no ? '<div><strong>Вихідний №:</strong> '+Ev.escapeHtml(ev.outgoing_no||'—')+'</div>' : '') + 
-              (ev.description ? ('<div><strong>Опис:</strong><br><div class="container auto">'+Ev.escapeHtml(ev.description)+'</div></div>') : '');
-
-    if (infoContent) infoContent.innerHTML=html;
-      setInfoModalType(ev.type);
-    if (infoOverlay){
-      infoOverlay.classList.add('show'); infoOverlay.setAttribute('aria-hidden','false'); infoOverlay.removeAttribute('inert');
-      // [css стрибки] overflow hidden disabled;
-
-      var el = document.querySelector('#editEvBtn');
-      el.setAttribute('data-id',id);
-      el.addEventListener('click',function(e){ closeInfo(); e.stopPropagation(); var eid=e.currentTarget.getAttribute('data-id'); openModalEdit(this.getAttribute('data-start')||dateISO, eid); });
-      // infoTitle
-      // item.addEventListener('click',function(e){ e.stopPropagation(); var eid=e.currentTarget.getAttribute('data-id'); openModalEdit(this.getAttribute('data-start')||dateISO, eid); });
-    }
-  }
-
-  function closeInfo(){
-    if (!infoOverlay) return;
-    if (infoOverlay.contains(document.activeElement)) { try{ document.activeElement.blur(); }catch(_){} }
-    infoOverlay.classList.remove('show'); infoOverlay.setAttribute('aria-hidden','true'); infoOverlay.setAttribute('inert','');
-    // [css стрибки] no-op: restore not needed
-  }
-
-  var infoClose   = $('infoClose');
-  var infoOk      = $('infoOk');
-  if (infoClose) infoClose.addEventListener('click',function(){ closeInfo(); });
-  if (infoOk)    infoOk.addEventListener('click',function(){ closeInfo(); });
 
 /* ===== Фокус та стабільний скрол ===== */
 var __lastFocusEl = null;
@@ -564,11 +294,10 @@ var __lastFocusEl = null;
       var w=((d2.getDay()+6)%7); if(w>=5) cell.classList.add('weekend'); if(Ev.sameDate(d2,today)) cell.classList.add('today');
 
       cell.addEventListener('click', function(ev){
+        var openModalNew  = global.CalendarApp.ui.openModalNew;
         var c=ev.currentTarget; var iso2=c.dataset.date; var headEl=c.querySelector('.cell-head'); var listEl=c.querySelector('.events');
         if(ev.target===c||ev.target===headEl||ev.target===listEl||ev.target===headEl.firstChild){ openModalNew(iso2); }
       });
-      // заміна на інфо
-      // cell.addEventListener('click',function(){ openInfo(iso2,ev.id); });
 
       cell.addEventListener('dragenter',function(e){ e.preventDefault(); this.classList.add('drop-target'); });
       cell.addEventListener('dragover', function(e){
@@ -702,6 +431,10 @@ function renderCell(cell){
     var matcher=Ev.buildMatcher(currentType, filterText ? filterText.value : '');
     var filtered=events.filter(matcher);
 
+    var openInfo      = global.CalendarApp.ui.openInfo; 
+    var openModalEdit      = global.CalendarApp.ui.openModalEdit;
+    var openModalNew  = global.CalendarApp.ui.openModalNew;
+
     for(var i=0;i<filtered.length;i++){
       var ev=filtered[i];
       var item=document.createElement('div'); item.className='event '+Ev.typeToClass(ev.type)+(ev.urgent?' urgent':''); if (ev && ev.done) { try { item.classList.add('done'); } catch(_){ item.className += ' done'; } } item.setAttribute('draggable', (ev._seg && ev._seg==='mid') ? 'false' : 'true'); item.setAttribute('data-id',ev.id);
@@ -721,7 +454,10 @@ item.setAttribute('data-seg', (ev._seg||'single'));
     dt.setData('text/calendar-event', JSON.stringify({ fromDate: sday, id: eid }));
   }
 });
+
+
 item.addEventListener('dragend',function(e){ e.currentTarget.classList.remove('dragging'); });
+    
 
       var bar=document.createElement('div'); bar.className='bar';
     
@@ -752,7 +488,9 @@ item.addEventListener('dragend',function(e){ e.currentTarget.classList.remove('d
     }
       });
       
-      item.addEventListener('click',function(e){ e.stopPropagation(); var eid=this.getAttribute('data-id'); var seg=this.getAttribute('data-seg'); var sday=this.getAttribute('data-start')||dateISO; if(seg&&seg!=='single'){ openModalEdit(sday, eid); } else { openInfo(dateISO,eid); } });
+      item.addEventListener('click',function(e){
+         var openInfo      = global.CalendarApp.ui.openInfo;
+         e.stopPropagation(); var eid=this.getAttribute('data-id'); var seg=this.getAttribute('data-seg'); var sday=this.getAttribute('data-start')||dateISO; if(seg&&seg!=='single'){ openModalEdit(sday, eid); } else { openInfo(dateISO,eid); } });
 
       item.appendChild(bar);
       item.appendChild(time);
@@ -860,6 +598,8 @@ if (ev._seg){ item.className += ' ev--'+ev._seg; }      // item.appendChild(del)
     }
     
 function renderGroup(tl, dateISO, startHour, endHour){
+   var openInfo      = global.CalendarApp.ui.openInfo;
+   
       if (!tl) return;
       for (var h=startHour; h<endHour; h++){
         for (var m=0; m<60; m+=15){
@@ -986,9 +726,6 @@ function renderGroup(tl, dateISO, startHour, endHour){
   global.CalendarApp = global.CalendarApp || {};
   global.CalendarApp.ui = global.CalendarApp.ui || {};
   global.CalendarApp.ui.init = init;
-  global.CalendarApp.ui.openModalNew  = openModalNew;
-  global.CalendarApp.ui.openModalEdit = openModalEdit;
-  global.CalendarApp.ui.openInfo = openInfo; 
   global.CalendarApp.ui.renderAllFn = renderAllFn;
 
   // Автостарт
