@@ -701,6 +701,12 @@ function renderGroup(tl, dateISO, startHour, endHour){
     });
   }
 
+  // встановлюємо обробку змін
+  setInterval(() => {
+    init();
+    // console.log('init:');
+    }, 10_000);
+
   // Експорт UI API (якщо буде потрібно з інших скриптів)
   global.CalendarApp = global.CalendarApp || {};
   global.CalendarApp.ui = global.CalendarApp.ui || {};

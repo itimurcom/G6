@@ -60,6 +60,20 @@
             "outgoing_no": "",
             "description": "",
             "user_id": 0
+        },
+        {
+            "end_date": "2025-10-09",
+            "id": "6c412b5f-c988-4fce-a535-21800caafb7d",
+            "time": "10:15",
+            "title": "Такой ось подій ВКЗ",
+            "owner": "Вася",
+            "type": "evt",
+            "urgent": false,
+            "done": false,
+            "incoming_no": "1",
+            "outgoing_no": "2",
+            "description": "Тестовий опис",
+            "user_id": 0
         }
     ],
     "2025-10-02": [
@@ -90,20 +104,6 @@
             "outgoing_no": "",
             "description": "",
             "user_id": 0
-        },
-        {
-            "end_date": "2025-10-04",
-            "id": "6c412b5f-c988-4fce-a535-21800caafb7d",
-            "time": "10:15",
-            "title": "Такой ось подій ВКЗ",
-            "owner": "Вася",
-            "type": "other",
-            "urgent": false,
-            "done": false,
-            "incoming_no": "1",
-            "outgoing_no": "2",
-            "description": "Тестовий опис",
-            "user_id": 0
         }
     ],
     "2025-10-03": [
@@ -114,25 +114,11 @@
             "title": "ВКЗ Відправка листа на КДШВ ТЕСТ",
             "owner": "Максим Юрійович",
             "type": "evt",
-            "urgent": false,
-            "done": true,
+            "urgent": true,
+            "done": false,
             "incoming_no": "",
             "outgoing_no": "",
             "description": "",
-            "user_id": 0
-        },
-        {
-            "end_date": null,
-            "id": "e14197d2-8fe8-484e-bbd5-329dc2a3f04e",
-            "time": "16:00",
-            "title": "ВКЗ - тест 2",
-            "owner": "Максим Юрійович",
-            "type": "mi",
-            "urgent": false,
-            "done": false,
-            "incoming_no": "1",
-            "outgoing_no": "2",
-            "description": "123",
             "user_id": 0
         },
         {
@@ -150,7 +136,22 @@
             "user_id": 0
         }
     ],
-    "2025-10-04": [],
+    "2025-10-04": [
+        {
+            "end_date": null,
+            "id": "e14197d2-8fe8-484e-bbd5-329dc2a3f04e",
+            "time": "16:00",
+            "title": "ВКЗ - тест 2",
+            "owner": "Максим Юрійович",
+            "type": "mi",
+            "urgent": false,
+            "done": false,
+            "incoming_no": "1",
+            "outgoing_no": "2",
+            "description": "123",
+            "user_id": 0
+        }
+    ],
     "2025-10-05": [],
     "2025-10-06": [],
     "2025-10-07": [],
