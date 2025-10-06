@@ -1,7 +1,22 @@
 {
     "": [],
     "2025-08-07": [],
-    "2025-09-01": [],
+    "2025-09-01": [
+        {
+            "end_date": null,
+            "id": "e_188ae722c32657f0",
+            "time": "15:00",
+            "title": "Нормальна назва",
+            "owner": "FJFJJF",
+            "type": "other",
+            "urgent": false,
+            "done": false,
+            "incoming_no": "",
+            "outgoing_no": "",
+            "description": "",
+            "user_id": 0
+        }
+    ],
     "2025-09-02": [],
     "2025-09-03": [],
     "2025-09-04": [],
@@ -34,11 +49,11 @@
     "2025-10-01": [
         {
             "end_date": null,
-            "id": "841291b6-3245-49aa-9587-3c63815270e5",
-            "time": "02:30",
-            "title": "ВКЗ ЖЕСТЬ  іваіваіва",
-            "owner": "Тім",
-            "type": "nas",
+            "id": "e_2247aec1ebb7127b",
+            "time": "15:00",
+            "title": "user_id",
+            "owner": "",
+            "type": "evt",
             "urgent": false,
             "done": false,
             "incoming_no": "",
@@ -47,22 +62,7 @@
             "user_id": 0
         }
     ],
-    "2025-10-02": [
-        {
-            "end_date": "2025-12-30",
-            "id": "6c412b5f-c988-4fce-a535-21800caafb7d",
-            "time": "10:15",
-            "title": "Такой ось подій ВКЗ",
-            "owner": "Вася",
-            "type": "mi",
-            "urgent": false,
-            "done": false,
-            "incoming_no": "1",
-            "outgoing_no": "2",
-            "description": "Тестовий опис",
-            "user_id": 0
-        }
-    ],
+    "2025-10-02": [],
     "2025-10-03": [],
     "2025-10-04": [],
     "2025-10-05": [],
@@ -126,7 +126,7 @@
         {
             "end_date": null,
             "id": "ab5721b3-8778-4c69-a46e-b43983cd7b35",
-            "time": "13:30",
+            "time": "11:00",
             "title": "ВКЗ Відправка листа на КДШВ ТЕСТ",
             "owner": "Максим Юрійович",
             "type": "evt",
@@ -135,6 +135,34 @@
             "incoming_no": "",
             "outgoing_no": "",
             "description": "",
+            "user_id": 0
+        },
+        {
+            "end_date": null,
+            "id": "841291b6-3245-49aa-9587-3c63815270e5",
+            "time": "02:30",
+            "title": "ВКЗ ЖЕСТЬ  іваіваіва",
+            "owner": "Тім",
+            "type": "nas",
+            "urgent": false,
+            "done": false,
+            "incoming_no": "",
+            "outgoing_no": "",
+            "description": "",
+            "user_id": 0
+        },
+        {
+            "end_date": null,
+            "id": "6c412b5f-c988-4fce-a535-21800caafb7d",
+            "time": "10:15",
+            "title": "ВКЗ Такой ось подій",
+            "owner": "Вася",
+            "type": "mi",
+            "urgent": false,
+            "done": false,
+            "incoming_no": "1",
+            "outgoing_no": "2",
+            "description": "Тестовий опис",
             "user_id": 0
         }
     ],
@@ -148,22 +176,7 @@
     "2025-10-14": [],
     "2025-10-15": [],
     "2025-10-16": [],
-    "2025-10-17": [
-        {
-            "end_date": "2025-10-30",
-            "id": "e_188ae722c32657f0",
-            "time": "15:00",
-            "title": "Нормальна назва",
-            "owner": "FJFJJF",
-            "type": "other",
-            "urgent": false,
-            "done": false,
-            "incoming_no": "",
-            "outgoing_no": "",
-            "description": "",
-            "user_id": 0
-        }
-    ],
+    "2025-10-17": [],
     "2025-10-18": [],
     "2025-10-19": [],
     "2025-10-20": [],

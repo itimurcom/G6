@@ -16,7 +16,7 @@ final class Auth
     }
 
     public static function id(): ?int {
-        return Session::get('uid', null);
+        return Session::get('user_id', null);
     }
 
     public static function user(): ?array {
@@ -43,7 +43,7 @@ final class Auth
                 return '';
             }
         if (!password_verify($password, $user['password_hash'])) return false;
-        Session::set('uid', (int)$user['id']);
+        Session::set('user_id', (int)$user['id']);
         return true;
     }
 
@@ -59,12 +59,12 @@ final class Auth
             'password_hash' => $hash,
             'role' => 'user',
         ]);
-        Session::set('uid', $id);
+        Session::set('user_id', $id);
         return ['ok'=>true, 'id'=>$id];
     }
 
     public static function logout(): void {
-        Session::forget('uid');
+        Session::forget('user_id');
     }
 
     public static function adminsExist(): bool

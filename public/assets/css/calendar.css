@@ -180,11 +180,10 @@
 .time.qmin { font-weight: 700; opacity: .8; font-size: 13px; }
 .items { display: flex; flex-direction: column; gap: 4px; }
 .item { font-size: 13px; cursor: pointer; position: relative; }
-.item.urgent {
+.item.urgent, .event.urgent {
   /* background: color-mix(in oklab,var(--urgent) 18%, var(--event-bg)); */
   border-radius: 8px;
-  border: 1px dashed color-mix(in oklab,var(--urgent) 50%, var(--event-bg));
-
+  border: 1px dashed color-mix(in oklab,var(--urgent) 60%, var(--event-bg));
   padding: 4px 6px;}
 
 /* Dots */
