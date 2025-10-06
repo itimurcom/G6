@@ -65,6 +65,7 @@ final class Auth
 
     public static function logout(): void {
         Session::forget('user_id');
+        session_unset();
     }
 
     public static function adminsExist(): bool
