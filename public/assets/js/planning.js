@@ -102,6 +102,7 @@
   }
 
   function collectForDay(store, dk) {
+    // Base events that start on this day
     var arr = store[dk] || [];
     var out = [];
 
@@ -111,12 +112,44 @@
       out.push({ start: start, ev: ev, dk: dk });
     }
 
+    // Include multi‑day events that started on other days but span into dk
+    try {
+      var cache = (typeof Data._getCache === "function") ? (Data._getCache() || {}) : (store || {});
+
+      function le(a, b){ return String(a) <= String(b); }
+      function ge(a, b){ return String(a) >= String(b); }
+
+      var keys = Object.keys(cache);
+      for (var ki = 0; ki < keys.length; ki++) {
+        var day = keys[ki];
+        if (day === dk) continue;
+
+        var list = cache[day] || [];
+        for (var j = 0; j < list.length; j++) {
+          var ev2 = list[j] || {};
+          var endDay = ev2.end_date || ev2.end || null;
+          if (!endDay) continue;
+
+          if (ge(dk, day) && le(dk, endDay)) {
+            var timeForSort = "00:00";
+            if (dk === endDay && (ev2.time || ev2.end_time)) {
+              timeForSort = ev2.time || ev2.end_time || "00:00";
+            }
+            var start2 = toDate(dk, timeForSort);
+            out.push({ start: start2, ev: ev2, dk: dk });
+          }
+        }
+      }
+    } catch (e) {
+      /* ignore */
+    }
+
     out.sort(function (a, b) {
       return a.start - b.start;
     });
 
     return out;
-  }
+}
 
   // ---------- type helpers (use existing globals; fallback) ----------
   var _typeToClass =
