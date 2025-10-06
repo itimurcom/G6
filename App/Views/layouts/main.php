@@ -76,6 +76,6 @@
       <?php } endforeach; ?>
   <?php endif; ?>
   -->
-
+<? console_log($_SESSION, '$_SESSION'); ?>
 </body>
 </html>

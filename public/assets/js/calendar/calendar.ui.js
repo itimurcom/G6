@@ -469,7 +469,15 @@ item.addEventListener('dragend',function(e){ e.currentTarget.classList.remove('d
       
       item.addEventListener('click',function(e){
          var openInfo      = global.CalendarApp.ui.openInfo;
-         e.stopPropagation(); var eid=this.getAttribute('data-id'); var seg=this.getAttribute('data-seg'); var sday=this.getAttribute('data-start')||dateISO; if(seg&&seg!=='single'){ openModalEdit(sday, eid); } else { openInfo(dateISO,eid); } });
+         e.stopPropagation(); var eid=this.getAttribute('data-id'); var seg=this.getAttribute('data-seg'); var sday=this.getAttribute('data-start')||dateISO;
+         if(seg&&seg!=='single'){
+            openInfo(sday, eid);
+            // openModalEdit(sday, eid);
+          }
+        else {
+          openInfo(dateISO,eid);
+        }
+      });
 
       item.appendChild(bar);
       item.appendChild(time);

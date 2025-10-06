@@ -1,5 +1,5 @@
 <?php
-
+            
 // === ROLE REGISTRATION LOGIC (sanitizer for /register) ===
 if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
     $path = strtok($_SERVER['REQUEST_URI'] ?? '/', '?') ?: '/';
@@ -127,3 +127,9 @@ if (!\App\Core\Auth::check() && in_array($path, $_PROTECTED, true)) {
 }
 $router->resolve();
 
+
+
+function console_log($value, $label = 'PHP') {
+    $js = json_encode($value, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    echo "<script>console.log('[{$label}]', {$js});</script>";
+}

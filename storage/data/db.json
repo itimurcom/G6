@@ -17,22 +17,7 @@
     "2025-09-14": [],
     "2025-09-15": [],
     "2025-09-16": [],
-    "2025-09-17": [
-        {
-            "end_date": "2025-09-30",
-            "id": "e_188ae722c32657f0",
-            "time": "15:00",
-            "title": "Нормальна назва",
-            "owner": "FJFJJF",
-            "type": "other",
-            "urgent": false,
-            "done": false,
-            "incoming_no": "",
-            "outgoing_no": "",
-            "description": "",
-            "user_id": 0
-        }
-    ],
+    "2025-09-17": [],
     "2025-09-18": [],
     "2025-09-19": [],
     "2025-09-20": [],
@@ -60,14 +45,16 @@
             "outgoing_no": "",
             "description": "",
             "user_id": 0
-        },
+        }
+    ],
+    "2025-10-02": [
         {
-            "end_date": "2025-10-09",
+            "end_date": "2025-12-30",
             "id": "6c412b5f-c988-4fce-a535-21800caafb7d",
             "time": "10:15",
             "title": "Такой ось подій ВКЗ",
             "owner": "Вася",
-            "type": "evt",
+            "type": "mi",
             "urgent": false,
             "done": false,
             "incoming_no": "1",
@@ -76,21 +63,10 @@
             "user_id": 0
         }
     ],
-    "2025-10-02": [
-        {
-            "end_date": null,
-            "id": "cbfc93e4-bc78-4e95-b4e6-662c6b0a2beb",
-            "time": "17:15",
-            "title": "ВКЗ",
-            "owner": "вапвап",
-            "type": "evt",
-            "urgent": true,
-            "done": false,
-            "incoming_no": "",
-            "outgoing_no": "",
-            "description": "",
-            "user_id": 0
-        },
+    "2025-10-03": [],
+    "2025-10-04": [],
+    "2025-10-05": [],
+    "2025-10-06": [
         {
             "end_date": null,
             "id": "745b5167-36e2-4c32-b214-7658d7fa7e59",
@@ -99,22 +75,6 @@
             "owner": "Василь з Адмінки",
             "type": "nas",
             "urgent": false,
-            "done": false,
-            "incoming_no": "",
-            "outgoing_no": "",
-            "description": "",
-            "user_id": 0
-        }
-    ],
-    "2025-10-03": [
-        {
-            "end_date": null,
-            "id": "ab5721b3-8778-4c69-a46e-b43983cd7b35",
-            "time": "15:45",
-            "title": "ВКЗ Відправка листа на КДШВ ТЕСТ",
-            "owner": "Максим Юрійович",
-            "type": "evt",
-            "urgent": true,
             "done": false,
             "incoming_no": "",
             "outgoing_no": "",
@@ -134,9 +94,7 @@
             "outgoing_no": "",
             "description": "укеуке",
             "user_id": 0
-        }
-    ],
-    "2025-10-04": [
+        },
         {
             "end_date": null,
             "id": "e14197d2-8fe8-484e-bbd5-329dc2a3f04e",
@@ -150,10 +108,36 @@
             "outgoing_no": "2",
             "description": "123",
             "user_id": 0
+        },
+        {
+            "end_date": null,
+            "id": "cbfc93e4-bc78-4e95-b4e6-662c6b0a2beb",
+            "time": "17:15",
+            "title": "ВКЗ",
+            "owner": "вапвап",
+            "type": "evt",
+            "urgent": true,
+            "done": false,
+            "incoming_no": "",
+            "outgoing_no": "",
+            "description": "",
+            "user_id": 0
+        },
+        {
+            "end_date": null,
+            "id": "ab5721b3-8778-4c69-a46e-b43983cd7b35",
+            "time": "15:45",
+            "title": "ВКЗ Відправка листа на КДШВ ТЕСТ",
+            "owner": "Максим Юрійович",
+            "type": "evt",
+            "urgent": true,
+            "done": false,
+            "incoming_no": "",
+            "outgoing_no": "",
+            "description": "",
+            "user_id": 0
         }
     ],
-    "2025-10-05": [],
-    "2025-10-06": [],
     "2025-10-07": [],
     "2025-10-08": [],
     "2025-10-09": [],
@@ -164,7 +148,22 @@
     "2025-10-14": [],
     "2025-10-15": [],
     "2025-10-16": [],
-    "2025-10-17": [],
+    "2025-10-17": [
+        {
+            "end_date": "2025-10-30",
+            "id": "e_188ae722c32657f0",
+            "time": "15:00",
+            "title": "Нормальна назва",
+            "owner": "FJFJJF",
+            "type": "other",
+            "urgent": false,
+            "done": false,
+            "incoming_no": "",
+            "outgoing_no": "",
+            "description": "",
+            "user_id": 0
+        }
+    ],
     "2025-10-18": [],
     "2025-10-19": [],
     "2025-10-20": [],
