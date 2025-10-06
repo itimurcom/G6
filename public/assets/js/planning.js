@@ -1,6 +1,24 @@
 // planning.js
 (function (global) {
   "use strict";
+  // === Multi-day segment helpers (declarations) ===
+  function _segPosition(dk, startDay, endDay) {
+    if (!endDay || !startDay) return "single";
+    var s = String(startDay).slice(0,10), e = String(endDay).slice(0,10), d = String(dk).slice(0,10);
+    if (e < s){ var t=s; s=e; e=t; }
+    if (d < s || d > e) return "single";
+    if (s === e) return "single";
+    if (d === s) return "start";
+    if (d === e) return "end";
+    return "mid";
+  }
+  function _segLabel(pos) {
+    return pos === "start" ? "Початок"
+         : pos === "mid"   ? "Продовження"
+         : pos === "end"   ? "Завершення"
+         : "";
+  }
+
 
     // global.PlanningToday = global.PlanningToday || {};
   global.CalendarApp                = global.CalendarApp || {};
@@ -102,54 +120,81 @@
   }
 
   function collectForDay(store, dk) {
-    // Base events that start on this day
-    var arr = store[dk] || [];
+    // Robust multi-day inclusion + separate display time
     var out = [];
+    var base = (Data.getEventsFor ? (Data.getEventsFor(dk) || []) : (store[dk] || [])).slice();
 
-    for (var i = 0; i < arr.length; i++) {
-      var ev = arr[i] || {};
-      var start = toDate(dk, ev.time || ev.start || "00:00");
-      out.push({ start: start, ev: ev, dk: dk });
+    // base-day items
+    for (var i=0;i<base.length;i++){
+      var ev = base[i] || {};
+      var t  = ev.time || ev.start || "00:00";
+      var dt = toDate(dk, t);
+      out.push({ 
+        start: dt,          // sort by actual time on start day
+        display: dt,        // display the same time
+        ev: ev, dk: dk, 
+        startDay: dk, 
+        endDay: (ev.end_date || ev.end || dk) 
+      });
     }
 
-    // Include multi‑day events that started on other days but span into dk
-    try {
-      var cache = (typeof Data._getCache === "function") ? (Data._getCache() || {}) : (store || {});
-
-      function le(a, b){ return String(a) <= String(b); }
-      function ge(a, b){ return String(a) >= String(b); }
+    // cross-day segments (mid/end)
+    (function includeSpans(){
+      var cache = {};
+      if (typeof Data._getCache === "function") cache = Data._getCache() || {};
+      else cache = store || {};
 
       var keys = Object.keys(cache);
-      for (var ki = 0; ki < keys.length; ki++) {
-        var day = keys[ki];
+      for (var idx=0; idx<keys.length; idx++){
+        var day = keys[idx];
         if (day === dk) continue;
-
         var list = cache[day] || [];
-        for (var j = 0; j < list.length; j++) {
+        for (var j=0;j<list.length;j++){
           var ev2 = list[j] || {};
-          var endDay = ev2.end_date || ev2.end || null;
+          var endDay = ev2.end_date || ev2.end;
           if (!endDay) continue;
 
-          if (ge(dk, day) && le(dk, endDay)) {
-            var timeForSort = "00:00";
-            if (dk === endDay && (ev2.time || ev2.end_time)) {
-              timeForSort = ev2.time || ev2.end_time || "00:00";
-            }
-            var start2 = toDate(dk, timeForSort);
-            out.push({ start: start2, ev: ev2, dk: dk });
-          }
+          // inside [start..end] ?
+          var a = String(day).slice(0,10), b = String(endDay).slice(0,10), d = String(dk).slice(0,10);
+          var s=a, e=b; if (e < s){ var tmp=s; s=e; e=tmp; }
+          if (d < s || d > e) continue;
+
+          // Sorting key -> 00:00 (keep segments at top), DISPLAY -> original start time
+          var sortAt = toDate(dk, "00:00");
+          var dispAt = toDate(dk, ev2.time || ev2.start || "00:00");
+
+          out.push({ 
+            start: sortAt, 
+            display: dispAt, 
+            ev: ev2, dk: dk, 
+            startDay: day, 
+            endDay: endDay 
+          });
         }
       }
-    } catch (e) {
-      /* ignore */
+    })();
+
+    out.sort(function (a, b) { return a.start - b.start; });
+    return out;
     }
 
-    out.sort(function (a, b) {
-      return a.start - b.start;
-    });
 
-    return out;
-}
+  (function ensurePlanningSegCss(){
+    var id = "planning-seg-css";
+    if (document.getElementById(id)) return;
+    var css = [
+      ,
+      ,
+      ,
+      ,
+      ".seg-li-start{background:rgba(34,197,94,.08)}",
+      ".seg-li-mid{background:rgba(234,179,8,.06)}",
+      ".seg-li-end{background:rgba(239,68,68,.06)}",
+      
+    ].join("\\n");
+    var el = document.createElement("style"); el.id = id; el.textContent = css; document.head.appendChild(el);
+  })();
+
 
   // ---------- type helpers (use existing globals; fallback) ----------
   var _typeToClass =
@@ -240,14 +285,22 @@
 
     for (var i = 0; i < items.length; i++) {
       let it = items[i];
+      // determine segment position (requires helpers from v5)
+      var segPos = _segPosition(it.dk, (it.startDay || it.dk), (it.endDay || (it.ev && it.ev.end_date) || null));
+      // date to use for opening info/edit (original start day for segments)
+      var infoDate = (segPos === "single") ? it.dk : (it.startDay || it.dk);
+      var editDate = infoDate;
 
       // Capture per-item constants to avoid closure over 'var'
       let dk = it.dk;
       let ev = it.ev;
-      let eid = ensureEventId(dk, ev);
+      let eid = (ev && ev.id && String(ev.id).trim()) ? String(ev.id) : ensureEventId((it.startDay || dk), ev);
 
       var li = document.createElement("li");
       li.className = "planning-today__item";
+      /* data-seg is set on chip */
+      
+      
       if (ev.urgent) li.classList.add("urgent");
       if (ev.done) li.classList.add("done");
       li.setAttribute("data-date", dk);
@@ -255,7 +308,7 @@
 
       var time = document.createElement("div");
       time.className = "planning-today__time";
-      time.textContent = formatTime(it.start);
+      time.textContent = formatTime(it.display || it.start);
 
       var details = document.createElement("div");
       details.className = "planning-today__details";
@@ -267,6 +320,41 @@
       chip.className = "chip " + _typeToClass(tRaw);
       chip.textContent = _labelForType(tRaw);
       chip.id = eid;
+      // v11: segment classes on CHIP (not the row)
+      chip.setAttribute("data-seg", segPos);
+      if (segPos !== "single") {
+        chip.classList.add("ev--multi");
+        chip.classList.add("ev--" + (segPos === "mid" ? "mid" : segPos));
+      }
+
+      chip.setAttribute("data-date", infoDate);
+      chip.setAttribute("data-id", eid);
+      chip.setAttribute("role", "button");
+      chip.setAttribute("tabindex", "0");
+
+      // Modal handlers for info/edit
+      function _openInfo(){ tryOpenInfo(infoDate, eid); }
+      function _openEdit(){ if (typeof openModalEdit === "function") openModalEdit(editDate, eid); else tryOpenInfo(infoDate, eid); }
+
+      chip.addEventListener("click", function(e){
+        e.preventDefault(); e.stopPropagation();
+        if (e.shiftKey) { _openEdit(); } else { _openInfo(); }
+      });
+
+      chip.addEventListener("dblclick", function(e){
+        e.preventDefault(); e.stopPropagation(); _openEdit();
+      });
+
+      chip.addEventListener("keydown", function(e){
+        if (e.key === "Enter" || e.key === " ") { e.preventDefault(); _openInfo(); }
+        if (e.key.toLowerCase() === "e" && (e.ctrlKey || e.metaKey)) { e.preventDefault(); _openEdit(); }
+      });
+
+      chip.addEventListener("contextmenu", function(e){
+        e.preventDefault(); e.stopPropagation(); _openInfo();
+      });
+
+      // (v10) seg-badge removed: styling handled via .ev-- classes
       chip.title = "Тип: " + chip.textContent;
       chip.setAttribute("role", "button");
       chip.setAttribute("tabindex", "0");
@@ -296,7 +384,7 @@
         e.preventDefault();
         e.stopPropagation();
         let eid = e.currentTarget.getAttribute("id");
-        tryOpenInfo(dk, eid);
+        tryOpenInfo(infoDate, eid);
       });
     }
 
@@ -343,7 +431,64 @@
     mount.appendChild(frag);
   }
 
-  // ---------- init ----------
+  
+  // ---------- delegated chip handlers (capture) ----------
+  (function installPlanningDelegatedHandlers(){
+    if (window.__planningDelegatedInstalled) return;
+    window.__planningDelegatedInstalled = true;
+    var mount = document.getElementById(MOUNT_ID);
+    if (!mount) return;
+
+    function getChipPayload(el){
+      var id = el.getAttribute("data-id");
+      var date = el.getAttribute("data-date") || el.getAttribute("data-start") || null;
+      // Fallback: try li data-date if present
+      if (!date){
+        var li = el.closest(".planning-today__item");
+        if (li && li.getAttribute) date = li.getAttribute("data-date");
+      }
+      return { id: id, date: date };
+    }
+
+    function openInfo(date, id){
+      if (!date || !id) return;
+      if (typeof tryOpenInfo === "function") tryOpenInfo(date, id);
+    }
+    function openEdit(date, id){
+      if (!date || !id) return;
+      var fn = (window.CalendarApp && window.CalendarApp.ui && window.CalendarApp.ui.openModalEdit) ? window.CalendarApp.ui.openModalEdit : null;
+      if (fn) fn(date, id); else openInfo(date, id);
+    }
+
+    mount.addEventListener("click", function(e){
+      var el = e.target.closest && e.target.closest(".chip");
+      if (!el) return;
+      var pay = getChipPayload(el);
+      if (!pay.id) return;
+      e.preventDefault(); e.stopPropagation();
+      if (e.shiftKey) openEdit(pay.date, pay.id);
+      else openInfo(pay.date, pay.id);
+    }, true);
+
+    mount.addEventListener("dblclick", function(e){
+      var el = e.target.closest && e.target.closest(".chip");
+      if (!el) return;
+      var pay = getChipPayload(el);
+      if (!pay.id) return;
+      e.preventDefault(); e.stopPropagation();
+      openEdit(pay.date, pay.id);
+    }, true);
+
+    mount.addEventListener("contextmenu", function(e){
+      var el = e.target.closest && e.target.closest(".chip");
+      if (!el) return;
+      var pay = getChipPayload(el);
+      if (!pay.id) return;
+      e.preventDefault(); e.stopPropagation();
+      openInfo(pay.date, pay.id);
+    }, true);
+  })();
+// ---------- init ----------
   function init() {
     ensureStore(function (store) {
       render(store || {});
