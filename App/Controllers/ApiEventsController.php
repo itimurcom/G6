@@ -76,6 +76,8 @@ final class ApiEventsController
         $payload = $this->parseJson();
         if ($payload === null) { $this->json(['ok'=>false,'error'=>'invalid json'], 400); return; }
         try {
+            // never trust client-supplied user_id
+            if (isset($payload['event']) && is_array($payload['event'])) { unset($payload['event']['user_id']); }
             $id = $this->repo->create($payload['date'] ?? '', $payload);
             $this->json(['ok'=>true,'id'=>$id], 201);
         } catch (\Throwable $e) {
@@ -91,6 +93,7 @@ final class ApiEventsController
         if ($id === '') { $this->json(['ok'=>false,'error'=>'id required'], 400); return; }
         unset($payload['id']);
         try {
+            if (isset($payload['event']) && is_array($payload['event'])) { unset($payload['event']['user_id']); }
             $ok = $this->repo->updateById($id, $payload);
             $this->json(['ok'=>(bool)$ok]);
         } catch (\Throwable $e) {

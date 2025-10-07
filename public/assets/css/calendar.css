@@ -352,3 +352,6 @@ body.light .ev--multi,
 @media (prefers-color-scheme: light) {
   :root:not(.theme-dark):not([data-theme="dark"]) .ev--multi { border-color:#000; }
 }
+
+/* Creator meta in info modal */
+.info-meta{font-size:.85em; opacity:.75; margin-top:.5rem;}

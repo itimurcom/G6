@@ -63,6 +63,7 @@ class ComposerStaticInitf502405953d43c522bce30c01bf37ad3
         'App\\Controllers\\ApiBackupController' => __DIR__ . '/../..' . '/App/Controllers/ApiBackupController.php',
         'App\\Controllers\\ApiEventsController' => __DIR__ . '/../..' . '/App/Controllers/ApiEventsController.php',
         'App\\Controllers\\ApiMysqlEventsController' => __DIR__ . '/../..' . '/App/Controllers/ApiMysqlEventsController.php',
+        'App\\Controllers\\ApiUsersController' => __DIR__ . '/../..' . '/App/Controllers/ApiUsersController.php',
         'App\\Controllers\\AuthController' => __DIR__ . '/../..' . '/App/Controllers/AuthController.php',
         'App\\Controllers\\CabinetController' => __DIR__ . '/../..' . '/App/Controllers/CabinetController.php',
         'App\\Controllers\\CalendarController' => __DIR__ . '/../..' . '/App/Controllers/CalendarController.php',

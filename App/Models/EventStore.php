@@ -133,7 +133,36 @@ final class EventStore
 
     public function writeDiff(array $incoming): array
     {
-        $current = $this->normalizeStore($this->read());
+                $current = $this->normalizeStore($this->read());
+        // Preserve original creators on update; set creator on create
+        $existingUsers = [];
+        if (is_array($current)) {
+            foreach ($current as $__d0 => $__arr0) {
+                if (!is_array($__arr0)) continue;
+                foreach ($__arr0 as $__ev0) {
+                    if (is_array($__ev0) && isset($__ev0['id'])) {
+                        $existingUsers[$__ev0['id']] = isset($__ev0['user_id']) ? (int)$__ev0['user_id'] : 0;
+                    }
+                }
+            }
+        }
+        try { $__authId = \App\Core\Auth::id(); } catch (\Throwable $__) { $__authId = null; }
+        if (is_array($incoming)) {
+            foreach ($incoming as $__d => $__arr) {
+                if (!is_array($__arr)) continue;
+                foreach ($__arr as $__i => $__ev) {
+                    if (!is_array($__ev)) continue;
+                    $__eid = isset($__ev['id']) ? $__ev['id'] : null;
+                    if ($__eid !== null && isset($existingUsers[$__eid])) {
+                        $incoming[$__d][$__i]['user_id'] = (int)$existingUsers[$__eid];
+                    } else {
+                        if (!isset($incoming[$__d][$__i]['user_id']) || $incoming[$__d][$__i]['user_id'] === '' || $incoming[$__d][$__i]['user_id'] === null) {
+                            $incoming[$__d][$__i]['user_id'] = (int)($__authId ?? 0);
+                        }
+                    }
+                }
+            }
+        }
         $next    = $this->normalizeStore($incoming);
 
         $curIdx = $this->indexStore($current);

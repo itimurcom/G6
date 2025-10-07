@@ -67,11 +67,18 @@ final class FileEventRepository
 
         if (!isset($next[$d]) || !is_array($next[$d])) $next[$d] = [];
         if (empty($event['id']) || !is_string($event['id'])) $event['id'] = $this->uuidV4();
+        // Inject current user id if missing (before storing)
+        if (!isset($event['user_id']) || $event['user_id'] === '' || $event['user_id'] === null) { $event['user_id'] = (int)(\App\Core\Auth::id() ?? 0); }
+        // Preserve creator: if user_id not provided, keep from old record (if found); otherwise set current auth id
+        if (!isset($event['user_id']) || $event['user_id'] === '' || $event['user_id'] === null) {
+            try {
+                $existing = $this->get($id);
+                if (is_array($existing) && isset($existing['user_id'])) { $event['user_id'] = (int)$existing['user_id']; }
+            } catch (\Throwable $__) { /* ignore */ }
+            if (!isset($event['user_id']) || $event['user_id'] === '' || $event['user_id'] === null) { $event['user_id'] = (int)(\App\Core\Auth::id() ?? 0); }
+        }
         $next[$d][] = $event;
 
-        
-        // Inject current user id if missing
-        if (!isset($event['user_id'])) { $event['user_id'] = \App\Core\Auth::id() ?? 0; }
         $res = $this->store->writeDiff($next);
         $res['id'] = $event['id'];
         $res['date'] = $d;
@@ -98,6 +105,14 @@ final class FileEventRepository
         unset($arr);
 
         if (!isset($next[$d]) || !is_array($next[$d])) $next[$d] = [];
+        // Preserve creator: if user_id not provided, keep from old record (if found); otherwise set current auth id
+        if (!isset($event['user_id']) || $event['user_id'] === '' || $event['user_id'] === null) {
+            try {
+                $existing = $this->get($id);
+                if (is_array($existing) && isset($existing['user_id'])) { $event['user_id'] = (int)$existing['user_id']; }
+            } catch (\Throwable $__) { /* ignore */ }
+            if (!isset($event['user_id']) || $event['user_id'] === '' || $event['user_id'] === null) { $event['user_id'] = (int)(\App\Core\Auth::id() ?? 0); }
+        }
         $next[$d][] = $event;
 
         $res = $this->store->writeDiff($next);
