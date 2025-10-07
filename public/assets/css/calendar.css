@@ -44,7 +44,7 @@
 .nav { display: inline-flex; gap: 8px; flex-wrap: wrap; }
 .type-filters { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
 .filters { display: grid; gap: 8px; grid-template-columns: minmax(0,1fr) auto; margin-top: 8px; }
-.quick-filters { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 4px; }
+.quick-filters { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 4px;}
 
 /* Buttons & chips (shared) */
 .btn,
