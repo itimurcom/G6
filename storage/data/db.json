@@ -255,20 +255,6 @@
     "2025-10-08": [
         {
             "end_date": null,
-            "id": "e_a20a127f401c0767",
-            "time": "12:00",
-            "title": "Завтра?",
-            "owner": "",
-            "type": "evt",
-            "urgent": false,
-            "done": false,
-            "incoming_no": "",
-            "outgoing_no": "",
-            "description": "",
-            "user_id": 1
-        },
-        {
-            "end_date": null,
             "id": "e_2239a1e915012410",
             "time": "12:00",
             "title": "Завтра 2",
@@ -285,11 +271,25 @@
     "2025-10-09": [
         {
             "end_date": null,
+            "id": "e_a20a127f401c0767",
+            "time": "12:00",
+            "title": "Завтра?",
+            "owner": "",
+            "type": "evt",
+            "urgent": false,
+            "done": false,
+            "incoming_no": "",
+            "outgoing_no": "",
+            "description": "",
+            "user_id": 1
+        },
+        {
+            "end_date": null,
             "id": "e_17655b6ec331369c",
             "time": "14:00",
             "title": "Тестування єблування",
             "owner": "",
-            "type": "evt",
+            "type": "mi",
             "urgent": false,
             "done": false,
             "incoming_no": "",
