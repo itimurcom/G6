@@ -153,3 +153,9 @@
   border-top-right-radius: 999px;
   border-bottom-right-radius: 999px;
 }
+
+
+/* Toolbar */
+.planning-toolbar{display:flex;gap:16px;align-items:center;margin:8px 0 12px;}
+.planning-toolbar label{display:flex;gap:6px;align-items:center;cursor:pointer;opacity:.85}
+.planning-toolbar input[type=radio]{accent-color:#4b9;}

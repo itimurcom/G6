@@ -86,6 +86,35 @@
   // ---------- Data access ----------
   var Data = (global.CalendarApp && global.CalendarApp.data) || {};
   var MOUNT_ID = "planning-today";
+  var TOOLBAR_ID = "planning-toolbar";
+  var STATE = { scope: (localStorage.getItem("planning.scope") || "all"), userId: 0 };
+  function readCurrentUserId(){
+    try{
+      var m = document.getElementById(MOUNT_ID);
+      var id = m && m.dataset ? parseInt(m.dataset.userId||"0",10) : 0;
+      return isNaN(id)?0:id;
+    }catch(_){return 0;}
+  }
+  function ensureToolbar(){
+    var t = document.getElementById(TOOLBAR_ID);
+    if(!t) return;
+    var inputs = t.querySelectorAll("input[name=planning-scope]");
+    for(var i=0;i<inputs.length;i++){
+      inputs[i].checked = (inputs[i].value === STATE.scope);
+      inputs[i].addEventListener("change", function(ev){
+        STATE.scope = ev.target.value === "my" ? "my" : "all";
+        localStorage.setItem("planning.scope", STATE.scope);
+        ensureStore(render);
+      });
+    }
+  }
+  function applyScope(list){
+    if(STATE.scope !== "my") return list;
+    var uid = STATE.userId||0; if(!uid) return [];
+    var out=[]; for(var i=0;i<list.length;i++){ var it=list[i]||{}; var ev=it.ev||{}; var u=parseInt(ev.user_id||0,10); if(u===uid) out.push(it); }
+    return out;
+  }
+
 
   // ---------- store helpers ----------
   function ensureStore(cb) {
@@ -394,6 +423,8 @@
 
   // ---------- page render ----------
   function render(store) {
+    STATE.userId = readCurrentUserId();
+    ensureToolbar();
     var mount = document.getElementById(MOUNT_ID);
     if (!mount) return;
 
@@ -411,10 +442,10 @@
       new Date(base.getFullYear(), base.getMonth(), base.getDate() + 2)
     );
 
-    var sY = collectForDay(store, dkY);
-    var sT = collectForDay(store, dkT);
-    var sZ = collectForDay(store, dkZ);
-    var sPz = collectForDay(store, dkPz);
+    var sY = applyScope(collectForDay(store, dkY));
+    var sT = applyScope(collectForDay(store, dkT));
+    var sZ = applyScope(collectForDay(store, dkZ));
+    var sPz = applyScope(collectForDay(store, dkPz));
 
     var dY = parseDayKey(dkY);
     var dT = parseDayKey(dkT);
