@@ -2,5 +2,6 @@
 <section>
   <section id="planning-today"></section>
 </section>
-<? include ("/var/www/html/calendar.localhost/App/Views/layouts/modals/editEvent.php"); ?>
-<? include ("/var/www/html/calendar.localhost/App/Views/layouts/modals/infoEvent.php"); ?>
+
+<? include __DIR__ . '/../layouts/modals/editEvent.php'; ?>
+<? include __DIR__ . '/../layouts/modals/infoEvent.php'; ?>
