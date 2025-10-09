@@ -77,5 +77,6 @@
   <?php endif; ?>
   -->
 <? console_log($_SESSION, '$_SESSION'); ?>
+<script src="/assets/js/calendar/api.usernames.inject.js?v=1"></script>
 </body>
 </html>

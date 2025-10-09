@@ -1,6 +1,6 @@
 <?php /** @var array|null $u */ $u = \App\Core\Auth::user(); ?>
 <div class="title">Мій кабінет</div>
-
+<span class="user--name">u s e r n a m e</span>
 <div class="cabinet-wrap">
   <div class="cabinet-grid">
     <!-- <section class="cabinet-card">
