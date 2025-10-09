@@ -172,20 +172,6 @@
         },
         {
             "end_date": null,
-            "id": "ab5721b3-8778-4c69-a46e-b43983cd7b35",
-            "time": "11:00",
-            "title": "ВКЗ Відправка листа на КДШВ ТЕСТ",
-            "owner": "Максим Юрійович",
-            "type": "evt",
-            "urgent": true,
-            "done": false,
-            "incoming_no": "",
-            "outgoing_no": "",
-            "description": "",
-            "user_id": 0
-        },
-        {
-            "end_date": null,
             "id": "e_710eba138edd8717",
             "time": "11:00",
             "title": "криво 3",
@@ -283,7 +269,7 @@
             "user_id": 0
         },
         {
-            "end_date": "2025-10-10",
+            "end_date": null,
             "id": "e_5c760929b85f684b",
             "time": "17:15",
             "title": "ВКЗ 2",
@@ -294,6 +280,20 @@
             "incoming_no": "",
             "outgoing_no": "",
             "description": "укеуке",
+            "user_id": 0
+        },
+        {
+            "end_date": null,
+            "id": "ab5721b3-8778-4c69-a46e-b43983cd7b35",
+            "time": "11:00",
+            "title": "ВКЗ Відправка листа на КДШВ ТЕСТ",
+            "owner": "Максим Юрійович",
+            "type": "evt",
+            "urgent": true,
+            "done": false,
+            "incoming_no": "",
+            "outgoing_no": "",
+            "description": "",
             "user_id": 0
         }
     ],
