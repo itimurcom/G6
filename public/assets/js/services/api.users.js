@@ -4,8 +4,6 @@
  * - If no data-user-id → uses /api/users/me
  * - Click / Enter on span → /cabinet?user_id=ID
  *
- * Drop this file to: public/js/services/api.users.js
- * Ensure your layout includes it once on every page.
  */
 (function (global) {
   'use strict';

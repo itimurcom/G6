@@ -63,7 +63,7 @@
   <?php endif; ?>
 
   <!-- If you still need CSRF bootstrap, keep it inside <body> -->
-  <script src="/js/bootstrap.csrf.js" defer></script>
+  <script src="/assets/js/services/bootstrap.csrf.js" defer></script>
 
   <!-- Optional: modules block (commented) -->
   <!--
@@ -77,6 +77,6 @@
   <?php endif; ?>
   -->
 <? console_log($_SESSION, '$_SESSION'); ?>
-<script src="/js/services/api.users.js?v=1"></script>
+<script src="/assets/js/services/api.users.js?v=1"></script>
 </body>
 </html>
