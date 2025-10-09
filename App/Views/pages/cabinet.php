@@ -1,6 +1,16 @@
-<?php /** @var array|null $u */ $u = \App\Core\Auth::user(); ?>
+<?php
+/** Resolve cabinet view user (by resolved CABINET_VIEW_USER_ID / GET / SESSION) */
+$__viewId = defined('CABINET_VIEW_USER_ID')
+    ? (int)CABINET_VIEW_USER_ID
+    : (int)($_GET['user_id'] ?? ($_REQUEST['cabinet_user_id'] ?? ($_SESSION['user_id'] ?? 0)));
+
+$u = null;
+try { $u = (new \App\Models\UserFileRepository())->findById($__viewId); } catch (\Throwable $e) { $u = null; }
+if (!$u) { $u = \App\Core\Auth::user() ?? []; }
+$isOwnCabinet = ((int)($_SESSION['user_id'] ?? 0) === (int)($u['id'] ?? 0));
+?>
 <div class="title">Мій кабінет</div>
-<span class="user--name">u s e r n a m e</span>
+<span class="user--name" data-user-id="<?= (int)($u['id'] ?? 0) ?>">loading…</span>
 <div class="cabinet-wrap">
   <div class="cabinet-grid">
     <!-- <section class="cabinet-card">
