@@ -57,7 +57,6 @@
   border: 1px solid var(--border);
   background: var(--event-bg);
   color: var(--fg);
-  width:8em;
   text-align: center;
 }
 .btn { padding: 8px 12px; border-radius: 10px; font-weight: 700; cursor: pointer; }
