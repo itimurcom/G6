@@ -14,7 +14,8 @@
             "incoming_no": "",
             "outgoing_no": "",
             "description": "",
-            "user_id": 0
+            "user_id": 0,
+            "created_at": ""
         }
     ],
     "2025-09-02": [],
@@ -68,7 +69,8 @@
             "incoming_no": "",
             "outgoing_no": "",
             "description": "",
-            "user_id": 0
+            "user_id": 0,
+            "created_at": ""
         },
         {
             "end_date": null,
@@ -82,7 +84,8 @@
             "incoming_no": "",
             "outgoing_no": "",
             "description": "",
-            "user_id": 0
+            "user_id": 0,
+            "created_at": ""
         },
         {
             "end_date": null,
@@ -96,7 +99,8 @@
             "incoming_no": "1",
             "outgoing_no": "2",
             "description": "123",
-            "user_id": 0
+            "user_id": 0,
+            "created_at": ""
         },
         {
             "end_date": null,
@@ -110,21 +114,8 @@
             "incoming_no": "",
             "outgoing_no": "",
             "description": "укеуке",
-            "user_id": 0
-        },
-        {
-            "end_date": null,
-            "id": "cbfc93e4-bc78-4e95-b4e6-662c6b0a2beb",
-            "time": "17:15",
-            "title": "ВКЗ",
-            "owner": "вапвап",
-            "type": "evt",
-            "urgent": false,
-            "done": false,
-            "incoming_no": "",
-            "outgoing_no": "",
-            "description": "",
-            "user_id": 0
+            "user_id": 0,
+            "created_at": ""
         },
         {
             "end_date": null,
@@ -138,7 +129,8 @@
             "incoming_no": "",
             "outgoing_no": "",
             "description": "",
-            "user_id": 3
+            "user_id": 3,
+            "created_at": ""
         },
         {
             "end_date": null,
@@ -152,7 +144,8 @@
             "incoming_no": "",
             "outgoing_no": "",
             "description": "",
-            "user_id": 0
+            "user_id": 0,
+            "created_at": ""
         },
         {
             "end_date": null,
@@ -166,7 +159,8 @@
             "incoming_no": "",
             "outgoing_no": "",
             "description": "",
-            "user_id": 0
+            "user_id": 0,
+            "created_at": ""
         },
         {
             "end_date": null,
@@ -180,7 +174,8 @@
             "incoming_no": "",
             "outgoing_no": "",
             "description": "",
-            "user_id": 0
+            "user_id": 0,
+            "created_at": ""
         },
         {
             "end_date": null,
@@ -194,7 +189,8 @@
             "incoming_no": "",
             "outgoing_no": "",
             "description": "",
-            "user_id": 0
+            "user_id": 0,
+            "created_at": ""
         }
     ],
     "2025-10-11": [
@@ -210,7 +206,8 @@
             "incoming_no": "",
             "outgoing_no": "",
             "description": "",
-            "user_id": 0
+            "user_id": 0,
+            "created_at": ""
         },
         {
             "end_date": null,
@@ -224,7 +221,8 @@
             "incoming_no": "",
             "outgoing_no": "",
             "description": "",
-            "user_id": 0
+            "user_id": 0,
+            "created_at": ""
         },
         {
             "end_date": null,
@@ -238,7 +236,8 @@
             "incoming_no": "1",
             "outgoing_no": "2",
             "description": "Тестовий опис Тестовий опис Тестовий опис Тестовий опис Тестовий опис Тестовий опис Тестовий опис Тестовий опис Тестовий описТестовий описТестовий описТестовий описТестовий опис Тестовий описТестовий описТестовий описТестовий описТестовий описТестовий описТестовий описТестовий описТестовий описТестовий описТестовий опис Тестовий описТестовий описТестовий опис Тестовий описТестовий опис Тестовий опис Тестовий опис Тестовий опис Тестовий опис Тестовий опис Тестовий опис Тестовий опис Тестовий описТестовий описТестовий описТестовий описТестовий опис Тестовий описТестовий описТестовий описТестовий описТестовий описТестовий описТестовий описТестовий описТестовий описТестовий описТестовий опис Тестовий описТестовий описТестовий опис Тестовий описТестовий опис Тестовий опис Тестовий опис Тестовий опис Тестовий опис Тестовий опис Тестовий опис Тестовий опис Тестовий описТестовий описТестовий описТестовий описТестовий опис Тестовий описТестовий описТестовий описТестовий описТестовий описТестовий описТестовий описТестовий описТестовий описТестовий описТестовий опис Тестовий описТестовий описТестовий опис Тестовий описТестовий опис Тестовий опис Тестовий опис Тестовий опис Тестовий опис Тестовий опис Тестовий опис Тестовий опис Тестовий описТестовий описТестовий описТестовий описТестовий опис Тестовий описТестовий описТестовий описТестовий описТестовий описТестовий описТестовий описТестовий описТестовий описТестовий описТестовий опис Тестовий описТестовий описТестовий опис Тестовий опис",
-            "user_id": 0
+            "user_id": 0,
+            "created_at": ""
         },
         {
             "end_date": null,
@@ -252,7 +251,8 @@
             "incoming_no": "",
             "outgoing_no": "",
             "description": "",
-            "user_id": 1
+            "user_id": 1,
+            "created_at": ""
         },
         {
             "end_date": null,
@@ -266,7 +266,8 @@
             "incoming_no": "",
             "outgoing_no": "",
             "description": "",
-            "user_id": 1
+            "user_id": 1,
+            "created_at": ""
         },
         {
             "end_date": null,
@@ -280,7 +281,8 @@
             "incoming_no": "",
             "outgoing_no": "",
             "description": "",
-            "user_id": 3
+            "user_id": 3,
+            "created_at": ""
         },
         {
             "end_date": null,
@@ -294,10 +296,42 @@
             "incoming_no": "",
             "outgoing_no": "",
             "description": "",
-            "user_id": 1
+            "user_id": 1,
+            "created_at": ""
         }
     ],
-    "2025-10-12": [],
+    "2025-10-12": [
+        {
+            "end_date": null,
+            "id": "cbfc93e4-bc78-4e95-b4e6-662c6b0a2beb",
+            "time": "17:15",
+            "title": "ВКЗ",
+            "owner": "вапвап",
+            "type": "evt",
+            "urgent": false,
+            "done": false,
+            "incoming_no": "",
+            "outgoing_no": "",
+            "description": "",
+            "user_id": 0,
+            "created_at": ""
+        },
+        {
+            "end_date": null,
+            "id": "e_b136dfad3ea90515",
+            "time": "16:00",
+            "title": "Одноденна",
+            "owner": "",
+            "type": "evt",
+            "urgent": false,
+            "done": false,
+            "incoming_no": "",
+            "outgoing_no": "",
+            "description": "",
+            "user_id": 1,
+            "created_at": "2025-10-10T12:56:45+00:00"
+        }
+    ],
     "2025-10-13": [],
     "2025-10-14": [],
     "2025-10-15": [],

@@ -67,6 +67,7 @@ final class FileEventRepository
 
         if (!isset($next[$d]) || !is_array($next[$d])) $next[$d] = [];
         if (empty($event['id']) || !is_string($event['id'])) $event['id'] = $this->uuidV4();
+        if (!isset($event['created_at']) || $event['created_at']==='' || $event['created_at']===null) { $event['created_at'] = gmdate('c'); }
         // Inject current user id if missing (before storing)
         if (!isset($event['user_id']) || $event['user_id'] === '' || $event['user_id'] === null) { $event['user_id'] = (int)(\App\Core\Auth::id() ?? 0); }
         // Preserve creator: if user_id not provided, keep from old record (if found); otherwise set current auth id
@@ -115,6 +116,8 @@ final class FileEventRepository
         }
         $next[$d][] = $event;
 
+        $evExisting = $this->get($id);
+        if (!isset($event['created_at']) && is_array($evExisting) && isset($evExisting['created_at'])) { $event['created_at'] = $evExisting['created_at']; }
         $res = $this->store->writeDiff($next);
         $res['id'] = $id;
         $res['date'] = $d;

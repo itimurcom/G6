@@ -8,38 +8,6 @@
   var locale='uk-UA';
   var weekdayShortFmt = new Intl.DateTimeFormat(locale,{weekday:'short'});
 
-  // === Current user & permissions ===
-  var __me = { id: 0, role: null, isAdmin: false };
-
-  function getCurrentUserId(){
-    var mt = document.getElementById('planning-today');
-    var id = mt && mt.dataset ? parseInt(mt.dataset.userId || '0', 10) : 0;
-    return isNaN(id) ? 0 : id;
-  }
-
-  (function preloadMe(){
-    try { __me.id = getCurrentUserId(); } catch(_){ __me.id = 0; }
-    try {
-      fetch('/api/users/me')
-        .then(function(r){ return r.json(); })
-        .then(function(x){
-          if (x && x.ok && x.user) {
-            __me.role = x.user.role || null;
-            __me.isAdmin = String(__me.role || '').toLowerCase() === 'admin';
-          }
-        })
-        .catch(function(){ });
-    } catch(_){}
-  })();
-
-  function canEditEvent(ev){
-    if (!ev) return false;
-    var uid  = parseInt(ev.user_id || 0, 10) || 0;
-    var meId = __me.id || getCurrentUserId() || 0;
-    return (__me.isAdmin === true) || (uid > 0 && meId > 0 && uid === meId);
-  }
-  // === /Current user & permissions ===
-
   var inputDate     = $('inputDate');
   var inputTime     = $('inputTime');
   var inputSpanDays = $('inputSpanDays');
@@ -82,10 +50,6 @@
   global.CalendarApp.ui.openModalNew  = openModalNew;
   global.CalendarApp.ui.openModalEdit = openModalEdit;
   global.CalendarApp.ui.openInfo      = openInfo; 
-
-  global.CalendarApp.ui.closeOverlay  = closeOverlay;
-  global.CalendarApp.ui.closeInfo     = closeInfo;
-
 
 /* ===== Модалки ===== */
   function setEditModalType(t){
@@ -259,9 +223,6 @@ function openModalNew(dateISO){
     var ev  = arr.find(function(e){ return e.id===id; });
     if (!ev) return;
 
-    // Guard permissions
-    if (typeof canEditEvent==='function' && !canEditEvent(ev)) { try{ alert('Недостатньо прав для редагування цієї події'); }catch(_){ } return; }
-
     // Prefill span days (inclusive, UTC)
     if (inputSpanDays){
       var ed = ev.end_date || '';
@@ -326,7 +287,8 @@ function openInfo(dateISO,id){
               '</div>' +
               '<div><strong>Назва:</strong> '+Ev.escapeHtml(ev.title||'')+'</div>'+
               '<div><strong>Відповідальний:</strong> '+Ev.escapeHtml(ev.owner||'—')+'</div>'+
-              '<div><strong>Власник (створив):</strong> '+(parseInt(ev.user_id||0,10)>0?'<span class="user--name" data-user-id="'+parseInt(ev.user_id,10)+'"></span>':'—')+'</div>'+
+              '<div><strong>Створено:</strong> ' + (ev.created_at ? Ev.escapeHtml(new Date(ev.created_at).toLocaleString(locale, {hour12:false})) : '—') + '</div>' +
+              
               
               '<div><strong>Терміновість:</strong> '+(ev.urgent?'так':'ні')+'</div>' +
 

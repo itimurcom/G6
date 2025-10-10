@@ -63,7 +63,7 @@ final class EventStore
                 if (empty($e['id']) || !is_string($e['id'])) {
                     $e['id'] = $this->uuidV4();
                 }
-                foreach (['time','title','owner','type','incoming_no','outgoing_no','description'] as $f) {
+                foreach (['time','title','owner','type','incoming_no','outgoing_no','description','created_at'] as $f) {
                     if (isset($e[$f]) && !is_string($e[$f])) $e[$f] = (string)$e[$f];
                     if (!isset($e[$f])) $e[$f] = '';
                 }
@@ -183,6 +183,7 @@ final class EventStore
             if (!isset($curIdx[$id])) {
                 $d = $n['date'];
                 if (!isset($current[$d]) || !is_array($current[$d])) $current[$d] = [];
+                if (!isset($n['ev']['created_at']) || $n['ev']['created_at'] === '' || $n['ev']['created_at'] === null) { $n['ev']['created_at'] = gmdate('c'); }
                 $current[$d][] = $n['ev'];
                 $created++;
             } else {
@@ -190,6 +191,7 @@ final class EventStore
                 $oldD = $o['date']; $old = $o['ev'];
                 $newD = $n['date']; $nev = $n['ev'];
                 $changed = json_encode($old, JSON_UNESCAPED_UNICODE) !== json_encode($nev, JSON_UNESCAPED_UNICODE);
+                if ((!isset($nev['created_at']) || $nev['created_at'] === '' || $nev['created_at'] === null) && isset($old['created_at'])) { $nev['created_at'] = $old['created_at']; }
                 if ($oldD !== $newD) {
                     array_splice($current[$oldD], $o['index'], 1);
                     if (!isset($current[$newD]) || !is_array($current[$newD])) $current[$newD] = [];
