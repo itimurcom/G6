@@ -4,6 +4,7 @@
   var Data   = (global.CalendarApp && global.CalendarApp.data)   || {};
   var Ev     = (global.CalendarApp && global.CalendarApp.events) || {};
   var renderAllFn = global.CalendarApp.ui.renderAllFn;
+
   
   var locale='uk-UA';
   var weekdayShortFmt = new Intl.DateTimeFormat(locale,{weekday:'short'});
@@ -51,6 +52,9 @@
   global.CalendarApp.ui.openModalEdit = openModalEdit;
   global.CalendarApp.ui.openInfo      = openInfo; 
 
+  global.CalendarApp.ui.closeOverlay = closeOverlay;
+  global.CalendarApp.ui.closeInfo    = closeInfo;
+  
 /* ===== Модалки ===== */
   function setEditModalType(t){
     if (!editModal) return;
@@ -354,6 +358,46 @@ if (modal) modal.addEventListener('submit', function(e){
       outgoing_no: (inputOutgoing    && inputOutgoing.value    || '').trim(),
       description: (inputDescription && inputDescription.value || '').trim()
     };
+
+    (function ensureUserId(){
+  try {
+    if (typeof ev !== 'undefined' && ev && (ev.user_id === undefined || ev.user_id === null)) {
+      var existing = null;
+      var od = (typeof overlay !== 'undefined' && overlay && overlay.dataset && overlay.dataset.origDate)
+        ? overlay.dataset.origDate
+        : (typeof newDate !== 'undefined' ? newDate : null);
+
+      if (od && typeof Data !== 'undefined' && Data && typeof Data.getEventsFor === 'function') {
+        var arr0 = Data.getEventsFor(od) || [];
+        for (var i = 0; i < arr0.length; i++) {
+          var x = arr0[i];
+          if (x && x.id === ev.id) { existing = x; break; }
+        }
+      }
+
+      if (existing && existing.user_id != null) {
+        ev.user_id = existing.user_id; // Editing: keep original author
+      } else {
+        // Creating or unknown: try to assign current user id from STATE or DOM
+        var myId = 0;
+        if (typeof STATE !== 'undefined' && STATE && STATE.userId) {
+          var tmp = parseInt(STATE.userId, 10);
+          if (!isNaN(tmp)) myId = tmp;
+        }
+        if (!myId) {
+          var mt = (typeof document !== 'undefined') ? document.getElementById('planning-today') : null;
+          if (mt && mt.dataset && mt.dataset.userId) {
+            var tmp2 = parseInt(mt.dataset.userId, 10);
+            if (!isNaN(tmp2)) myId = tmp2;
+          }
+        }
+        if (myId) { ev.user_id = myId; }
+      }
+    }
+  } catch (__e) {
+    // swallow to avoid breaking save flow
+  }
+})();
 
     // Minimal guards
     if (!ev.title) return;

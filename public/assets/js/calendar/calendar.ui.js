@@ -106,8 +106,18 @@
     if (e.key==='ArrowRight') changeMonth(1);
   });
 
-  window.addEventListener('keydown',function(e){ if(e.key==='Escape'){ try{ closeOverlay(); }catch(_){ } try{ closeInfo(); }catch(_){ } } });
-// Ensure close fields exist on every event (in-place)
+  // window.addEventListener('keydown',function(e){ if(e.key==='Escape'){ try{ closeOverlay(); }catch(_){ } try{ closeInfo(); }catch(_){ } } });
+// Do NOT early-return on inputs for Escape
+  window.addEventListener('keydown', function(e){
+    if (e.key === 'Escape') {
+      var ui = (window.CalendarApp && window.CalendarApp.ui) || {};
+      try { ui.closeOverlay && ui.closeOverlay(); } catch(_) {}
+      try { ui.closeInfo    && ui.closeInfo(); }    catch(_) {}
+      // optionally: e.preventDefault(); e.stopPropagation();
+      return;
+    }
+  });
+  // Ensure close fields exist on every event (in-place)
 function migrateEnsureCloseFields(dayMap) {
   if (!dayMap || typeof dayMap !== 'object') return;
   Object.keys(dayMap).forEach(function (day) {
