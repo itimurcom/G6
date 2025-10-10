@@ -1,66 +1,131 @@
 (function (global) {
   "use strict";
 
-  var Data   = (global.CalendarApp && global.CalendarApp.data)   || {};
-  var Ev     = (global.CalendarApp && global.CalendarApp.events) || {};
+  var Data        = (global.CalendarApp && global.CalendarApp.data)   || {};
+  var Ev          = (global.CalendarApp && global.CalendarApp.events) || {};
   var renderAllFn = global.CalendarApp.ui.renderAllFn;
-  
-  var locale='uk-UA';
-  var weekdayShortFmt = new Intl.DateTimeFormat(locale,{weekday:'short'});
 
-  var inputDate     = $('inputDate');
-  var inputTime     = $('inputTime');
-  var inputSpanDays = $('inputSpanDays');
-  var inputTitle    = $('inputTitle');
+  var locale = 'uk-UA';
+  var weekdayShortFmt = new Intl.DateTimeFormat(locale, { weekday: 'short' });
 
-  var inputOwner    = $('inputOwner');
-  var inputType     = $('inputType');
-  var inputUrgent   = $('inputUrgent');
-  var inputDone     = $('inputDone');
+  // === Info modal helpers for multi-day ===
+  function __isoToUTCDate(iso){ var a=String(iso).split('-').map(Number); return new Date(Date.UTC(a[0], a[1]-1, a[2])); }
+  function __addDaysUTC(d, n){ return new Date(d.getTime() + n*86400000); }
+  function __fmtISO(d){ var y=d.getUTCFullYear(), m=String(d.getUTCMonth()+1).padStart(2,'0'), da=String(d.getUTCDate()).padStart(2,'0'); return y+'-'+m+'-'+da; }
+  function __hasEventOn(dateISO, id){
+    try {
+      var arr = (typeof Data!=='undefined' && Data.getEventsFor) ? (Data.getEventsFor(dateISO)||[]) : [];
+      for (var i=0;i<arr.length;i++){ var e=arr[i]; if (e && e.id===id) return true; }
+    } catch(_){}
+    return false;
+  }
+  function __findStartDateByScan(id, hintISO){
+    // scan backwards up to 120 days to find earliest occurrence of this id
+    var cur = __isoToUTCDate(hintISO);
+    for (var i=0;i<120;i++){
+      var prev = __addDaysUTC(cur, -1);
+      var prevISO = __fmtISO(prev);
+      if (!__hasEventOn(prevISO, id)) break;
+      cur = prev;
+    }
+    return __fmtISO(cur);
+  }
+  // === /helpers ===
 
-  var inputIncoming     = $('inputIncoming');    // Вхідний номер // 8
-  var inputOutgoing     = $('inputOutgoing');    // Вихідний номер // 8
-  var inputDescription  = $('inputDescription'); // Опис (textarea) // 8
+  // === Current user & permissions ===
+  var __me = { id: 0, role: null, isAdmin: false };
+
+  function getCurrentUserId(){
+    var mt = document.getElementById('planning-today');
+    var id = mt && mt.dataset ? parseInt(mt.dataset.userId || '0', 10) : 0;
+    return isNaN(id) ? 0 : id;
+  }
+
+  (function preloadMe(){
+    try { __me.id = getCurrentUserId(); } catch(_){ __me.id = 0; }
+    try {
+      fetch('/api/users/me')
+        .then(function(r){ return r.json(); })
+        .then(function(x){
+          if (x && x.ok && x.user) {
+            __me.role = x.user.role || null;
+            __me.isAdmin = String(__me.role || '').toLowerCase() === 'admin';
+          }
+        })
+        .catch(function(){});
+    } catch(_){}
+  })();
+
+  function canEditEvent(ev){
+    if (!ev) return false;
+    var uid  = parseInt(ev.user_id || 0, 10) || 0;
+    var meId = __me.id || getCurrentUserId() || 0;
+    return (__me.isAdmin === true) || (uid > 0 && meId > 0 && uid === meId);
+  }
+  // === /Current user & permissions ===
+
+  var $id = function(id){ return document.getElementById(id); };
+
+  var inputDate     = $id('inputDate');
+  var inputTime     = $id('inputTime');
+  var inputSpanDays = $id('inputSpanDays');
+  var inputTitle    = $id('inputTitle');
+
+  var inputOwner    = $id('inputOwner');
+  var inputType     = $id('inputType');
+  var inputUrgent   = $id('inputUrgent');
+  var inputDone     = $id('inputDone');
+
+  var inputIncoming     = $id('inputIncoming');    // Вхідний номер
+  var inputOutgoing     = $id('inputOutgoing');    // Вихідний номер
+  var inputDescription  = $id('inputDescription'); // Опис (textarea)
 
   // Інфо-модалка
-  var infoOverlay   = $('infoOverlay'); // 13  
-  var infoModal     = infoOverlay ? infoOverlay.querySelector('.modal') : null;
-  var infoClose     = $('infoClose');
-  var infoOk        = $('infoOk');
+  var infoOverlay = $id('infoOverlay');
+  var infoModal   = infoOverlay ? infoOverlay.querySelector('.modal') : null;
+  var infoClose   = $id('infoClose');
+  var infoOk      = $id('infoOk');
 
   // Модалка редагування
-  var overlay      = $('eventOverlay'); // 29
-  var modal        = $('eventModal'); // 19
-  var editModal    = overlay ? overlay.querySelector('.modal') : null; // 7
-  
-  if (infoClose) infoClose.addEventListener('click',function(){ closeInfo(); });
-  if (infoOk)    infoOk.addEventListener('click',function(){ closeInfo(); });
+  var overlay   = $id('eventOverlay');
+  var modal     = $id('eventModal');
+  var editModal = overlay ? overlay.querySelector('.modal') : null;
 
-  if (inputType)   inputType.addEventListener('change',function(){ setEditModalType(inputType.value); });
-  if (inputUrgent) inputUrgent.addEventListener('change',applyUrgentClass);
-  if (inputDone)   inputDone.addEventListener('change',applyDoneClass);
+  // Кнопки закриття редагування (були звернення без оголошення)
+  var btnClose  = $id('btnClose');
+  var btnCancel = $id('btnCancel');
 
-  if (btnClose)  btnClose.addEventListener('click',function(){ closeOverlay(); });
-  if (btnCancel) btnCancel.addEventListener('click',function(){ closeOverlay(); });
-  
+  var __lastFocusEl = null;
+
+  if (infoClose) infoClose.addEventListener('click', function(){ closeInfo(); });
+  if (infoOk)    infoOk.addEventListener('click',    function(){ closeInfo(); });
+
+  if (inputType)   inputType.addEventListener('change', function(){ setEditModalType(inputType.value); });
+  if (inputUrgent) inputUrgent.addEventListener('change', applyUrgentClass);
+  if (inputDone)   inputDone.addEventListener('change',   applyDoneClass);
+
+  if (btnClose)  btnClose.addEventListener('click',  function(){ closeOverlay(); });
+  if (btnCancel) btnCancel.addEventListener('click', function(){ closeOverlay(); });
+
   // Експортуємо індикатор для data-модуля
   global.CalendarApp.ui.showSaving    = showSaving;
   global.CalendarApp.ui.hideSaving    = hideSaving;
 
   global.CalendarApp.ui.openModalNew  = openModalNew;
   global.CalendarApp.ui.openModalEdit = openModalEdit;
-  global.CalendarApp.ui.openInfo      = openInfo; 
+  global.CalendarApp.ui.openInfo      = openInfo;
+  global.CalendarApp.ui.closeOverlay  = closeOverlay;
+  global.CalendarApp.ui.closeInfo     = closeInfo;
 
-/* ===== Модалки ===== */
+  /* ===== Модалки ===== */
   function setEditModalType(t){
     if (!editModal) return;
     editModal.classList.remove('type-mi','type-nas','type-evt','type-other');
     editModal.classList.add(t==='mi'?'type-mi':t==='nas'?'type-nas':t==='evt'?'type-evt':'type-other');
   }
 
-  // підсказки
   function ensureSaveToast(){
-    var t = $('saveToast');
+    var t = $id('saveToast');
     if (!t){
       t = document.createElement('div');
       t.id='saveToast';
@@ -68,7 +133,7 @@
       t.setAttribute('aria-live','polite');
       t.style.cssText = [
         'position:fixed',
-        'bottom:16px',        
+        'bottom:16px',
         'left:50%',
         'transform:translateX(-50%) translateY(8px)',
         'z-index:99999',
@@ -95,16 +160,13 @@
     return t;
   }
 
-
   function setToastAnchor(){
     var t = ensureSaveToast();
-    var hasBottom = !!document.querySelector('.bottom-actions');
     t.style.bottom = '16px';
   }
 
   function setToastMode(mode){
-    /* ===== Тост (індикатор) — внизу екрана ===== */
-    var t=ensureSaveToast(); var ico=$('saveToastIcon');
+    var t=ensureSaveToast(); var ico=$id('saveToastIcon');
     t.style.borderColor = 'var(--border)';
     t.style.boxShadow   = '0 8px 20px rgba(0,0,0,.12)';
     t.style.color       = 'var(--fg)';
@@ -112,116 +174,106 @@
     if (mode==='saving'){
       ico.textContent='⏳';
     } else if (mode==='ok'){
-        if (typeof global.refresh == 'function') {
-          global.refresh();
-        }
-        t.style.background='var(--type-evt)'; t.style.borderColor='var(--type-evt)'; t.style.color='#fff'; t.style.boxShadow='0 8px 24px rgba(34,197,94,.28)'; ico.textContent='✅';
-      } else if (mode==='err'){
-        t.style.background='var(--urgent)'; t.style.borderColor='var(--urgent)'; t.style.color='#fff'; t.style.boxShadow='0 8px 24px rgba(239,68,68,.28)'; ico.textContent='⚠️';
-      }
+      if (typeof global.refresh == 'function') { global.refresh(); }
+      t.style.background='var(--type-evt)'; t.style.borderColor='var(--type-evt)'; t.style.color='#fff'; t.style.boxShadow='0 8px 24px rgba(34,197,94,.28)'; ico.textContent='✅';
+    } else if (mode==='err'){
+      t.style.background='var(--urgent)'; t.style.borderColor='var(--urgent)'; t.style.color='#fff'; t.style.boxShadow='0 8px 24px rgba(239,68,68,.28)'; ico.textContent='⚠️';
+    }
   }
 
-  function toastShow(){
-    var t=ensureSaveToast();
-    t.style.opacity='1';
-    t.style.transform='translateX(-50%) translateY(0)';
-  }
+  function toastShow(){ var t=ensureSaveToast(); t.style.opacity='1'; t.style.transform='translateX(-50%) translateY(0)'; }
+  function toastHide(){ var t=ensureSaveToast(); t.style.opacity='0'; t.style.transform='translateX(-50%) translateY(8px)'; }
 
-  function toastHide(){
-    var t=ensureSaveToast();
-    t.style.opacity='0';
-    t.style.transform='translateX(-50%) translateY(8px)';
-  }
-  
   function showSaving(msg){
     ensureSaveToast();
     setToastAnchor();
     setToastMode('saving');
-    $('saveToastText').textContent = msg || 'Збереження…'; toastShow();
+    $id('saveToastText').textContent = msg || 'Збереження…';
+    toastShow();
   }
-  
+
   function hideSaving(ok){
     ensureSaveToast();
-    if (ok===true){ setToastMode('ok'); $('saveToastText').textContent='Збережено'; setTimeout(toastHide,950); }
-    else if (ok===false){ setToastMode('err'); $('saveToastText').textContent='Помилка збереження'; setTimeout(toastHide,1600); }
+    if (ok===true){ setToastMode('ok'); $id('saveToastText').textContent='Збережено'; setTimeout(toastHide,950); }
+    else if (ok===false){ setToastMode('err'); $id('saveToastText').textContent='Помилка збереження'; setTimeout(toastHide,1600); }
     else { toastHide(); }
   }
 
-    function applyUrgentClass(){
-    var urgentSwitch = $('urgentSwitch');
-
+  function applyUrgentClass(){
+    var urgentSwitch = $id('urgentSwitch');
     if (!editModal || !urgentSwitch || !inputUrgent) return;
     editModal.classList.remove('urgent');
     urgentSwitch.classList.toggle('active', !!inputUrgent.checked);
   }
 
   function applyDoneClass(){
-    var doneSwitch   = $('doneSwitch');
-
+    var doneSwitch   = $id('doneSwitch');
     if (!editModal || !doneSwitch || !inputDone) return;
     doneSwitch.classList.toggle('active', !!inputDone.checked);
   }
-
 
   function showOverlay(){
     if (!overlay) return;
     overlay.removeAttribute('inert');
     overlay.setAttribute('aria-hidden','false');
     overlay.classList.add('show');
-    // [css стрибки] overflow hidden disabled;
     setTimeout(function(){ if(inputTitle) inputTitle.focus(); },0);
   }
 
   function closeOverlay(){
     if (!overlay) return;
-    // Blur anything inside the overlay to avoid scroll jumps
     if (overlay.contains(document.activeElement)) { try{ document.activeElement.blur(); }catch(_){ } }
     var x = window.scrollX, y = window.scrollY;
     overlay.classList.remove('show');
     overlay.setAttribute('aria-hidden','true');
     overlay.setAttribute('inert','');
-    // return focus back to the opener without scrolling
     requestAnimationFrame(function(){
       try{ window.scrollTo(x,y); }catch(_){}
       try{ __lastFocusEl && __lastFocusEl.focus && __lastFocusEl.focus({preventScroll:true}); }catch(_){}
     });
   }
 
-function openModalNew(dateISO){
-    var modalTitle   = $('modalTitle');
-    var inputEndDate = $('inputEndDate');
+  function openModalNew(dateISO){
+    var modalTitle   = $id('modalTitle');
+    var inputEndDate = $id('inputEndDate');
 
-  try{ __lastFocusEl = document.activeElement; }catch(_){}
+    try{ __lastFocusEl = document.activeElement; }catch(_){}
     if (!overlay) return;
     if (modalTitle) modalTitle.textContent='Нова подія';
     overlay.dataset.mode='new'; overlay.dataset.origDate=dateISO; delete overlay.dataset.id;
     if (inputDate)   inputDate.value = dateISO;
     if (inputTime)   inputTime.value = Ev.defaultTime();
-    
-    if (inputEndDate) inputEndDate.value = '';
-    if (inputSpanDays) inputSpanDays.value = '';
-    if (inputTitle)  inputTitle.value = '';
-    if (inputOwner)  inputOwner.value = '';
-    if (inputType)   inputType.value = 'evt';
-    if (inputUrgent) inputUrgent.checked = false;
-    
+
+    if (inputEndDate)   inputEndDate.value = '';
+    if (inputSpanDays)  inputSpanDays.value = '';
+    if (inputTitle)     inputTitle.value = '';
+    if (inputOwner)     inputOwner.value = '';
+    if (inputType)      inputType.value = 'evt';
+    if (inputUrgent)    inputUrgent.checked = false;
+    if (inputDone)      inputDone.checked   = false;
+
     if (inputIncoming)     inputIncoming.value = '';
     if (inputOutgoing)     inputOutgoing.value = '';
     if (inputDescription)  inputDescription.value = '';
-    
-    setEditModalType(inputType ? inputType.value : 'evt'); applyUrgentClass(); showOverlay();
+
+    setEditModalType(inputType ? inputType.value : 'evt');
+    applyUrgentClass();
+    applyDoneClass();
+    showOverlay();
   }
 
- function openModalEdit(dateISO, id){
-    var modalTitle   = $('modalTitle');
+  function openModalEdit(dateISO, id){
+    var modalTitle = $id('modalTitle');
 
     try{ __lastFocusEl = document.activeElement; }catch(_){}
-
     if (!overlay) return;
-  // Find event strictly from its start day
+
+    // Find event strictly from its start day
     var arr = Data.getEventsFor(dateISO) || [];
     var ev  = arr.find(function(e){ return e.id===id; });
     if (!ev) return;
+
+    if (typeof canEditEvent==='function' && !canEditEvent(ev)) { return; }
 
     // Prefill span days (inclusive, UTC)
     if (inputSpanDays){
@@ -232,19 +284,17 @@ function openModalNew(dateISO){
           var __b=ed.split('-').map(Number);
           var ds=new Date(Date.UTC(__a[0],__a[1]-1,__a[2]));
           var de=new Date(Date.UTC(__b[0],__b[1]-1,__b[2]));
-          var diff = Math.round((de-ds)/86400000) + 1; // inclusive
+          var diff = Math.round((de-ds)/86400000) + 1;
           inputSpanDays.value = (diff>0) ? String(diff) : '1';
         } else {
           inputSpanDays.value = '1';
         }
       } catch(_){ inputSpanDays.value = '1'; }
     }
-    try{ __lastFocusEl = document.activeElement; }catch(_){}
 
-    var arr=Data.getEventsFor(dateISO); var ev=arr.find(function(e){return e.id===id;}); if(!ev) return;
     if (modalTitle) modalTitle.textContent='Редагувати подію';
-    if (!overlay) return;
     overlay.dataset.mode='edit'; overlay.dataset.origDate=dateISO; overlay.dataset.id=id;
+
     if (inputDate)   inputDate.value = dateISO;
     if (inputTime)   inputTime.value = ev.time || '';
     if (inputTitle)  inputTitle.value = ev.title || '';
@@ -252,76 +302,125 @@ function openModalNew(dateISO){
     if (inputType)   inputType.value = ev.type || 'evt';
     if (inputUrgent) inputUrgent.checked = !!ev.urgent;
     if (inputDone)   inputDone.checked   = !!ev.done;
-    
+
     if (inputIncoming)     inputIncoming.value = ev.incoming_no || '';
     if (inputOutgoing)     inputOutgoing.value = ev.outgoing_no || '';
     if (inputDescription)  inputDescription.value = ev.description || '';
 
-    setEditModalType(inputType ? inputType.value : 'evt'); applyUrgentClass(); showOverlay();
-    }
+    setEditModalType(inputType ? inputType.value : 'evt');
+    applyUrgentClass();
+    applyDoneClass();
+    showOverlay();
+  }
 
-/* ===== Інфо ===== */
+  /* ===== Інфо ===== */
   function setInfoModalType(t){
     if (!infoModal) return;
     infoModal.classList.remove('type-mi','type-nas','type-evt','type-other');
     infoModal.classList.add(t==='mi'?'type-mi':t==='nas'?'type-nas':t==='evt'?'type-evt':'type-other');
   }
 
-function openInfo(dateISO,id){ 
-    var infoContent = $('infoContent');
+  function openInfo(dateISO,id){
+    var infoContent = $id('infoContent');
 
-    var arr=Data.getEventsFor(dateISO); var ev=arr.find(function(e){return e.id===id;}); if(!ev) return;
-    var html=
-              '<div class="row">' +
-                '<div><strong>Дата:</strong> '+Ev.formatISO(dateISO)+' ('+weekdayShortFmt.format(new Date(dateISO))+')</div>'+
-                '<div><strong>Час:</strong> '+(ev.time||'')+'</div>'+
-              '</div>' +
+    var arr = Data.getEventsFor(dateISO) || [];
+    var ev  = arr.find(function(e){return e.id===id;});
+    if(!ev) return;
 
-              '<div class="row">' +
-                '<div><strong>Тип:</strong> '+Ev.labelForType(ev.type)+'</div>'+
-                '<div style="position:relative;margin-right:1em;">' +
-                  '<strong>Виконана:</strong> '+(ev.done?'так':'ні') +
-                  (ev.urgent ? '<span style="top:-36px;" class="flag-urgent"><span class="icon"><svg class="icon"><use href="#i-fire-clock"></use></svg></span></span>' : '') +
-                  // '<span class="urgent-icon">🔥</span>' + 
-                '</div>' +
-              '</div>' +
-              '<div><strong>Назва:</strong> '+Ev.escapeHtml(ev.title||'')+'</div>'+
-              '<div><strong>Відповідальний:</strong> '+Ev.escapeHtml(ev.owner||'—')+'</div>'+
-              '<div><strong>Створено:</strong> ' + (ev.created_at ? Ev.escapeHtml(new Date(ev.created_at).toLocaleString(locale, {hour12:false})) : '—') + '</div>' +
-              
-              
-              '<div><strong>Терміновість:</strong> '+(ev.urgent?'так':'ні')+'</div>' +
+    var p = dateISO.split('-').map(Number);
+    var y = p[0], m = p[1], d = p[2];
 
-              (ev.incoming_no ? '<div><strong>Вхідний №:</strong> '+Ev.escapeHtml(ev.incoming_no||'—')+'</div>' : '') +
-              (ev.outgoing_no ? '<div><strong>Вихідний №:</strong> '+Ev.escapeHtml(ev.outgoing_no||'—')+'</div>' : '') + 
-              (ev.description ? ('<div><strong>Опис:</strong><br><div class="container auto">'+Ev.escapeHtml(ev.description)+'</div></div>') : '');
+    // author & end blocks
+    var __authorBlock = '';
+    var __endBlock = '';
+    try {
+      var __uid = parseInt(ev.user_id||0,10) || 0;
+      if (__uid > 0) {
+        __authorBlock = '<div><strong>Автор:</strong> <span class="user--name" data-user-id="'+__uid+'"></span></div>';
+      }
+    } catch(_){}
 
-    if (infoContent) infoContent.innerHTML=html;
-      setInfoModalType(ev.type);
+    if (ev && ev.end_date) {
+      try {
+        var startISO = __findStartDateByScan(id, dateISO);
+        var ds = __isoToUTCDate(startISO);
+        var de = __isoToUTCDate(ev.end_date);
+        if (de >= ds) {
+          var __diff = Math.round((de - ds)/86400000) + 1; // inclusive
+          __endBlock = '<div><strong>Дата завершення:</strong> ' + Ev.formatISO(ev.end_date) + ' ('+ __diff + ' дн.)</div>';
+        } else {
+          __endBlock = '<div><strong>Дата завершення:</strong> ' + Ev.formatISO(ev.end_date) + '</div>';
+        }
+      } catch(_){
+        __endBlock = '<div><strong>Дата завершення:</strong> ' + Ev.formatISO(ev.end_date) + '</div>';
+      }
+    }
+
+    var html =
+      '<div class="row">' +
+        '<div><strong>Дата:</strong> '+Ev.formatISO(dateISO)+' ('+weekdayShortFmt.format(new Date(Date.UTC(y,m-1,d)))+')</div>' +
+        __endBlock +
+        '<div><strong>Час:</strong> '+(ev.time||'')+'</div>' +
+      '</div>' +
+
+      '<div class="row">' +
+        '<div><strong>Тип:</strong> '+Ev.labelForType(ev.type)+'</div>' +
+        '<div style="position:relative;margin-right:1em;">' +
+          '<strong>Виконана:</strong> '+(ev.done?'так':'ні') +
+          (ev.urgent ? '<span style="top:-36px;" class="flag-urgent"><span class="icon"><svg class="icon"><use href="#i-fire-clock"></use></svg></span></span>' : '') +
+        '</div>' +
+      '</div>' +
+      '<div><strong>Назва:</strong> '+Ev.escapeHtml(ev.title||'')+'</div>' +
+      '<div><strong>Відповідальний:</strong> '+Ev.escapeHtml(ev.owner||'—')+'</div>' +
+
+      '<div><strong>Власник (створив):</strong> ' + (parseInt(ev.user_id||0,10) > 0 ? '<span class="user--name" data-user-id="'+parseInt(ev.user_id,10)+'"></span>' : '—') + '</div>' +
+      __authorBlock +
+      '<div><strong>Створено:</strong> ' + (ev.created_at ? Ev.escapeHtml(new Date(ev.created_at).toLocaleString(locale, {hour12:false})) : '—') + '</div>' +
+      '<div><strong>Терміновість:</strong> '+(ev.urgent?'так':'ні')+'</div>' +
+
+      (ev.incoming_no ? '<div><strong>Вхідний №:</strong> '+Ev.escapeHtml(ev.incoming_no||'—')+'</div>' : '') +
+      (ev.outgoing_no ? '<div><strong>Вихідний №:</strong> '+Ev.escapeHtml(ev.outgoing_no||'—')+'</div>' : '') +
+      (ev.description ? ('<div><strong>Опис:</strong><br><div class="container auto">'+Ev.escapeHtml(ev.description)+'</div></div>') : '');
+
+    if (infoContent) infoContent.innerHTML = html;
+    setInfoModalType(ev.type);
+
     if (infoOverlay){
-      infoOverlay.classList.add('show'); infoOverlay.setAttribute('aria-hidden','false'); infoOverlay.removeAttribute('inert');
-      // [css стрибки] overflow hidden disabled;
+      infoOverlay.classList.add('show');
+      infoOverlay.setAttribute('aria-hidden','false');
+      infoOverlay.removeAttribute('inert');
 
       var el = document.querySelector('#editEvBtn');
-      el.setAttribute('data-id',id);
-      el.addEventListener('click',function(e){ closeInfo(); e.stopPropagation(); var eid=e.currentTarget.getAttribute('data-id'); openModalEdit(this.getAttribute('data-start')||dateISO, eid); });
-      // infoTitle
-      // item.addEventListener('click',function(e){ e.stopPropagation(); var eid=e.currentTarget.getAttribute('data-id'); openModalEdit(this.getAttribute('data-start')||dateISO, eid); });
+      if (el){
+        el.setAttribute('data-id', id);
+        var __can = (typeof canEditEvent==='function') ? canEditEvent(ev) : true;
+        try { el.onclick = null; } catch(_){ }
+        if (!__can) {
+          el.hidden = true; el.setAttribute('aria-hidden','true'); el.tabIndex = -1;
+        } else {
+          el.hidden = false; el.removeAttribute('aria-hidden'); el.tabIndex = 0;
+          el.onclick = function(e){
+            closeInfo();
+            e.stopPropagation();
+            var eid = el.getAttribute('data-id');
+            openModalEdit(el.getAttribute('data-start')||dateISO, eid);
+          };
+        }
+      }
     }
   }
- 
+
   function closeInfo(){
     if (!infoOverlay) return;
-    if (infoOverlay.contains(document.activeElement)) { try{ document.activeElement.blur(); }catch(_){} }
-    infoOverlay.classList.remove('show'); infoOverlay.setAttribute('aria-hidden','true'); infoOverlay.setAttribute('inert','');
-    // [css стрибки] no-op: restore not needed
+    if (infoOverlay.contains(document.activeElement)) { try{ document.activeElement.blur(); }catch(_){ } }
+    infoOverlay.classList.remove('show');
+    infoOverlay.setAttribute('aria-hidden','true');
+    infoOverlay.setAttribute('inert','');
   }
-  
 
-if (modal) modal.addEventListener('submit', function(e){
+  if (modal) modal.addEventListener('submit', function(e){
     e.preventDefault();
 
-    // Native validity: if invalid, show browser hints and keep modal open
     try {
       if (modal && typeof modal.checkValidity === 'function' && !modal.checkValidity()) {
         if (typeof modal.reportValidity === 'function') modal.reportValidity();
@@ -332,7 +431,6 @@ if (modal) modal.addEventListener('submit', function(e){
     var newDate = inputDate ? inputDate.value : '';
     if (!newDate) return;
 
-    // Build event payload
     var ev = {
       end_date: (function(){
         var v = (inputSpanDays && inputSpanDays.value!=='') ? parseInt(inputSpanDays.value,10) : NaN;
@@ -357,7 +455,6 @@ if (modal) modal.addEventListener('submit', function(e){
       description: (inputDescription && inputDescription.value || '').trim()
     };
 
-    // Minimal guards
     if (!ev.title) return;
     if (!ev.type) ev.type = 'evt';
 
@@ -381,21 +478,18 @@ if (modal) modal.addEventListener('submit', function(e){
           }
         }
       } else {
-        var arr = Data.getEventsFor(newDate);
-        arr.push(ev);
-        Data.setEventsFor(newDate, arr);
+        var arrNew = Data.getEventsFor(newDate);
+        arrNew.push(ev);
+        Data.setEventsFor(newDate, arrNew);
       }
-      // Rerender everything in a stable scroll frame
-      withStableScroll(renderAllFn);
+      if (typeof withStableScroll === 'function') { withStableScroll(renderAllFn); }
+      else { renderAllFn && renderAllFn(); }
     } catch(err){
       console.warn('submit/save failed', err);
-      // If saving failed, keep modal open so user sees state
       return;
     }
 
-    // Close the modal AFTER successful save/rerender
     closeOverlay();
   });
-/* ===== Позначення подій як виконаних (close_user_id/close_time) ===== */
-  
+
 })(window);
