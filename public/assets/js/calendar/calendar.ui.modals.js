@@ -4,10 +4,41 @@
   var Data   = (global.CalendarApp && global.CalendarApp.data)   || {};
   var Ev     = (global.CalendarApp && global.CalendarApp.events) || {};
   var renderAllFn = global.CalendarApp.ui.renderAllFn;
-
   
   var locale='uk-UA';
   var weekdayShortFmt = new Intl.DateTimeFormat(locale,{weekday:'short'});
+
+  // === Current user & permissions ===
+  var __me = { id: 0, role: null, isAdmin: false };
+
+  function getCurrentUserId(){
+    var mt = document.getElementById('planning-today');
+    var id = mt && mt.dataset ? parseInt(mt.dataset.userId || '0', 10) : 0;
+    return isNaN(id) ? 0 : id;
+  }
+
+  (function preloadMe(){
+    try { __me.id = getCurrentUserId(); } catch(_){ __me.id = 0; }
+    try {
+      fetch('/api/users/me')
+        .then(function(r){ return r.json(); })
+        .then(function(x){
+          if (x && x.ok && x.user) {
+            __me.role = x.user.role || null;
+            __me.isAdmin = String(__me.role || '').toLowerCase() === 'admin';
+          }
+        })
+        .catch(function(){ });
+    } catch(_){}
+  })();
+
+  function canEditEvent(ev){
+    if (!ev) return false;
+    var uid  = parseInt(ev.user_id || 0, 10) || 0;
+    var meId = __me.id || getCurrentUserId() || 0;
+    return (__me.isAdmin === true) || (uid > 0 && meId > 0 && uid === meId);
+  }
+  // === /Current user & permissions ===
 
   var inputDate     = $('inputDate');
   var inputTime     = $('inputTime');
@@ -52,9 +83,10 @@
   global.CalendarApp.ui.openModalEdit = openModalEdit;
   global.CalendarApp.ui.openInfo      = openInfo; 
 
-  global.CalendarApp.ui.closeOverlay = closeOverlay;
-  global.CalendarApp.ui.closeInfo    = closeInfo;
-  
+  global.CalendarApp.ui.closeOverlay  = closeOverlay;
+  global.CalendarApp.ui.closeInfo     = closeInfo;
+
+
 /* ===== Модалки ===== */
   function setEditModalType(t){
     if (!editModal) return;
@@ -227,6 +259,9 @@ function openModalNew(dateISO){
     var ev  = arr.find(function(e){ return e.id===id; });
     if (!ev) return;
 
+    // Guard permissions
+    if (typeof canEditEvent==='function' && !canEditEvent(ev)) { try{ alert('Недостатньо прав для редагування цієї події'); }catch(_){ } return; }
+
     // Prefill span days (inclusive, UTC)
     if (inputSpanDays){
       var ed = ev.end_date || '';
@@ -291,6 +326,7 @@ function openInfo(dateISO,id){
               '</div>' +
               '<div><strong>Назва:</strong> '+Ev.escapeHtml(ev.title||'')+'</div>'+
               '<div><strong>Відповідальний:</strong> '+Ev.escapeHtml(ev.owner||'—')+'</div>'+
+              '<div><strong>Власник (створив):</strong> '+(parseInt(ev.user_id||0,10)>0?'<span class="user--name" data-user-id="'+parseInt(ev.user_id,10)+'"></span>':'—')+'</div>'+
               
               '<div><strong>Терміновість:</strong> '+(ev.urgent?'так':'ні')+'</div>' +
 
@@ -358,46 +394,6 @@ if (modal) modal.addEventListener('submit', function(e){
       outgoing_no: (inputOutgoing    && inputOutgoing.value    || '').trim(),
       description: (inputDescription && inputDescription.value || '').trim()
     };
-
-    (function ensureUserId(){
-  try {
-    if (typeof ev !== 'undefined' && ev && (ev.user_id === undefined || ev.user_id === null)) {
-      var existing = null;
-      var od = (typeof overlay !== 'undefined' && overlay && overlay.dataset && overlay.dataset.origDate)
-        ? overlay.dataset.origDate
-        : (typeof newDate !== 'undefined' ? newDate : null);
-
-      if (od && typeof Data !== 'undefined' && Data && typeof Data.getEventsFor === 'function') {
-        var arr0 = Data.getEventsFor(od) || [];
-        for (var i = 0; i < arr0.length; i++) {
-          var x = arr0[i];
-          if (x && x.id === ev.id) { existing = x; break; }
-        }
-      }
-
-      if (existing && existing.user_id != null) {
-        ev.user_id = existing.user_id; // Editing: keep original author
-      } else {
-        // Creating or unknown: try to assign current user id from STATE or DOM
-        var myId = 0;
-        if (typeof STATE !== 'undefined' && STATE && STATE.userId) {
-          var tmp = parseInt(STATE.userId, 10);
-          if (!isNaN(tmp)) myId = tmp;
-        }
-        if (!myId) {
-          var mt = (typeof document !== 'undefined') ? document.getElementById('planning-today') : null;
-          if (mt && mt.dataset && mt.dataset.userId) {
-            var tmp2 = parseInt(mt.dataset.userId, 10);
-            if (!isNaN(tmp2)) myId = tmp2;
-          }
-        }
-        if (myId) { ev.user_id = myId; }
-      }
-    }
-  } catch (__e) {
-    // swallow to avoid breaking save flow
-  }
-})();
 
     // Minimal guards
     if (!ev.title) return;

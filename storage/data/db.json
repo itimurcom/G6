@@ -46,101 +46,43 @@
     "2025-09-28": [],
     "2025-09-29": [],
     "2025-09-30": [],
-    "2025-10-01": [
-        {
-            "end_date": null,
-            "id": "e_2247aec1ebb7127b",
-            "time": "15:00",
-            "title": "user_id",
-            "owner": "",
-            "type": "evt",
-            "urgent": false,
-            "done": false,
-            "incoming_no": "",
-            "outgoing_no": "",
-            "description": "",
-            "user_id": 0
-        }
-    ],
+    "2025-10-01": [],
     "2025-10-02": [],
     "2025-10-03": [],
     "2025-10-04": [],
     "2025-10-05": [],
     "2025-10-06": [],
-    "2025-10-07": [
+    "2025-10-07": [],
+    "2025-10-08": [],
+    "2025-10-09": [],
+    "2025-10-10": [
         {
             "end_date": null,
-            "id": "841291b6-3245-49aa-9587-3c63815270e5",
-            "time": "02:30",
-            "title": "ВКЗ ЖЕСТЬ  іваіваіва",
-            "owner": "Тім",
-            "type": "nas",
-            "urgent": false,
-            "done": false,
-            "incoming_no": "",
-            "outgoing_no": "",
-            "description": "",
-            "user_id": 0
-        },
-        {
-            "end_date": null,
-            "id": "e_e463225145c154bc",
-            "time": "12:00",
-            "title": "додав подію",
-            "owner": "",
-            "type": "evt",
-            "urgent": false,
-            "done": false,
-            "incoming_no": "",
-            "outgoing_no": "",
-            "description": "",
-            "user_id": 1
-        },
-        {
-            "end_date": null,
-            "id": "745b5167-36e2-4c32-b214-7658d7fa7e59",
-            "time": "18:30",
-            "title": "Донесення щодо ВКЗ на КДШВ",
-            "owner": "Василь з Адмінки",
-            "type": "nas",
-            "urgent": false,
-            "done": false,
-            "incoming_no": "",
-            "outgoing_no": "",
-            "description": "",
-            "user_id": 0
-        }
-    ],
-    "2025-10-08": [
-        {
-            "end_date": null,
-            "id": "e_710eba138edd8717",
-            "time": "11:00",
-            "title": "криво 3",
-            "owner": "",
-            "type": "evt",
-            "urgent": true,
-            "done": false,
-            "incoming_no": "",
-            "outgoing_no": "",
-            "description": "",
-            "user_id": 0
-        }
-    ],
-    "2025-10-09": [
-        {
-            "end_date": null,
-            "id": "e_17655b6ec331369c",
-            "time": "14:00",
-            "title": "Тестування єблування",
+            "id": "e_1b07d28f3e8d77e5",
+            "time": "10:30",
+            "title": "криво",
             "owner": "",
             "type": "mi",
-            "urgent": true,
+            "urgent": false,
             "done": false,
             "incoming_no": "",
             "outgoing_no": "",
             "description": "",
-            "user_id": 3
+            "user_id": 0
+        },
+        {
+            "end_date": null,
+            "id": "e_4895fb00b6239d23",
+            "time": "10:15",
+            "title": "криво 2",
+            "owner": "",
+            "type": "mi",
+            "urgent": false,
+            "done": false,
+            "incoming_no": "",
+            "outgoing_no": "",
+            "description": "",
+            "user_id": 0
         },
         {
             "end_date": null,
@@ -172,6 +114,92 @@
         },
         {
             "end_date": null,
+            "id": "cbfc93e4-bc78-4e95-b4e6-662c6b0a2beb",
+            "time": "17:15",
+            "title": "ВКЗ",
+            "owner": "вапвап",
+            "type": "evt",
+            "urgent": false,
+            "done": false,
+            "incoming_no": "",
+            "outgoing_no": "",
+            "description": "",
+            "user_id": 0
+        },
+        {
+            "end_date": null,
+            "id": "e_17655b6ec331369c",
+            "time": "14:00",
+            "title": "Тестування єблування",
+            "owner": "",
+            "type": "mi",
+            "urgent": true,
+            "done": false,
+            "incoming_no": "",
+            "outgoing_no": "",
+            "description": "",
+            "user_id": 3
+        },
+        {
+            "end_date": null,
+            "id": "e_710eba138edd8717",
+            "time": "11:00",
+            "title": "криво 3",
+            "owner": "",
+            "type": "evt",
+            "urgent": true,
+            "done": false,
+            "incoming_no": "",
+            "outgoing_no": "",
+            "description": "",
+            "user_id": 0
+        },
+        {
+            "end_date": null,
+            "id": "e_2247aec1ebb7127b",
+            "time": "15:00",
+            "title": "user_id",
+            "owner": "",
+            "type": "evt",
+            "urgent": false,
+            "done": false,
+            "incoming_no": "",
+            "outgoing_no": "",
+            "description": "",
+            "user_id": 0
+        },
+        {
+            "end_date": null,
+            "id": "841291b6-3245-49aa-9587-3c63815270e5",
+            "time": "02:30",
+            "title": "ВКЗ ЖЕСТЬ  іваіваіва",
+            "owner": "Тім",
+            "type": "nas",
+            "urgent": false,
+            "done": false,
+            "incoming_no": "",
+            "outgoing_no": "",
+            "description": "",
+            "user_id": 0
+        },
+        {
+            "end_date": null,
+            "id": "745b5167-36e2-4c32-b214-7658d7fa7e59",
+            "time": "18:30",
+            "title": "Донесення щодо ВКЗ на КДШВ",
+            "owner": "Василь з Адмінки",
+            "type": "nas",
+            "urgent": false,
+            "done": false,
+            "incoming_no": "",
+            "outgoing_no": "",
+            "description": "",
+            "user_id": 0
+        }
+    ],
+    "2025-10-11": [
+        {
+            "end_date": null,
             "id": "ab5721b3-8778-4c69-a46e-b43983cd7b35",
             "time": "11:00",
             "title": "ВКЗ Відправка листа на КДШВ ТЕСТ",
@@ -183,28 +211,12 @@
             "outgoing_no": "",
             "description": "",
             "user_id": 0
-        }
-    ],
-    "2025-10-10": [
-        {
-            "end_date": null,
-            "id": "e_2239a1e915012410",
-            "time": "14:45",
-            "title": "Завтра 2",
-            "owner": "",
-            "type": "nas",
-            "urgent": true,
-            "done": false,
-            "incoming_no": "",
-            "outgoing_no": "",
-            "description": "",
-            "user_id": 3
         },
         {
             "end_date": null,
-            "id": "e_1b07d28f3e8d77e5",
-            "time": "10:30",
-            "title": "криво",
+            "id": "e_4ce89f0509c6a28f",
+            "time": "10:45",
+            "title": "Купити монітор 2",
             "owner": "",
             "type": "mi",
             "urgent": false,
@@ -214,22 +226,6 @@
             "description": "",
             "user_id": 0
         },
-        {
-            "end_date": null,
-            "id": "e_4895fb00b6239d23",
-            "time": "10:15",
-            "title": "криво 2",
-            "owner": "",
-            "type": "mi",
-            "urgent": false,
-            "done": false,
-            "incoming_no": "",
-            "outgoing_no": "",
-            "description": "",
-            "user_id": 0
-        }
-    ],
-    "2025-10-11": [
         {
             "end_date": null,
             "id": "6c412b5f-c988-4fce-a535-21800caafb7d",
@@ -242,20 +238,6 @@
             "incoming_no": "1",
             "outgoing_no": "2",
             "description": "Тестовий опис Тестовий опис Тестовий опис Тестовий опис Тестовий опис Тестовий опис Тестовий опис Тестовий опис Тестовий описТестовий описТестовий описТестовий описТестовий опис Тестовий описТестовий описТестовий описТестовий описТестовий описТестовий описТестовий описТестовий описТестовий описТестовий описТестовий опис Тестовий описТестовий описТестовий опис Тестовий описТестовий опис Тестовий опис Тестовий опис Тестовий опис Тестовий опис Тестовий опис Тестовий опис Тестовий опис Тестовий описТестовий описТестовий описТестовий описТестовий опис Тестовий описТестовий описТестовий описТестовий описТестовий описТестовий описТестовий описТестовий описТестовий описТестовий описТестовий опис Тестовий описТестовий описТестовий опис Тестовий описТестовий опис Тестовий опис Тестовий опис Тестовий опис Тестовий опис Тестовий опис Тестовий опис Тестовий опис Тестовий описТестовий описТестовий описТестовий описТестовий опис Тестовий описТестовий описТестовий описТестовий описТестовий описТестовий описТестовий описТестовий описТестовий описТестовий описТестовий опис Тестовий описТестовий описТестовий опис Тестовий описТестовий опис Тестовий опис Тестовий опис Тестовий опис Тестовий опис Тестовий опис Тестовий опис Тестовий опис Тестовий описТестовий описТестовий описТестовий описТестовий опис Тестовий описТестовий описТестовий описТестовий описТестовий описТестовий описТестовий описТестовий описТестовий описТестовий описТестовий опис Тестовий описТестовий описТестовий опис Тестовий опис",
-            "user_id": 0
-        },
-        {
-            "end_date": null,
-            "id": "cbfc93e4-bc78-4e95-b4e6-662c6b0a2beb",
-            "time": "17:15",
-            "title": "ВКЗ",
-            "owner": "вапвап",
-            "type": "evt",
-            "urgent": false,
-            "done": false,
-            "incoming_no": "",
-            "outgoing_no": "",
-            "description": "",
             "user_id": 0
         },
         {
@@ -274,20 +256,32 @@
         },
         {
             "end_date": null,
-            "id": "e_4ce89f0509c6a28f",
-            "time": "10:45",
-            "title": "Купити монітор 2",
+            "id": "e_e463225145c154bc",
+            "time": "12:00",
+            "title": "додав подію",
             "owner": "",
-            "type": "mi",
+            "type": "evt",
             "urgent": false,
             "done": false,
             "incoming_no": "",
             "outgoing_no": "",
             "description": "",
-            "user_id": 0
-        }
-    ],
-    "2025-10-12": [
+            "user_id": 1
+        },
+        {
+            "end_date": null,
+            "id": "e_2239a1e915012410",
+            "time": "14:45",
+            "title": "Завтра 2",
+            "owner": "",
+            "type": "nas",
+            "urgent": true,
+            "done": false,
+            "incoming_no": "",
+            "outgoing_no": "",
+            "description": "",
+            "user_id": 3
+        },
         {
             "end_date": null,
             "id": "e_9dae1b4026072efc",
@@ -303,6 +297,7 @@
             "user_id": 1
         }
     ],
+    "2025-10-12": [],
     "2025-10-13": [],
     "2025-10-14": [],
     "2025-10-15": [],

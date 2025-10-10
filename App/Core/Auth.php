@@ -44,6 +44,19 @@ final class Auth
             }
         if (!password_verify($password, $user['password_hash'])) return false;
         Session::set('user_id', (int)$user['id']);
+        // Store full user profile in session for fast access
+        try {
+            $role = isset($user['role']) ? (string)$user['role'] : '';
+            $isAdm = (mb_strtolower($role) === 'admin') || !empty($user['is_admin']);
+            Session::set('user', [
+                'id'       => (int)$user['id'],
+                'name'     => (string)($user['name'] ?? ''),
+                'login'    => $user['login'] ?? null,
+                'email'    => $user['email'] ?? null,
+                'role'     => $role,
+                'is_admin' => $isAdm,
+            ]);
+        } catch (\Throwable $__) {}
         return true;
     }
 
@@ -60,11 +73,27 @@ final class Auth
             'role' => 'user',
         ]);
         Session::set('user_id', $id);
+        try {
+            $created = self::repo()->findById($id);
+            if (is_array($created)) {
+                $role = isset($created['role']) ? (string)$created['role'] : '';
+                $isAdm = (mb_strtolower($role) === 'admin') || !empty($created['is_admin']);
+                Session::set('user', [
+                    'id'       => (int)($created['id'] ?? $id),
+                    'name'     => (string)($created['name'] ?? ''),
+                    'login'    => $created['login'] ?? null,
+                    'email'    => $created['email'] ?? null,
+                    'role'     => $role,
+                    'is_admin' => $isAdm,
+                ]);
+            }
+        } catch (\Throwable $__) {}
         return ['ok'=>true, 'id'=>$id];
     }
 
     public static function logout(): void {
         Session::forget('user_id');
+        try { Session::forget('user'); } catch (\Throwable $__) {}
         session_unset();
     }
 
