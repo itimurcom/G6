@@ -12,8 +12,23 @@
   stroke-linecap: round;
   stroke-linejoin: round;
 }
-.icon--xs { --icon-size: .875rem; }
-.icon--sm { --icon-size: 1rem; }
-.icon--md { --icon-size: 1.25rem; }
-.icon--lg { --icon-size: 1.5rem; }
-.icon--xl { --icon-size: 2rem; }
+
+.icon--xs {
+  --icon-size: .875rem;
+}
+
+.icon--sm {
+  --icon-size: 1rem;
+}
+
+.icon--md {
+  --icon-size: 1.25rem;
+}
+
+.icon--lg {
+  --icon-size: 1.5rem;
+}
+
+.icon--xl {
+  --icon-size: 2rem;
+}

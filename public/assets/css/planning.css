@@ -1,18 +1,23 @@
-
 /* Strikethrough for done items everywhere */
-.today-panel .items > div.done,
-.today-panel .items > div.done *,
+.today-panel .items>div.done,
+.today-panel .items>div.done *,
 .planning-today__item.done,
 .planning-today__item.done *,
 .event.done,
-.event.done *{ text-decoration: line-through; }
+.event.done * {
+  text-decoration: line-through;
+}
 
 /* Remove previous 'red line' strikes if present */
 .event.done::after,
-.today-panel .items > div.done::after{ content:none !important; }
+.today-panel .items>div.done::after {
+  content: none !important;
+}
 
 /* Do not block clicks by top placeholder bar */
-.page-head{ pointer-events: none; }
+.page-head {
+  pointer-events: none;
+}
 
 /* === Planning spacing v2 (merged) === */
 /* Consolidated planning styles */
@@ -56,17 +61,19 @@
   grid-template-rows: auto auto;
   gap: 2px;
 }
+
 /* one-line row: chip (left) + title; owner переноситься вниз за потреби */
-.planning-today__details{
+.planning-today__details {
   display: flex;
   align-items: baseline;
   gap: 6px;
-  flex-wrap: wrap; /* дозволяє owner піти на наступний рядок на вузьких екранах */
+  flex-wrap: wrap;
+  /* дозволяє owner піти на наступний рядок на вузьких екранах */
 }
 
 .planning-today__title {
   font-weight: 600;
-   margin: 0; 
+  margin: 0;
 }
 
 .planning-today__owner {
@@ -95,59 +102,82 @@
 }
 
 /* Grey color for date in section title */
-.planning-section__date { color: #6b7280; font-weight: 400;; } /* ~ gray-500 */
-/* Title row: title left + type chip right */
-.planning-today__head{
-  display:flex;
-  align-items:center;
-  gap:.5rem;
+.planning-section__date {
+  color: #6b7280;
+  font-weight: 400;
+  ;
 }
-.planning-today__head .chip{
-  margin-left:auto; /* push chip to the right edge */
-  white-space:nowrap;
+
+/* ~ gray-500 */
+/* Title row: title left + type chip right */
+.planning-today__head {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+}
+
+.planning-today__head .chip {
+  margin-left: auto;
+  /* push chip to the right edge */
+  white-space: nowrap;
 }
 
 /* === v10 Planning UI tweaks === */
 /* More spacious chip on Planning page */
-.planning-today__head .chip{
+.planning-today__head .chip {
   padding: 4px 10px;
   border-radius: 999px;
   line-height: 1.2;
 }
 
 /* Align with Calendar multi-day look */
-.planning-today__item.ev--multi{
+.planning-today__item.ev--multi {
   border: 1px dashed #ffffff60;
 }
+
 /* Keep radius coupling like in calendar.css */
-.planning-today__item.ev--start{ border-top-right-radius: 0; border-bottom-right-radius: 0; }
-.planning-today__item.ev--mid  { border-radius: 0; }
-.planning-today__item.ev--end  { border-top-left-radius: 0; border-bottom-left-radius: 0; }
+.planning-today__item.ev--start {
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+.planning-today__item.ev--mid {
+  border-radius: 0;
+}
+
+.planning-today__item.ev--end {
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+}
 
 
 /* === v11 Planning chip-centric multi-day === */
-.planning-today__details .chip{
-  padding: .4em 1.8em;           /* more space on Planning */
+.planning-today__details .chip {
+  padding: .4em 1.8em;
+  /* more space on Planning */
   line-height: 1.2;
-  border-radius: 999px;        /* default pill */
+  border-radius: 999px;
+  /* default pill */
 }
 
 /* Dashed border only for multi-day segments */
-.planning-today__details .chip.ev--multi{
+.planning-today__details .chip.ev--multi {
   border: 1px dashed currentColor;
 }
 
 /* Segment rounding identical to Calendar behaviour */
-.planning-today__details .chip.ev--start{
+.planning-today__details .chip.ev--start {
   border-top-right-radius: 0;
   border-bottom-right-radius: 0;
   border-top-left-radius: 999px;
   border-bottom-left-radius: 999px;
 }
-.planning-today__details .chip.ev--mid{
+
+.planning-today__details .chip.ev--mid {
   border-radius: 0;
 }
-.planning-today__details .chip.ev--end{
+
+.planning-today__details .chip.ev--end {
   border-top-left-radius: 0;
   border-bottom-left-radius: 0;
   border-top-right-radius: 999px;
@@ -156,6 +186,21 @@
 
 
 /* Toolbar */
-.planning-toolbar{display:flex;gap:16px;align-items:center;margin:8px 0 12px;}
-.planning-toolbar label{display:flex;gap:6px;align-items:center;cursor:pointer;opacity:.85}
-.planning-toolbar input[type=radio]{accent-color:#4b9;}
+.planning-toolbar {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  margin: 8px 0 12px;
+}
+
+.planning-toolbar label {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  cursor: pointer;
+  opacity: .85
+}
+
+.planning-toolbar input[type=radio] {
+  accent-color: #4b9;
+}

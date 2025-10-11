@@ -231,15 +231,6 @@
     });
   }
 
-  // Export small API into CalendarApp.ui if present (keeps your global style)
-  if (window.CalendarApp && window.CalendarApp.ui) {
-    window.CalendarApp.ui.isEventClosed = isEventClosed;
-    window.CalendarApp.ui.applyClosedStyles = applyClosedStyles;
-    window.CalendarApp.ui.migrateEnsureCloseFields = migrateEnsureCloseFields;
-    window.CalendarApp.ui.closeEventById = closeEventById;
-    window.CalendarApp.ui.reopenEventById = reopenEventById;
-  }
-
   /* ===== Фокус та стабільний скрол ===== */
   var __lastFocusEl = null;
 
@@ -495,6 +486,12 @@
       item.appendChild(time);
       item.appendChild(title);
 
+      // Позначка простроченого в клітинці
+      try {
+        if (isEventOverdueStrict(ev)) {
+          item.classList.add('ev--overdue-flash');
+        }
+      } catch (_) { }
 
       if (ev._seg && ev._seg !== 'single') { item.classList.add('ev--multi'); }
       if (ev._seg) { item.className += ' ev--' + ev._seg; }      // item.appendChild(del);
@@ -665,6 +662,12 @@
             row.setAttribute('draggable', 'true');
             if (seg !== 'single') row.classList.add('ev--multi');
             row.classList.add('ev--' + seg);
+
+            try {
+              if (isEventOverdueStrict(ev)) {
+                row.classList.add('ev--overdue-flash');
+              }
+            } catch (_) { }
             row.addEventListener('dragstart', function (e) {
               var id = e.currentTarget.dataset.id; var d = e.currentTarget.dataset.date;
               if (e.dataTransfer) { e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/calendar-event', JSON.stringify({ fromDate: d, id: id })); }
@@ -699,6 +702,76 @@
     renderGroup(todayTimeline, todayISO, 6, 24);
     if (lateOpen) renderGroup(lateTimeline, nextISO, 0, 6);
   }
+
+  /**
+   * Overdue:
+   * - Закриті (close_user_id/close_time) або done — НІКОЛИ не прострочені
+   * - Single-day: start < today  або (start == today && time < now)
+   * - Multi-day:  start < today  І end < today
+   *
+   * Старт шукаємо у: _startDay > start_date > day > dateISO > date
+   */
+  function isEventOverdueStrict(ev, todayISO, nowHM) {
+    try {
+      if (!ev) return false;
+
+      // закриті / done — не прострочені
+      if ((typeof isEventClosed === 'function' && isEventClosed(ev)) || ev.done) return false;
+
+      // утиліти
+      function pad2(n) { return ('0' + n).slice(-2); }
+      function dayKey(src) {
+        if (!src) return '';
+        if (src instanceof Date) {
+          return src.getFullYear() + '-' + pad2(src.getMonth() + 1) + '-' + pad2(src.getDate());
+        }
+        var s = String(src).slice(0, 10);         // очікуємо YYYY-MM-DD
+        var a = s.split('-');
+        var d = new Date(+a[0] || 0, (+a[1] || 1) - 1, +a[2] || 1);
+        if (isNaN(d.getTime())) return '';
+        return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate());
+      }
+      function toMin(hm) {
+        if (hm === null || hm === undefined) return null;
+        var s = String(hm).trim().replace('.', ':'); // підтримка "9.00"
+        if (!s) return null;
+        var p = s.split(':'), h = parseInt(p[0], 10), m = parseInt(p[1] || '0', 10);
+        if (isNaN(h)) h = 0; if (isNaN(m)) m = 0;
+        if (m > 59) m = 59; if (m < 0) m = 0; if (h < 0) h = 0;
+        return h * 60 + m;
+      }
+
+      var todayK = dayKey(todayISO || new Date());
+
+      // Визначаємо реальний старт/фініш
+      var startSrc = ev._startDay || ev.start_date || ev.day || ev.dateISO || ev.date || null;
+      var endSrc = ev.end_date || ev.finish || ev.end || null;
+
+      var startK = dayKey(startSrc);
+      var endK = dayKey(endSrc);
+      var isMulti = !!endK && endK !== startK;
+
+      // Мульти: прострочена лише якщо ОБИДВІ дати у минулому
+      if (isMulti) {
+        if (!startK || !endK) return false;
+        return (startK < todayK) && (endK < todayK);
+      }
+
+      // Одноденна
+      if (!startK) return false;
+      if (startK < todayK) return true;
+      if (startK > todayK) return false;
+
+      // Сьогодні: перевіряємо час
+      var tMin = toMin(ev.time);
+      if (tMin === null) return false; // без часу — до кінця дня не вважаємо простроченою
+      var nowMin = toMin(nowHM || (function () { var d = new Date(); return pad2(d.getHours()) + ':' + pad2(d.getMinutes()); })());
+      if (nowMin === null) return false;
+      return nowMin > tMin;
+    } catch (_) { return false; }
+  }
+
+
   /* ===== Ініціалізація ===== */
   function migrateEnsureIds() {
     var s = Data.readStore();
@@ -726,14 +799,19 @@
   // встановлюємо обробку змін
   setInterval(() => {
     calendar_init();
-    // console.log('init:');
-  }, 10_000);
+  }, 60_000);
 
   // Експорт UI API (якщо буде потрібно з інших скриптів)
   global.CalendarApp = global.CalendarApp || {};
   global.CalendarApp.ui = global.CalendarApp.ui || {};
   // global.CalendarApp.ui.init = init;
   global.CalendarApp.ui.renderAllFn = renderAllFn;
+  CalendarApp.ui.isEventOverdueStrict = isEventOverdueStrict;
+  window.CalendarApp.ui.isEventClosed = isEventClosed;
+  window.CalendarApp.ui.applyClosedStyles = applyClosedStyles;
+  window.CalendarApp.ui.migrateEnsureCloseFields = migrateEnsureCloseFields;
+  window.CalendarApp.ui.closeEventById = closeEventById;
+  window.CalendarApp.ui.reopenEventById = reopenEventById;
 
   // Автостарт
   if (document.readyState === 'loading') {

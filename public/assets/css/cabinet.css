@@ -13,7 +13,9 @@
 }
 
 /* Dark overrides (support multiple togglers) */
-[data-theme="dark"], .theme-dark, .dark {
+[data-theme="dark"],
+.theme-dark,
+.dark {
   --cabinet-text: #e6e9ef;
   --cabinet-card-bg: #111418;
   --cabinet-border: #2a2f36;
@@ -44,39 +46,70 @@
 
 /* ----- COMPONENT STYLES (use only tokens above) ----- */
 .cabinet-wrap {
-  display: flex; flex-direction: column; align-items: center; gap: 24px;
-  margin: 0 auto; padding: 12px; max-width: 920px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+  margin: 0 auto;
+  padding: 12px;
+  max-width: 920px;
   color: var(--cabinet-text);
 }
 
 .cabinet-grid {
-  display: grid; grid-template-columns: 1fr 1fr; gap: 24px; width: 100%;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  width: 100%;
 }
-@media (max-width: 900px) { .cabinet-grid { grid-template-columns: 1fr; } }
+
+@media (max-width: 900px) {
+  .cabinet-grid {
+    grid-template-columns: 1fr;
+  }
+}
 
 .cabinet-card {
-  margin: 0 auto; width: 100%; max-width: 460px;
-  padding: 20px; border-radius: 16px;
+  margin: 0 auto;
+  width: 100%;
+  max-width: 460px;
+  padding: 20px;
+  border-radius: 16px;
   background: var(--cabinet-card-bg);
   box-shadow: var(--cabinet-shadow);
   color: var(--cabinet-text);
 }
 
-.cabinet-card h3 { margin: 0 0 16px 0; color: var(--cabinet-text); }
+.cabinet-card h3 {
+  margin: 0 0 16px 0;
+  color: var(--cabinet-text);
+}
 
-.field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; }
-.field label { font-size: 14px; color: var(--cabinet-text); }
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+
+.field label {
+  font-size: 14px;
+  color: var(--cabinet-text);
+}
 
 .input {
-  width: 100%; box-sizing: border-box;
-  padding: 10px 12px; border-radius: 10px;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 10px 12px;
+  border-radius: 10px;
   border: 1px solid var(--cabinet-border);
   background: var(--cabinet-input-bg);
   color: var(--cabinet-text);
 }
 
 .btn {
-  padding: 10px 16px; border-radius: 10px;
+  padding: 10px 16px;
+  border-radius: 10px;
   border: 1px solid var(--cabinet-border);
   background: var(--cabinet-btn-bg);
   color: var(--cabinet-btn-text);
