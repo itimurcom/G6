@@ -117,19 +117,6 @@
       return;
     }
   });
-  // Ensure close fields exist on every event (in-place)
-function migrateEnsureCloseFields(dayMap) {
-  if (!dayMap || typeof dayMap !== 'object') return;
-  Object.keys(dayMap).forEach(function (day) {
-    var arr = dayMap[day];
-    if (!Array.isArray(arr)) return;
-    for (var i=0; i<arr.length; i++) {
-      var ev = arr[i];
-      if (!('close_user_id' in ev)) ev.close_user_id = null;
-      if (!('close_time' in ev)) ev.close_time = null;
-    }
-  });
-}
 
 // Helper: is closed?
 function isEventClosed(ev) {
@@ -172,72 +159,11 @@ function applyClosedStyles(node, ev) {
   }
 }
 
-// Mark as done / reopen — in-memory + server
-// You already have storeAll(dayMap) in backend API; here we'll call a small close endpoint for atomic updates.
-function closeEventById(dayMap, eventId, userId) {
-  if (!dayMap || !eventId) return Promise.reject(new Error('bad args'));
-  var evRef = null, evDay = null, evIdx = -1;
-
-  Object.keys(dayMap).some(function (d) {
-    var idx = -1;
-    var found = (dayMap[d] || []).some(function (e, i) {
-      if (e.id === eventId) { idx = i; return true; }
-      return false;
-    });
-    if (found) { evRef = dayMap[d][idx]; evDay = d; evIdx = idx; return true; }
-    return false;
-  });
-
-  if (!evRef) return Promise.reject(new Error('not found'));
-
-  var nowIso = new Date().toISOString();
-  evRef.close_user_id = userId || 'system';
-  evRef.close_time = nowIso;
-
-  // optimistic UI — server sync
-  return fetch('/api/events/close', {
-    method: 'POST',
-    headers: {'Content-Type': 'application/json', 'Accept':'application/json'},
-    body: JSON.stringify({ id: eventId, close_user_id: evRef.close_user_id, close_time: evRef.close_time })
-  }).then(function (r) {
-    if (!r.ok) throw new Error('HTTP '+r.status);
-    return r.json();
-  });
-}
-
-function reopenEventById(dayMap, eventId) {
-  if (!dayMap || !eventId) return Promise.reject(new Error('bad args'));
-  var evRef = null;
-
-  Object.keys(dayMap).some(function (d) {
-    return (dayMap[d] || []).some(function (e) {
-      if (e.id === eventId) { evRef = e; return true; }
-      return false;
-    });
-  });
-
-  if (!evRef) return Promise.reject(new Error('not found'));
-
-  evRef.close_user_id = null;
-  evRef.close_time = null;
-
-  return fetch('/api/events/close', {
-    method: 'POST',
-    headers: {'Content-Type': 'application/json', 'Accept':'application/json'},
-    body: JSON.stringify({ id: eventId, close_user_id: null, close_time: null })
-  }).then(function (r) {
-    if (!r.ok) throw new Error('HTTP '+r.status);
-    return r.json();
-  });
-}
 
 // Export small API into CalendarApp.ui if present (keeps your global style)
 if (window.CalendarApp && window.CalendarApp.ui) {
   window.CalendarApp.ui.isEventClosed = isEventClosed;
   window.CalendarApp.ui.applyClosedStyles = applyClosedStyles;
-  window.CalendarApp.ui.migrateEnsureCloseFields = migrateEnsureCloseFields;
-  window.CalendarApp.ui.closeEventById = closeEventById;
-  window.CalendarApp.ui.reopenEventById = reopenEventById;
 }
 
 /* ===== Фокус та стабільний скрол ===== */

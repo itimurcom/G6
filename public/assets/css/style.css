@@ -138,3 +138,46 @@ body{
 .space {
   padding:8px 12px;
 }
+
+
+/* Overdue angled beam, horizontal sweep (defaults from the demo load) */
+.ev--overdue-flash {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+
+  /* defaults */
+  --overdue-shine-angle: 45deg;      /* visual angle of the beam */
+  --overdue-shine-duration: 1.8s;    /* animation speed */
+  --overdue-shine-alpha: 0.28;       /* beam intensity */
+  --overdue-shine-color: 255,160,80; /* orange (RGB, no alpha) */
+  --overdue-shine-stop1: 47%;        /* thickness controls */
+  --overdue-shine-stop2: 50%;
+  --overdue-shine-stop3: 53%;
+}
+
+.ev--overdue-flash::after {
+  content: "";
+  position: absolute;
+  /* big vertical overscan hides diagonal beam edges */
+  inset: -220% -60%;
+  pointer-events: none;
+  background: linear-gradient(
+    var(--overdue-shine-angle),
+    rgba(var(--overdue-shine-color), 0) var(--overdue-shine-stop1),
+    rgba(var(--overdue-shine-color), var(--overdue-shine-alpha)) var(--overdue-shine-stop2),
+    rgba(var(--overdue-shine-color), 0) var(--overdue-shine-stop3)
+  );
+  transform: translate3d(-130%, 0, 0);
+  animation: overdue-shine-x var(--overdue-shine-duration) linear infinite;
+  will-change: transform;
+}
+
+@keyframes overdue-shine-x {
+  to { transform: translate3d(130%, 0, 0); }
+}
+
+/* Accessibility */
+@media (prefers-reduced-motion: reduce) {
+  .ev--overdue-flash::after { animation: none; }
+}
