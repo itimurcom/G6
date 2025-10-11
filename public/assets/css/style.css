@@ -148,8 +148,8 @@ body{
 
   /* defaults */
   --overdue-shine-angle: 45deg;      /* visual angle of the beam */
-  --overdue-shine-duration: 1.8s;    /* animation speed */
-  --overdue-shine-alpha: 0.28;       /* beam intensity */
+  --overdue-shine-duration: 2.8s;    /* animation speed */
+  --overdue-shine-alpha: 0.60;       /* beam intensity */
   --overdue-shine-color: 255,160,80; /* orange (RGB, no alpha) */
   --overdue-shine-stop1: 47%;        /* thickness controls */
   --overdue-shine-stop2: 50%;
