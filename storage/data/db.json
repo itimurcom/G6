@@ -114,7 +114,7 @@
             "title": "криво",
             "owner": "",
             "type": "mi",
-            "urgent": false,
+            "urgent": true,
             "done": false,
             "incoming_no": "",
             "outgoing_no": "",

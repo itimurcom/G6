@@ -369,7 +369,7 @@ body {
   /* visual angle of the beam */
   --overdue-shine-duration: 5s;
   /* animation speed */
-  --overdue-shine-alpha: 0.40;
+  --overdue-shine-alpha: 0.50;
   /* beam intensity */
   --overdue-shine-color: 255, 255, 255;
   /* white (RGB, no alpha) */

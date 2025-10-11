@@ -340,6 +340,7 @@
       var chip = document.createElement("span");
       chip.className = "chip " + _typeToClass(tRaw);
       if (isEventOverdueStrict(ev)) chip.classList.add('ev--overdue-flash');
+      if (ev.urgent) chip.classList.add('urgent');
 
       chip.textContent = _labelForType(tRaw);
       chip.id = eid;
