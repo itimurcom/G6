@@ -30,7 +30,9 @@ class CabinetController extends Controller
                 '/assets/css/calendar.css',
                 '/assets/css/cabinet.css',
             ],
-            'extra_js'  => [],
+            'extra_js'  => [
+                '/assets/js/app.js',
+            ],
         ];
 
         $me = Auth::user();

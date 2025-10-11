@@ -50,9 +50,6 @@
     </section>
   </main>
 
-  <!-- App scripts -->
-  <script src="/assets/js/app.js" defer></script>
-
   <?php if (!empty($extra_js)): ?>
     <?php foreach ((array)$extra_js as $src):
       if (file_exists($_SERVER['DOCUMENT_ROOT'].$src)) { ?>

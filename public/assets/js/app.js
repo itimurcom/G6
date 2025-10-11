@@ -28,7 +28,7 @@
     }
   }
 
-  function init(){
+  function app_init(){
     ensureFAB();
     applyTheme(readTheme());
     var themeBtn = document.getElementById('themeToggle');
@@ -45,7 +45,7 @@
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);
   } else {
-    init();
+    app_init();
   }
 })();
 

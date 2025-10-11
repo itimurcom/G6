@@ -14,6 +14,7 @@ class CalendarController extends Controller
                 '/assets/css/icons.css',
                 ],
             'extra_js' => [
+                '/assets/js/app.js',
                 '/assets/js/calendar/calendar.events.js',
                 '/assets/js/calendar/calendar.data.js',
                 

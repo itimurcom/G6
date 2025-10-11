@@ -520,7 +520,7 @@
     }, true);
   })();
 // ---------- init ----------
-  function init() {
+  function planing_init() {
     ensureStore(function (store) {
       render(store || {});
     });
@@ -529,7 +529,7 @@
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", init);
   } else {
-    init();
+    planing_init()
   }
 
   // ---------- public refresh ----------

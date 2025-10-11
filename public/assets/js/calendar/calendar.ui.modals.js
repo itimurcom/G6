@@ -3,12 +3,16 @@
 
   var Data        = (global.CalendarApp && global.CalendarApp.data)   || {};
   var Ev          = (global.CalendarApp && global.CalendarApp.events) || {};
-  var renderAllFn = global.CalendarApp.ui.renderAllFn;
+  var UI          = (global.CalendarApp && global.CalendarApp.ui)     || {};
+  var renderAllFn = (UI && UI.renderAllFn) || function(){};
 
   var locale = 'uk-UA';
   var weekdayShortFmt = new Intl.DateTimeFormat(locale, { weekday: 'short' });
 
-  // === Info modal helpers for multi-day ===
+  // === Helpers ===
+  function $id(id){ return document.getElementById(id); }
+
+  // Multi-day helpers
   function __isoToUTCDate(iso){ var a=String(iso).split('-').map(Number); return new Date(Date.UTC(a[0], a[1]-1, a[2])); }
   function __addDaysUTC(d, n){ return new Date(d.getTime() + n*86400000); }
   function __fmtISO(d){ var y=d.getUTCFullYear(), m=String(d.getUTCMonth()+1).padStart(2,'0'), da=String(d.getUTCDate()).padStart(2,'0'); return y+'-'+m+'-'+da; }
@@ -20,7 +24,6 @@
     return false;
   }
   function __findStartDateByScan(id, hintISO){
-    // scan backwards up to 120 days to find earliest occurrence of this id
     var cur = __isoToUTCDate(hintISO);
     for (var i=0;i<120;i++){
       var prev = __addDaysUTC(cur, -1);
@@ -30,7 +33,14 @@
     }
     return __fmtISO(cur);
   }
-  // === /helpers ===
+  function ukDayWord(n){
+    n = Math.abs(n) % 100;
+    var n1 = n % 10;
+    if (n>10 && n<20) return 'днів';
+    if (n1>1 && n1<5) return 'дні';
+    if (n1==1) return 'день';
+    return 'днів';
+  }
 
   // === Current user & permissions ===
   var __me = { id: 0, role: null, isAdmin: false };
@@ -62,10 +72,9 @@
     var meId = __me.id || getCurrentUserId() || 0;
     return (__me.isAdmin === true) || (uid > 0 && meId > 0 && uid === meId);
   }
-  // === /Current user & permissions ===
+  // === /permissions ===
 
-  var $id = function(id){ return document.getElementById(id); };
-
+  // Inputs
   var inputDate     = $id('inputDate');
   var inputTime     = $id('inputTime');
   var inputSpanDays = $id('inputSpanDays');
@@ -76,22 +85,20 @@
   var inputUrgent   = $id('inputUrgent');
   var inputDone     = $id('inputDone');
 
-  var inputIncoming     = $id('inputIncoming');    // Вхідний номер
-  var inputOutgoing     = $id('inputOutgoing');    // Вихідний номер
-  var inputDescription  = $id('inputDescription'); // Опис (textarea)
+  var inputIncoming     = $id('inputIncoming');
+  var inputOutgoing     = $id('inputOutgoing');
+  var inputDescription  = $id('inputDescription');
 
-  // Інфо-модалка
+  // Info modal
   var infoOverlay = $id('infoOverlay');
   var infoModal   = infoOverlay ? infoOverlay.querySelector('.modal') : null;
   var infoClose   = $id('infoClose');
   var infoOk      = $id('infoOk');
 
-  // Модалка редагування
+  // Edit modal
   var overlay   = $id('eventOverlay');
   var modal     = $id('eventModal');
   var editModal = overlay ? overlay.querySelector('.modal') : null;
-
-  // Кнопки закриття редагування (були звернення без оголошення)
   var btnClose  = $id('btnClose');
   var btnCancel = $id('btnCancel');
 
@@ -107,17 +114,41 @@
   if (btnClose)  btnClose.addEventListener('click',  function(){ closeOverlay(); });
   if (btnCancel) btnCancel.addEventListener('click', function(){ closeOverlay(); });
 
-  // Експортуємо індикатор для data-модуля
+  // Export UI API
+  global.CalendarApp = global.CalendarApp || {};
+  global.CalendarApp.ui = global.CalendarApp.ui || {};
   global.CalendarApp.ui.showSaving    = showSaving;
   global.CalendarApp.ui.hideSaving    = hideSaving;
-
   global.CalendarApp.ui.openModalNew  = openModalNew;
   global.CalendarApp.ui.openModalEdit = openModalEdit;
   global.CalendarApp.ui.openInfo      = openInfo;
   global.CalendarApp.ui.closeOverlay  = closeOverlay;
   global.CalendarApp.ui.closeInfo     = closeInfo;
 
-  /* ===== Модалки ===== */
+  /* ===== Refresh glue (to keep My Tasks in sync) ===== */
+  function forceRefreshUI(detail){
+    // Dispatch a DOM event other modules can listen to
+    try { document.dispatchEvent(new CustomEvent('calendar:changed', {detail: detail||{}})); } catch(_){}
+
+    // Touch localStorage to trigger storage listeners
+    try { localStorage.setItem('calendar:lastChange', String(Date.now())); } catch(_){}
+
+    // Call known refreshers if present
+    try {
+      if (typeof global.refresh === 'function') global.refresh();
+      if (UI) {
+        if (typeof UI.renderAllFn === 'function') UI.renderAllFn();
+        if (typeof UI.renderAll === 'function')   UI.renderAll();
+        if (typeof UI.renderTasks === 'function') UI.renderTasks();
+        if (typeof UI.refreshTasks === 'function') UI.refreshTasks();
+      }
+      if (global.CalendarApp && global.CalendarApp.data && typeof global.CalendarApp.data.reload === 'function'){
+        global.CalendarApp.data.reload();
+      }
+    } catch(_){}
+  }
+
+  /* ===== UI helpers ===== */
   function setEditModalType(t){
     if (!editModal) return;
     editModal.classList.remove('type-mi','type-nas','type-evt','type-other');
@@ -150,7 +181,7 @@
         'box-shadow:0 8px 20px rgba(0,0,0,.12)',
         'opacity:0',
         'pointer-events:none',
-        'transition:opacity .25s ease, transform .25s ease, background-color .2s ease, color .2s ease, border-color .2s ease'
+        'transition:opacity .25s ease, transform .25s ease'
       ].join(';');
       var ico=document.createElement('span'); ico.id='saveToastIcon'; ico.textContent='⏳';
       var txt=document.createElement('span'); txt.id='saveToastText'; txt.textContent='Збереження…';
@@ -158,11 +189,6 @@
       document.body.appendChild(t);
     }
     return t;
-  }
-
-  function setToastAnchor(){
-    var t = ensureSaveToast();
-    t.style.bottom = '16px';
   }
 
   function setToastMode(mode){
@@ -174,24 +200,15 @@
     if (mode==='saving'){
       ico.textContent='⏳';
     } else if (mode==='ok'){
-      if (typeof global.refresh == 'function') { global.refresh(); }
       t.style.background='var(--type-evt)'; t.style.borderColor='var(--type-evt)'; t.style.color='#fff'; t.style.boxShadow='0 8px 24px rgba(34,197,94,.28)'; ico.textContent='✅';
+      forceRefreshUI({source:'toast'});
     } else if (mode==='err'){
       t.style.background='var(--urgent)'; t.style.borderColor='var(--urgent)'; t.style.color='#fff'; t.style.boxShadow='0 8px 24px rgba(239,68,68,.28)'; ico.textContent='⚠️';
     }
   }
-
   function toastShow(){ var t=ensureSaveToast(); t.style.opacity='1'; t.style.transform='translateX(-50%) translateY(0)'; }
   function toastHide(){ var t=ensureSaveToast(); t.style.opacity='0'; t.style.transform='translateX(-50%) translateY(8px)'; }
-
-  function showSaving(msg){
-    ensureSaveToast();
-    setToastAnchor();
-    setToastMode('saving');
-    $id('saveToastText').textContent = msg || 'Збереження…';
-    toastShow();
-  }
-
+  function showSaving(msg){ ensureSaveToast(); setToastMode('saving'); $id('saveToastText').textContent = msg || 'Збереження…'; toastShow(); }
   function hideSaving(ok){
     ensureSaveToast();
     if (ok===true){ setToastMode('ok'); $id('saveToastText').textContent='Збережено'; setTimeout(toastHide,950); }
@@ -202,12 +219,12 @@
   function applyUrgentClass(){
     var urgentSwitch = $id('urgentSwitch');
     if (!editModal || !urgentSwitch || !inputUrgent) return;
-    editModal.classList.remove('urgent');
+    editModal.classList.toggle('urgent', !!inputUrgent.checked);
     urgentSwitch.classList.toggle('active', !!inputUrgent.checked);
   }
 
   function applyDoneClass(){
-    var doneSwitch   = $id('doneSwitch');
+    var doneSwitch = $id('doneSwitch');
     if (!editModal || !doneSwitch || !inputDone) return;
     doneSwitch.classList.toggle('active', !!inputDone.checked);
   }
@@ -240,7 +257,12 @@
     try{ __lastFocusEl = document.activeElement; }catch(_){}
     if (!overlay) return;
     if (modalTitle) modalTitle.textContent='Нова подія';
-    overlay.dataset.mode='new'; overlay.dataset.origDate=dateISO; delete overlay.dataset.id;
+
+    overlay.dataset.mode='new';
+    overlay.dataset.origDate=dateISO;
+    overlay.dataset.id='';
+    overlay.dataset.startDate=dateISO; // keep start_date on client
+
     if (inputDate)   inputDate.value = dateISO;
     if (inputTime)   inputTime.value = Ev.defaultTime();
 
@@ -264,18 +286,15 @@
 
   function openModalEdit(dateISO, id){
     var modalTitle = $id('modalTitle');
-
     try{ __lastFocusEl = document.activeElement; }catch(_){}
     if (!overlay) return;
 
-    // Find event strictly from its start day
     var arr = Data.getEventsFor(dateISO) || [];
     var ev  = arr.find(function(e){ return e.id===id; });
     if (!ev) return;
 
     if (typeof canEditEvent==='function' && !canEditEvent(ev)) { return; }
 
-    // Prefill span days (inclusive, UTC)
     if (inputSpanDays){
       var ed = ev.end_date || '';
       try{
@@ -293,7 +312,10 @@
     }
 
     if (modalTitle) modalTitle.textContent='Редагувати подію';
-    overlay.dataset.mode='edit'; overlay.dataset.origDate=dateISO; overlay.dataset.id=id;
+    overlay.dataset.mode='edit';
+    overlay.dataset.origDate=dateISO;
+    overlay.dataset.id=id;
+    overlay.dataset.startDate = ev.start_date || dateISO;
 
     if (inputDate)   inputDate.value = dateISO;
     if (inputTime)   inputTime.value = ev.time || '';
@@ -330,9 +352,9 @@
     var p = dateISO.split('-').map(Number);
     var y = p[0], m = p[1], d = p[2];
 
-    // author & end blocks
     var __authorBlock = '';
     var __endBlock = '';
+
     try {
       var __uid = parseInt(ev.user_id||0,10) || 0;
       if (__uid > 0) {
@@ -340,14 +362,14 @@
       }
     } catch(_){}
 
-    if (ev && ev.end_date) {
+    if (ev && ev.end_date){
       try {
-        var startISO = __findStartDateByScan(id, dateISO);
+        var startISO = ev.start_date || __findStartDateByScan(id, dateISO);
         var ds = __isoToUTCDate(startISO);
         var de = __isoToUTCDate(ev.end_date);
         if (de >= ds) {
-          var __diff = Math.round((de - ds)/86400000) + 1; // inclusive
-          __endBlock = '<div><strong>Дата завершення:</strong> ' + Ev.formatISO(ev.end_date) + ' ('+ __diff + ' дн.)</div>';
+          var days = Math.round((de - ds)/86400000) + 1;
+          __endBlock = '<div><strong>Дата завершення:</strong> ' + Ev.formatISO(ev.end_date) + ' ('+ days + ' ' + ukDayWord(days) + ')</div>';
         } else {
           __endBlock = '<div><strong>Дата завершення:</strong> ' + Ev.formatISO(ev.end_date) + '</div>';
         }
@@ -356,7 +378,7 @@
       }
     }
 
-    var html =
+    var html = '' +
       '<div class="row">' +
         '<div><strong>Дата:</strong> '+Ev.formatISO(dateISO)+' ('+weekdayShortFmt.format(new Date(Date.UTC(y,m-1,d)))+')</div>' +
         __endBlock +
@@ -372,12 +394,10 @@
       '</div>' +
       '<div><strong>Назва:</strong> '+Ev.escapeHtml(ev.title||'')+'</div>' +
       '<div><strong>Відповідальний:</strong> '+Ev.escapeHtml(ev.owner||'—')+'</div>' +
-
       '<div><strong>Власник (створив):</strong> ' + (parseInt(ev.user_id||0,10) > 0 ? '<span class="user--name" data-user-id="'+parseInt(ev.user_id,10)+'"></span>' : '—') + '</div>' +
       __authorBlock +
       '<div><strong>Створено:</strong> ' + (ev.created_at ? Ev.escapeHtml(new Date(ev.created_at).toLocaleString(locale, {hour12:false})) : '—') + '</div>' +
       '<div><strong>Терміновість:</strong> '+(ev.urgent?'так':'ні')+'</div>' +
-
       (ev.incoming_no ? '<div><strong>Вхідний №:</strong> '+Ev.escapeHtml(ev.incoming_no||'—')+'</div>' : '') +
       (ev.outgoing_no ? '<div><strong>Вихідний №:</strong> '+Ev.escapeHtml(ev.outgoing_no||'—')+'</div>' : '') +
       (ev.description ? ('<div><strong>Опис:</strong><br><div class="container auto">'+Ev.escapeHtml(ev.description)+'</div></div>') : '');
@@ -454,12 +474,55 @@
       outgoing_no: (inputOutgoing    && inputOutgoing.value    || '').trim(),
       description: (inputDescription && inputDescription.value || '').trim()
     };
+// FIX: Preserve or assign ev.user_id so "My tasks" updates immediately after save
+(function ensureUserId(){
+  try {
+    if (typeof ev !== 'undefined' && ev && (ev.user_id === undefined || ev.user_id === null)) {
+      var existing = null;
+      var od = (typeof overlay !== 'undefined' && overlay && overlay.dataset && overlay.dataset.origDate)
+        ? overlay.dataset.origDate
+        : (typeof newDate !== 'undefined' ? newDate : null);
+
+      if (od && typeof Data !== 'undefined' && Data && typeof Data.getEventsFor === 'function') {
+        var arr0 = Data.getEventsFor(od) || [];
+        for (var i = 0; i < arr0.length; i++) {
+          var x = arr0[i];
+          if (x && x.id === ev.id) { existing = x; break; }
+        }
+      }
+
+      if (existing && existing.user_id != null) {
+        ev.user_id = existing.user_id; // Editing: keep original author
+      } else {
+        // Creating or unknown: try to assign current user id from STATE or DOM
+        var myId = 0;
+        if (typeof STATE !== 'undefined' && STATE && STATE.userId) {
+          var tmp = parseInt(STATE.userId, 10);
+          if (!isNaN(tmp)) myId = tmp;
+        }
+        if (!myId) {
+          var mt = (typeof document !== 'undefined') ? document.getElementById('planning-today') : null;
+          if (mt && mt.dataset && mt.dataset.userId) {
+            var tmp2 = parseInt(mt.dataset.userId, 10);
+            if (!isNaN(tmp2)) myId = tmp2;
+          }
+        }
+        if (myId) { ev.user_id = myId; }
+      }
+    }
+  } catch (__e) {
+    // swallow to avoid breaking save flow
+  }
+})();
+
+    // keep start_date on client: set on create, preserve on edit
+    var mode     = overlay ? overlay.dataset.mode : 'new';
+    var origDate = overlay ? overlay.dataset.origDate : newDate;
+    var startD   = overlay ? (overlay.dataset.startDate || '') : '';
+    if (mode === 'new') { ev.start_date = newDate; } else { ev.start_date = startD || newDate; }
 
     if (!ev.title) return;
     if (!ev.type) ev.type = 'evt';
-
-    var mode     = overlay ? overlay.dataset.mode : 'new';
-    var origDate = overlay ? overlay.dataset.origDate : newDate;
 
     try {
       if (mode==='edit'){
@@ -482,8 +545,11 @@
         arrNew.push(ev);
         Data.setEventsFor(newDate, arrNew);
       }
-      if (typeof withStableScroll === 'function') { withStableScroll(renderAllFn); }
-      else { renderAllFn && renderAllFn(); }
+
+      // Strong refresh so "Мої задачі" та інші блоки синхронізуються
+      if (typeof withStableScroll === 'function') { withStableScroll(renderAllFn); } else { try{ renderAllFn && renderAllFn(); }catch(_){}}
+      forceRefreshUI({source:'submit', date:newDate, mode:mode, id:ev.id});
+
     } catch(err){
       console.warn('submit/save failed', err);
       return;

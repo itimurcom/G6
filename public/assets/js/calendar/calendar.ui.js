@@ -708,7 +708,7 @@ function renderGroup(tl, dateISO, startHour, endHour){
     if (changed) Data.writeStore(s);
   }
 
-  function init(){
+  function calendar_init(){
     // Рендер каркасу
     renderCalendar();
     // Завантаження й первинний рендер
@@ -721,7 +721,7 @@ function renderGroup(tl, dateISO, startHour, endHour){
 
   // встановлюємо обробку змін
   setInterval(() => {
-    init();
+    calendar_init();
     // console.log('init:');
     }, 10_000);
 
@@ -735,7 +735,7 @@ function renderGroup(tl, dateISO, startHour, endHour){
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);
   } else {
-    init();
+    calendar_init();
   }
 
 })(window);
