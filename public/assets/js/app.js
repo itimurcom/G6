@@ -43,7 +43,7 @@
 
 
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', init);
+    document.addEventListener('DOMContentLoaded', app_init);
   } else {
     app_init();
   }

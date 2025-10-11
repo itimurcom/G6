@@ -733,7 +733,7 @@ function renderGroup(tl, dateISO, startHour, endHour){
 
   // Автостарт
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', init);
+    document.addEventListener('DOMContentLoaded', calendar_init);
   } else {
     calendar_init();
   }

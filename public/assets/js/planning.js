@@ -517,7 +517,7 @@
   }
 
   if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", init);
+    document.addEventListener("DOMContentLoaded", planing_init);
   } else {
     planing_init()
   }
