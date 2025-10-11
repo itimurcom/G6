@@ -339,6 +339,8 @@
 
       var chip = document.createElement("span");
       chip.className = "chip " + _typeToClass(tRaw);
+      if (isEventOverdueStrict(ev)) chip.classList.add('ev--overdue-flash');
+
       chip.textContent = _labelForType(tRaw);
       chip.id = eid;
       // v11: segment classes on CHIP (not the row)

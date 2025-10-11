@@ -80,7 +80,7 @@
             "owner": "",
             "type": "other",
             "urgent": false,
-            "done": true,
+            "done": false,
             "incoming_no": "",
             "outgoing_no": "",
             "description": "",
