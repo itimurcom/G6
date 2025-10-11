@@ -56,30 +56,30 @@
 
   function resolveById(id) {
     var i = 0;
-    function next() {
+    function id_next() {
       if (i >= ID_ENDPOINTS.length) return Promise.reject(new Error('all id endpoints failed'));
       var url = ID_ENDPOINTS[i++](id);
       return fetchJSON(url).then(function (j) {
         var u = asUserShape(j);
         if (u) return u;
-        return next();
-      }).catch(function () { return next(); });
+        return id_next();
+      }).catch(function () { return id_next(); });
     }
-    return next();
+    return id_next();
   }
 
   function resolveMe() {
     var i = 0;
-    function next() {
+    function me_next() {
       if (i >= ME_ENDPOINTS.length) return Promise.reject(new Error('all me endpoints failed'));
       var url = ME_ENDPOINTS[i++]();
       return fetchJSON(url).then(function (j) {
         var u = asUserShape(j);
         if (u) return u;
-        return next();
-      }).catch(function () { return next(); });
+        return me_next();
+      }).catch(function () { return me_next(); });
     }
-    return next();
+    return me_next();
   }
 
   function extractId(el) {

@@ -9,9 +9,6 @@
   var locale = 'uk-UA';
   var weekdayShortFmt = new Intl.DateTimeFormat(locale, { weekday: 'short' });
 
-  // === Helpers ===
-  function $id(id){ return document.getElementById(id); }
-
   // Multi-day helpers
   function __isoToUTCDate(iso){ var a=String(iso).split('-').map(Number); return new Date(Date.UTC(a[0], a[1]-1, a[2])); }
   function __addDaysUTC(d, n){ return new Date(d.getTime() + n*86400000); }

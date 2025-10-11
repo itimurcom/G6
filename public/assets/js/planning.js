@@ -12,13 +12,6 @@
     if (d === e) return "end";
     return "mid";
   }
-  function _segLabel(pos) {
-    return pos === "start" ? "Початок"
-         : pos === "mid"   ? "Продовження"
-         : pos === "end"   ? "Завершення"
-         : "";
-  }
-
 
     // global.PlanningToday = global.PlanningToday || {};
   global.CalendarApp                = global.CalendarApp || {};
@@ -318,7 +311,6 @@
       var segPos = _segPosition(it.dk, (it.startDay || it.dk), (it.endDay || (it.ev && it.ev.end_date) || null));
       // date to use for opening info/edit (original start day for segments)
       var infoDate = (segPos === "single") ? it.dk : (it.startDay || it.dk);
-      var editDate = infoDate;
 
       // Capture per-item constants to avoid closure over 'var'
       let dk = it.dk;
@@ -361,26 +353,22 @@
       chip.setAttribute("role", "button");
       chip.setAttribute("tabindex", "0");
 
-      // Modal handlers for info/edit
-      function _openInfo(){ tryOpenInfo(infoDate, eid); }
-      function _openEdit(){ if (typeof openModalEdit === "function") openModalEdit(editDate, eid); else tryOpenInfo(infoDate, eid); }
-
       chip.addEventListener("click", function(e){
         e.preventDefault(); e.stopPropagation();
-        if (e.shiftKey) { _openEdit(); } else { _openInfo(); }
+        if (e.shiftKey) { openEdit(); } else { openInfo(); }
       });
 
       chip.addEventListener("dblclick", function(e){
-        e.preventDefault(); e.stopPropagation(); _openEdit();
+        e.preventDefault(); e.stopPropagation(); openEdit();
       });
 
       chip.addEventListener("keydown", function(e){
-        if (e.key === "Enter" || e.key === " ") { e.preventDefault(); _openInfo(); }
-        if (e.key.toLowerCase() === "e" && (e.ctrlKey || e.metaKey)) { e.preventDefault(); _openEdit(); }
+        if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openInfo(); }
+        if (e.key.toLowerCase() === "e" && (e.ctrlKey || e.metaKey)) { e.preventDefault(); openEdit(); }
       });
 
       chip.addEventListener("contextmenu", function(e){
-        e.preventDefault(); e.stopPropagation(); _openInfo();
+        e.preventDefault(); e.stopPropagation(); openInfo();
       });
 
       // (v10) seg-badge removed: styling handled via .ev-- classes
@@ -483,12 +471,14 @@
 
     function openInfo(date, id){
       if (!date || !id) return;
-      if (typeof tryOpenInfo === "function") tryOpenInfo(date, id);
+      var fn = (window.CalendarApp && window.CalendarApp.ui && window.CalendarApp.ui.openModalInfo) ? window.CalendarApp.ui.openModalInfo : null;
+      if (fn) fn(date, id); else tryOpenInfo(date, id);
     }
+
     function openEdit(date, id){
       if (!date || !id) return;
       var fn = (window.CalendarApp && window.CalendarApp.ui && window.CalendarApp.ui.openModalEdit) ? window.CalendarApp.ui.openModalEdit : null;
-      if (fn) fn(date, id); else openInfo(date, id);
+      if (fn) fn(date, id); else tryOpenInfo(date, id);
     }
 
     mount.addEventListener("click", function(e){

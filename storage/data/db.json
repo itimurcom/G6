@@ -67,8 +67,8 @@
             "incoming_no": "12345",
             "outgoing_no": "12345",
             "description": "test",
-            "start_date": "2025-10-08",
             "user_id": 0,
+            "start_date": "2025-10-08",
             "created_at": ""
         },
         {
@@ -228,6 +228,7 @@
             "outgoing_no": "",
             "description": "",
             "user_id": 1,
+            "start_date": "2025-10-11",
             "created_at": ""
         },
         {
@@ -263,7 +264,7 @@
         {
             "end_date": null,
             "id": "e_9dae1b4026072efc",
-            "time": "11:15",
+            "time": "11:14",
             "title": "тест 50",
             "owner": "",
             "type": "mi",

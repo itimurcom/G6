@@ -728,7 +728,7 @@ function renderGroup(tl, dateISO, startHour, endHour){
   // Експорт UI API (якщо буде потрібно з інших скриптів)
   global.CalendarApp = global.CalendarApp || {};
   global.CalendarApp.ui = global.CalendarApp.ui || {};
-  global.CalendarApp.ui.init = init;
+  // global.CalendarApp.ui.init = init;
   global.CalendarApp.ui.renderAllFn = renderAllFn;
 
   // Автостарт

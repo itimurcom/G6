@@ -109,6 +109,7 @@ function toUADisplayDate(dateLike){
 
   // DOM посилання
   function $(id){ return document.getElementById(id); }
+  function $id(id){ return document.getElementById(id); }
 
   function withStableScroll(fn){
     var x = window.scrollX, y = window.scrollY;
