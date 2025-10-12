@@ -41,13 +41,16 @@
     var btnTypeNas = $('btnTypeNas');
     var btnTypeEvt = $('btnTypeEvt');
     var btnTypeOther = $('btnTypeOther');
+    var btnTypeOverdue = $('btnTypeOverdue');
     var btnTypeReset = $('btnTypeReset');
+   
 
     if (!btnTypeMi) return;
     btnTypeMi.classList.toggle('active', currentType === 'mi');
     btnTypeNas.classList.toggle('active', currentType === 'nas');
     btnTypeEvt.classList.toggle('active', currentType === 'evt');
     btnTypeOther.classList.toggle('active', currentType === 'other');
+    btnTypeOverdue.classList.toggle('active', currentType === 'overdue');
     if (btnTypeReset) btnTypeReset.style.display = (currentType === 'all') ? 'none' : 'inline-grid';
   }
 
@@ -61,16 +64,19 @@
   var btnTypeNas = $('btnTypeNas');
   var btnTypeEvt = $('btnTypeEvt');
   var btnTypeOther = $('btnTypeOther');
+  var btnTypeOverdue = $('btnTypeOverdue');
   var btnTypeReset = $('btnTypeReset');
 
   if (btnTypeMi) btnTypeMi.addEventListener('click', function () { setTypeFilter('mi'); });
   if (btnTypeNas) btnTypeNas.addEventListener('click', function () { setTypeFilter('nas'); });
   if (btnTypeEvt) btnTypeEvt.addEventListener('click', function () { setTypeFilter('evt'); });
   if (btnTypeOther) btnTypeOther.addEventListener('click', function () { setTypeFilter('other'); });
+  if (btnTypeOverdue) btnTypeOverdue.addEventListener('click', function () { setTypeFilter('overdue'); });
   if (btnTypeReset) btnTypeReset.addEventListener('click', function () { setTypeFilter('all'); });
   if (filterText) filterText.addEventListener('input', function () {
     withStableScroll(renderAllFn);
   });
+
   if (btnClearFilters) btnClearFilters.addEventListener('click', function () { if (filterText) filterText.value = ''; setTypeFilter('all'); });
   if (quickFilters) quickFilters.addEventListener('click', function (e) {
     var b = e.target && e.target.closest ? e.target.closest('button[data-type]') : null;
