@@ -70,14 +70,6 @@
           <input id="inputOutgoing" name="outgoing_no" type="text" autocomplete="off" placeholder="Напр.: Вих-5678/09">
         </div>
       </div>
-
-      <!-- Легенда (залишаємо у content, як у тебе було) -->
-      <div class="legend" aria-hidden="true">
-        <span class="lg"><i style="background:var(--type-mi)"></i>ТЛГ: МИ</span>
-        <span class="lg"><i style="background:var(--type-nas)"></i>ТЛГ: НАС</span>
-        <span class="lg"><i style="background:var(--type-evt)"></i>Захід</span>
-        <span class="lg"><i style="background:var(--type-other)"></i>Інше</span>
-      </div>
     </div>
 
     <footer>

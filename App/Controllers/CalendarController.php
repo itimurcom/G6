@@ -19,9 +19,6 @@ class CalendarController extends Controller
                 '/assets/js/calendar/calendar.data.js',
                 
                 '/assets/js/calendar/calendar.ui.js',
-                '/assets/js/calendar/calendar.ui.toast.js',
-                // '/assets/js/calendar/calendar.ui.today.js',
-                // '/assets/js/calendar/calendar.ui.chat.js',
                 '/assets/js/calendar/calendar.ui.backup.js',
                 '/assets/js/calendar/calendar.ui.modals.js',
                 ],

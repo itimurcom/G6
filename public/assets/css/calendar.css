@@ -130,13 +130,12 @@
 }
 
 .tbtn.active {
-  outline: 2px solid var(--accent);
-  outline-offset: 1px;
+  border-color: var(--accent);
 }
 
 .tbtn.reset-type {
-  width: 36px;
-  height: 36px;
+  width: 28px;
+  height: 28px;
   display: inline-grid;
   place-items: center;
   font-size: 18px;
@@ -366,6 +365,9 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
+  border:1px dashed var(--border);
+  border-radius: 8px;
+  padding: 4px 8px;
 }
 
 .lg i {

@@ -12,12 +12,20 @@
           <button id="btnToday" class="btn">Сьогодні</button>
           <button id="btnNext" class="btn">›</button>
         </div>
-        <div id="typeFiltersBar" class="type-filters">
+        <!-- <div id="typeFiltersBar" class="type-filters">
           <button id="btnTypeEvt" class="tbtn evt" type="button">Захід</button>
           <button id="btnTypeMi" class="tbtn mi" type="button">ТЛГ: МИ</button>
           <button id="btnTypeNas" class="tbtn nas" type="button">ТЛГ: НАС</button>
           <button id="btnTypeOther" class="tbtn other" type="button">Інше</button>
           <button id="btnTypeReset" class="tbtn reset-type" type="button" title="Скинути" style="display:none">×</button>
+        </div> -->
+        <div id="typeFiltersBar" class="legend type-filters">
+          <button id="btnTypeEvt"   class="lg tbtn ev" type="button"><i style="background:var(--type-evt)"></i>Захід</button>
+          <button id="btnTypeMi"    class="lg tbtn ev" type="button"><i style="background:var(--type-mi)"></i>ТЛГ: МИ</button>
+          <button id="btnTypeNas"   class="lg tbtn ev" type="button"><i style="background:var(--type-nas)"></i>ТЛГ: НАС</button>
+          <button id="btnTypeOther" class="lg tbtn ev" type="button"><i style="background:var(--type-evt)"></i>Інше</button>
+          <button id="btnTypeOther" class="lg tbtn ev ev--overdue-flash"" type="button"><i style="background:brown;"></i>Прострочені</button>
+          <button id="btnTypeReset" class="lg tbtn reset-type" type="button" title="Скинути" style="display:none">×</button>
         </div>
       </div>
 
@@ -46,6 +54,7 @@
       <span class="lg"><i style="background:var(--type-nas)"></i>ТЛГ: НАС</span>
       <span class="lg"><i style="background:var(--type-evt)"></i>Захід</span>
       <span class="lg"><i style="background:var(--type-other)"></i>Інше</span>
+      <span class="lg ev--overdue-flash"><i style="background:brown;"></i>Прострочені</span>
       <span class="subtle" style="margin-left:auto">Клік по вільному місцю дня — додати; перетягни картку, щоб перенести</span>
     </div>
 
