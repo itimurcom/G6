@@ -43,7 +43,7 @@
     var btnTypeOther = $('btnTypeOther');
     var btnTypeOverdue = $('btnTypeOverdue');
     var btnTypeReset = $('btnTypeReset');
-   
+
 
     if (!btnTypeMi) return;
     btnTypeMi.classList.toggle('active', currentType === 'mi');
@@ -77,12 +77,25 @@
     withStableScroll(renderAllFn);
   });
 
-  if (btnClearFilters) btnClearFilters.addEventListener('click', function () { if (filterText) filterText.value = ''; setTypeFilter('all'); });
+  if (btnClearFilters) btnClearFilters.addEventListener('click', function () {
+    if (filterText) filterText.value = ''; setTypeFilter('all');
+    filterText.classList.remove('type-mi', 'type-nas', 'type-evt', 'type-other', 'ev--overdue-flash');
+    filterText.style.background = 'transparent';
+    filterText.classList.remove('active');
+  });
   if (quickFilters) quickFilters.addEventListener('click', function (e) {
     var b = e.target && e.target.closest ? e.target.closest('button[data-type]') : null;
+    var tp = b.getAttribute('data-type');
     if (!b) return;
-    setTypeFilter(b.getAttribute('data-type'));
-    if (filterText) filterText.value = b.getAttribute('data-text') || '';
+    setTypeFilter(tp);
+    if (filterText) {
+      filterText.value = b.getAttribute('data-text') || '';
+      filterText.classList.remove('type-mi', 'type-nas', 'type-evt', 'type-other', 'ev--overdue-flash');
+      // filterText.classList.add('type-' + b.getAttribute('data-type'));
+      filterText.style.background = 'color-mix(in oklab, var(--type-' + tp + ') 20%, transparent)';
+       filterText.classList.add('active');
+      }
+
     withStableScroll(renderAllFn);
   });
 

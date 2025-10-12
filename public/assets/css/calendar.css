@@ -158,19 +158,19 @@
 }
 
 .chip.evt {
-  background: color-mix(in oklab, var(--type-evt) 15%, var(--event-bg));
+  background: color-mix(in oklab, var(--type-evt) var(--type-btn-op), var(--event-bg));
 }
 
 .chip.mi {
-  background: color-mix(in oklab, var(--type-mi) 15%, var(--event-bg));
+  background: color-mix(in oklab, var(--type-mi) var(--type-btn-op), var(--event-bg));
 }
 
 .chip.nas {
-  background: color-mix(in oklab, var(--type-nas) 15%, var(--event-bg));
+  background: color-mix(in oklab, var(--type-nas) var(--type-btn-op), var(--event-bg));
 }
 
 .chip.other {
-  background: color-mix(in oklab, var(--type-other) 15%, var(--event-bg));
+  background: color-mix(in oklab, var(--type-other) var(--type-btn-op), var(--event-bg));
 }
 
 /* Inputs */
@@ -182,7 +182,7 @@
   padding: 9px 12px;
   border-radius: 10px;
   border: 1px solid var(--border);
-  background: var(--bg) !important;
+  background: var(--bg);
   color: var(--fg);
   font: inherit;
 }
@@ -862,4 +862,13 @@ body.light .ev--multi,
   font-size: .85em;
   opacity: .75;
   margin-top: .5rem;
+}
+
+#filterText {
+  border: 1px dashed var(--border);
+}
+
+
+#filterText.active {
+  border-color: var(--accent);
 }
