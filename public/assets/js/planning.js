@@ -325,6 +325,25 @@
       if (ev.urgent) li.classList.add("urgent");
       if (ev.done) li.classList.add("done");
       li.setAttribute("data-date", dk);
+      // === Added: expose meta for filters ===
+      try {
+        li.setAttribute("data-type", (String(ev.type||"other").toLowerCase() || "other"));
+        li.setAttribute("data-owner", (ev.owner ? String(ev.owner) : ""));
+        li.setAttribute("data-done", (ev.done ? "1" : "0"));
+        li.setAttribute("data-urgent", (ev.urgent ? "1" : "0"));
+        // event start date (best effort): prefer explicit ev.date -> startDay -> dk
+        var evStartDay = (ev.date || it.startDay || dk) ? String((ev.date || it.startDay || dk)).slice(0,10) : "";
+        li.setAttribute("data-ev-date", evStartDay);
+        // end date if present
+        var evEndDay = (it.endDay || ev.end_date || ev.end || "");
+        li.setAttribute("data-ev-end-date", evEndDay ? String(evEndDay).slice(0,10) : "");
+        // times if present
+        var evStartTime = (ev.time || ev.start || "");
+        if (evStartTime) li.setAttribute("data-ev-start", String(evStartTime).slice(0,5));
+        var evEndTime = (ev.end_time || ev.endTime || "");
+        if (evEndTime) li.setAttribute("data-ev-end", String(evEndTime).slice(0,5));
+      } catch(e){ /* safe */ }
+      // === /Added ===
       // if (eid) li.setAttribute("data-id", eid);
 
       var time = document.createElement("div");
@@ -451,6 +470,11 @@
 
     mount.innerHTML = "";
     mount.appendChild(frag);
+
+    // === Apply active legend filter after each render ===
+    if (global.__planningLegendApply) {
+      try { global.__planningLegendApply(); } catch(e){}
+    }
   }
 
   
@@ -512,7 +536,7 @@
       openInfo(pay.date, pay.id);
     }, true);
   })();
-// ---------- init ----------
+  // ---------- init ----------
   function planing_init() {
     ensureStore(function (store) {
       render(store || {});
@@ -553,11 +577,188 @@
       });
     }
   }
+  
 
   // встановлюємо обробку змін
   setInterval(() => {
     console.log('refresh planning');
     refreshPlanning();
   }, 10_000);
+
+  /* ===================================================================
+     Inline Planning Legend Filters
+     - Binds to existing .legend buttons (span.lg ...)
+     - No external CSS; uses inline style.display toggling
+     - Filters: today, overdue, type-mi, type-nas, type-evt, type-other
+     =================================================================== */
+  (function installLegendFilters(){
+    if (global.__planningLegendInstalled) return;
+    global.__planningLegendInstalled = true;
+
+    var doc = global.document;
+    var state = { active: 'all' };
+
+    function $(sel, ctx){ return (ctx||doc).querySelector(sel); }
+    function $all(sel, ctx){ return Array.prototype.slice.call((ctx||doc).querySelectorAll(sel)); }
+    function pad2(n){ return ('0'+n).slice(-2); }
+    function todayISO(){ var d=new Date(); return d.getFullYear()+'-'+pad2(d.getMonth()+1)+'-'+pad2(d.getDate()); }
+    function nowHM(){ var d=new Date(); return pad2(d.getHours())+':'+pad2(d.getMinutes()); }
+    function normalizeISO(s){
+      if (!s) return null; s=String(s).trim();
+      if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+      var m=s.match(/^(\d{2})\.(\d{2})\.(\d{4})$/); if (m) return m[3]+'-'+m[2]+'-'+m[1];
+      return null;
+    }
+    function normalizeHM(s){
+      if (!s) return null; s=String(s).trim();
+      var m=s.match(/^(\d{1,2})[:.](\d{2})$/); if (m) return pad2(+m[1])+':'+pad2(+m[2]);
+      var m2=s.match(/^(\d{1,2})$/); if (m2) return pad2(+m2[1])+':00';
+      return null;
+    }
+
+    function parseMeta(el){
+      var type = (el.getAttribute('data-type') || 'other').toLowerCase();
+      var done = (el.getAttribute('data-done') === '1') || el.classList.contains('done');
+      var urgent = (el.getAttribute('data-urgent') === '1') || el.classList.contains('urgent');
+      var date = normalizeISO(el.getAttribute('data-ev-date') || el.getAttribute('data-date'));
+      var endDate = normalizeISO(el.getAttribute('data-ev-end-date'));
+      var start = normalizeHM(el.getAttribute('data-ev-start'));
+      var end = normalizeHM(el.getAttribute('data-ev-end'));
+      return { type: type, done: done, urgent: urgent, date: date, endDate: endDate, start: start, end: end };
+    }
+
+    function containsToday(dateISO, endDateISO){
+      var t = todayISO();
+      if (!dateISO) return false;
+      if (!endDateISO) return dateISO === t;
+      return dateISO <= t && t <= endDateISO;
+    }
+
+    function isOverdueStrict(meta){
+      if (meta.done) return false;
+      var t = todayISO(), hm = nowHM();
+      if (meta.endDate){
+        if (meta.endDate < t) return true;
+        if (meta.endDate === t && meta.end && meta.end < hm) return true;
+        return false;
+      }
+      if (!meta.date) return false;
+      if (meta.date < t) return true;
+      if (meta.date === t){
+        if (meta.start && meta.start < hm) return true;
+        return false;
+      }
+      return false;
+    }
+
+    function matches(meta, filter){
+      switch(filter){
+        case 'all': return true;
+        case 'today': return containsToday(meta.date, meta.endDate);
+        case 'overdue': return isOverdueStrict(meta);
+        case 'type-mi': return meta.type === 'mi';
+        case 'type-nas': return meta.type === 'nas';
+        case 'type-evt': return meta.type === 'evt';
+        case 'type-other': return meta.type === 'other';
+        default: return true;
+      }
+    }
+
+    function getAllItems(){
+      var mount = document.getElementById('planning-today');
+      if (!mount) return [];
+      return $all('.planning-today__item', mount);
+    }
+
+    function apply(){
+      var items = getAllItems();
+      var total = items.length, visible = 0;
+      for (var i=0;i<items.length;i++){
+        var el = items[i];
+        var meta = parseMeta(el);
+        if (matches(meta, state.active)){
+          el.style.display = '';
+          visible++;
+        } else {
+          el.style.display = 'none';
+        }
+      }
+
+      // Hide empty sections (optional, cosmetic)
+      var sections = $all('.planning-section', document.getElementById('planning-today'));
+      for (var s=0; s<sections.length; s++){
+        var ul = sections[s].querySelector('.planning-today__list');
+        if (!ul) continue;
+        var anyVisible = Array.prototype.some.call(ul.children || [], function(li){
+          return li && li.style.display !== 'none';
+        });
+        sections[s].style.display = anyVisible ? '' : 'none';
+      }
+
+      try {
+        document.dispatchEvent(new CustomEvent('planning:filters-applied', { detail: { filter: state.active, visibleCount: visible, total: total } }));
+      } catch(e){}
+    }
+
+    function detectFilterFromLegendSpan(span){
+      var txt = span.textContent.replace(/\s+/g,' ').trim().toLowerCase();
+      if (span.classList.contains('ev--overdue-flash') || txt.indexOf('простроч') !== -1) return 'overdue';
+      if (txt.indexOf('сьогодні') !== -1) return 'today';
+      if (txt.indexOf('тлг') !== -1 && txt.indexOf('ми') !== -1) return 'type-mi';
+      if (txt.indexOf('тлг') !== -1 && txt.indexOf('нас') !== -1) return 'type-nas';
+      if (txt.indexOf('захід') !== -1) return 'type-evt';
+      if (txt.indexOf('інше') !== -1) return 'type-other';
+      return null;
+    }
+
+    function setActiveLegend(legendEl, targetSpan){
+      var spans = $all('.lg', legendEl);
+      for (var i=0;i<spans.length;i++){
+        spans[i].classList.remove('is-active');
+        spans[i].setAttribute('aria-pressed','false');
+      }
+      if (targetSpan){
+        targetSpan.classList.add('is-active');
+        targetSpan.setAttribute('aria-pressed','true');
+      }
+    }
+
+    function wireLegend(){
+      var legend = document.querySelector('.legend');
+      if (!legend) return;
+      var spans = $all('.lg', legend);
+      spans.forEach(function(sp){
+        var f = detectFilterFromLegendSpan(sp);
+        if (f) sp.setAttribute('data-filter', f);
+        sp.style.cursor = 'pointer';
+        sp.addEventListener('click', function(){
+          var filter = sp.getAttribute('data-filter');
+          if (!filter) return;
+          if (state.active === filter){
+            state.active = 'all';
+            setActiveLegend(legend, null);
+          } else {
+            state.active = filter;
+            setActiveLegend(legend, sp);
+          }
+          try { document.dispatchEvent(new CustomEvent('planning:filters-change', { detail: { filter: state.active } })); } catch(e){}
+          apply();
+        });
+      });
+    }
+
+    // Install on DOM ready
+    if (document.readyState === 'loading'){
+      document.addEventListener('DOMContentLoaded', wireLegend);
+    } else {
+      wireLegend();
+    }
+
+    // Public apply for re-renders
+    global.__planningLegendApply = apply;
+
+    // Re-apply when external code asks
+    document.addEventListener('planning:rerender', apply);
+  })();
 
 })(window);

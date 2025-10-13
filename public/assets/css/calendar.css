@@ -129,7 +129,8 @@
   background: color-mix(in oklab, var(--type-other) var(--type-btn-op), var(--event-bg));
 }
 
-.tbtn.active {
+.tbtn.active,
+.lg.is-active {
   border-color: var(--accent);
 }
 
