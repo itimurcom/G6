@@ -9,25 +9,12 @@ try { $u = (new \App\Models\UserFileRepository())->findById($__viewId); } catch 
 if (!$u) { $u = \App\Core\Auth::user() ?? []; }
 $isOwnCabinet = ((int)($_SESSION['user_id'] ?? 0) === (int)($u['id'] ?? 0));
 ?>
-<div class="title">Мій кабінет</div>
+<header class="cal-header">
+<div class="title">Кабінет</div>
 <span class="user--name" data-user-id="<?= (int)($u['id'] ?? 0) ?>">loading…</span>
+</header>
 <div class="cabinet-wrap">
   <div class="cabinet-grid">
-    <!-- <section class="cabinet-card">
-      <h3>Профіль</h3>
-      <form method="post" action="/cabinet/profile/update">
-        <div class="field">
-          <label>Ім’я</label>
-          <input class="input" type="text" name="name" value="<?= htmlspecialchars($u['name'] ?? '') ?>" required>
-        </div>
-        <div class="field">
-          <label>Ел. пошта</label>
-          <input class="input" type="email" name="email" value="<?= htmlspecialchars($u['email'] ?? '') ?>" required>
-        </div>
-        <input type="hidden" name="_csrf" value="<?= htmlspecialchars(\App\Security\Csrf::token(), ENT_QUOTES) ?>">
-        <button class="btn btn--primary" type="submit">Зберегти</button>
-      </form>
-    </section> -->
     <section class="cabinet-card">
       <h3>Профіль</h3>
         <table>

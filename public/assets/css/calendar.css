@@ -132,7 +132,8 @@
 }
 
 .tbtn.active,
-.lg.is-active {
+.lg.is-active,
+.lg.active {
   border-color: var(--accent);
 }
 
