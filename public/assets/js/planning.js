@@ -13,7 +13,6 @@
     return "mid";
   }
 
-    // global.PlanningToday = global.PlanningToday || {};
   global.CalendarApp                = global.CalendarApp || {};
   global.CalendarApp.ui             = global.CalendarApp.ui || {};
   global.CalendarApp.ui.renderAllFn = refreshPlanning;
@@ -319,12 +318,11 @@
 
       var li = document.createElement("li");
       li.className = "planning-today__item";
-      /* data-seg is set on chip */
-      
       
       if (ev.urgent) li.classList.add("urgent");
       if (ev.done) li.classList.add("done");
       li.setAttribute("data-date", dk);
+
       // === Added: expose meta for filters ===
       try {
         li.setAttribute("data-type", (String(ev.type||"other").toLowerCase() || "other"));
@@ -344,7 +342,6 @@
         if (evEndTime) li.setAttribute("data-ev-end", String(evEndTime).slice(0,5));
       } catch(e){ /* safe */ }
       // === /Added ===
-      // if (eid) li.setAttribute("data-id", eid);
 
       var time = document.createElement("div");
       time.className = "planning-today__time";
@@ -375,20 +372,18 @@
       chip.setAttribute("role", "button");
       chip.setAttribute("tabindex", "0");
 
+      // NOTE: keeping original listeners as-is (project compatibility)
       chip.addEventListener("click", function(e){
         e.preventDefault(); e.stopPropagation();
         if (e.shiftKey) { openEdit(); } else { openInfo(); }
       });
-
       chip.addEventListener("dblclick", function(e){
         e.preventDefault(); e.stopPropagation(); openEdit();
       });
-
       chip.addEventListener("keydown", function(e){
         if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openInfo(); }
         if (e.key.toLowerCase() === "e" && (e.ctrlKey || e.metaKey)) { e.preventDefault(); openEdit(); }
       });
-
       chip.addEventListener("contextmenu", function(e){
         e.preventDefault(); e.stopPropagation(); openInfo();
       });
@@ -418,12 +413,12 @@
       li.appendChild(details);
       ul.appendChild(li);
 
-      // ---- interactions (use captured dk/eid) ----
+      // Additional direct open (stable, uses captured infoDate/eid)
       chip.addEventListener("click", function (e) {
         e.preventDefault();
         e.stopPropagation();
-        let eid = e.currentTarget.getAttribute("id");
-        tryOpenInfo(infoDate, eid);
+        let eid2 = e.currentTarget.getAttribute("id");
+        tryOpenInfo(infoDate, eid2);
       });
     }
 
@@ -586,8 +581,9 @@
   }, 10_000);
 
   /* ===================================================================
-     Inline Planning Legend Filters
+     Inline Planning Legend Filters (+ Clear 'X' button)
      - Binds to existing .legend buttons (span.lg ...)
+     - Adds clear button "X" that resets filters to 'all' and hides itself
      - No external CSS; uses inline style.display toggling
      - Filters: today, overdue, type-mi, type-nas, type-evt, type-other
      =================================================================== */
@@ -597,6 +593,7 @@
 
     var doc = global.document;
     var state = { active: 'all' };
+    var clearBtn = null; // span.lg with "X"
 
     function $(sel, ctx){ return (ctx||doc).querySelector(sel); }
     function $all(sel, ctx){ return Array.prototype.slice.call((ctx||doc).querySelectorAll(sel)); }
@@ -670,6 +667,11 @@
       return $all('.planning-today__item', mount);
     }
 
+    function updateClearVisibility(){
+      if (!clearBtn) return;
+      clearBtn.style.display = (state.active === 'all') ? 'none' : '';
+    }
+
     function apply(){
       var items = getAllItems();
       var total = items.length, visible = 0;
@@ -695,6 +697,8 @@
         sections[s].style.display = anyVisible ? '' : 'none';
       }
 
+      updateClearVisibility();
+
       try {
         document.dispatchEvent(new CustomEvent('planning:filters-applied', { detail: { filter: state.active, visibleCount: visible, total: total } }));
       } catch(e){}
@@ -717,10 +721,35 @@
         spans[i].classList.remove('is-active');
         spans[i].setAttribute('aria-pressed','false');
       }
-      if (targetSpan){
+      if (targetSpan && targetSpan.getAttribute('data-filter') !== 'clear'){
         targetSpan.classList.add('is-active');
         targetSpan.setAttribute('aria-pressed','true');
       }
+    }
+
+    function ensureClearButton(legend){
+      // Reuse existing if already present
+      clearBtn = legend.querySelector('.lg[data-filter="clear"]');
+      if (clearBtn) { updateClearVisibility(); return; }
+
+      // Create new span.lg "X" to match design
+      clearBtn = document.createElement('span');
+      clearBtn.className = 'lg lg--clear';
+      clearBtn.setAttribute('data-filter', 'clear');
+      clearBtn.setAttribute('title', 'Скинути фільтри');
+      clearBtn.textContent = 'X';
+      clearBtn.style.cursor = 'pointer';
+      clearBtn.style.display = 'none'; // hidden by default
+
+      // Append at the end of legend
+      legend.appendChild(clearBtn);
+
+      clearBtn.addEventListener('click', function(){
+        var legendEl = document.querySelector('.legend');
+        state.active = 'all';
+        setActiveLegend(legendEl, null);
+        apply();
+      });
     }
 
     function wireLegend(){
@@ -733,7 +762,7 @@
         sp.style.cursor = 'pointer';
         sp.addEventListener('click', function(){
           var filter = sp.getAttribute('data-filter');
-          if (!filter) return;
+          if (!filter || filter === 'clear') return;
           if (state.active === filter){
             state.active = 'all';
             setActiveLegend(legend, null);
@@ -745,6 +774,9 @@
           apply();
         });
       });
+
+      ensureClearButton(legend);
+      updateClearVisibility();
     }
 
     // Install on DOM ready
@@ -758,7 +790,7 @@
     global.__planningLegendApply = apply;
 
     // Re-apply when external code asks
-    document.addEventListener('planning:rerender', apply);
+    document.addEventListener('planning:rerender', function(){ apply(); });
   })();
 
 })(window);
