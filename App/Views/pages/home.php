@@ -12,7 +12,7 @@
       <span class="lg"><i style="background:var(--type-nas)"></i>ТЛГ: НАС</span>
       <span class="lg"><i style="background:var(--type-evt)"></i>Захід</span>
       <span class="lg"><i style="background:var(--type-other)"></i>Інше</span>
-      <span class="lg ev--overdue-flash"><i style="background:brown;"></i>Прострочені</span>
+      <span class="lg ev--overdue-flash"><i style="background:var(--type-overdue);"></i>Прострочені</span>
     </div>
 <? include ("/var/www/html/calendar.localhost/App/Views/layouts/modals/editEvent.php"); ?>
 <? include ("/var/www/html/calendar.localhost/App/Views/layouts/modals/infoEvent.php"); ?>
