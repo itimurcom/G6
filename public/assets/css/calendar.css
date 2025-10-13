@@ -48,6 +48,8 @@
   align-items: start;
   gap: 16px 20px;
   margin-bottom: 10px;
+  padding-bottom: 10px;
+  border-bottom: 1px dashed var(--border);
 }
 
 /* Nav & filters */
