@@ -23,7 +23,7 @@
           <button id="btnTypeEvt"   class="lg tbtn ev" type="button"><i style="background:var(--type-evt)"></i>Захід</button>
           <button id="btnTypeMi"    class="lg tbtn ev" type="button"><i style="background:var(--type-mi)"></i>ТЛГ: МИ</button>
           <button id="btnTypeNas"   class="lg tbtn ev" type="button"><i style="background:var(--type-nas)"></i>ТЛГ: НАС</button>
-          <button id="btnTypeOther" class="lg tbtn ev" type="button"><i style="background:var(--type-evt)"></i>Інше</button>
+          <button id="btnTypeOther" class="lg tbtn ev" type="button"><i style="background:var(--type-other)"></i>Інше</button>
           <button id="btnTypeOverdue" class="lg tbtn ev ev--overdue-flash" type="button"><i style="background:brown;"></i>Прострочені</button>
           <button id="btnTypeReset" class="lg tbtn reset-type" type="button" title="Скинути" style="display:none">×</button>
         </div>

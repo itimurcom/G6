@@ -69,11 +69,81 @@
   function buildMatcher(currentType, query) {
     var q = norm(query || '');
     var t = currentType || 'all';
+
+    // Optional hook to check "overdue" state without hard coupling:
+    var overdueFn = (global.CalendarApp && global.CalendarApp.ui && global.CalendarApp.ui.isEventOverdueStrict)
+      || (typeof isEventOverdueStrict === 'function' && isEventOverdueStrict) || null;
+
+    // Fallback local overdue check (mirrors ui/app.js logic) in case the hook isn't available
+    function isOverdueLocal(ev, todayISO, nowHM) {
+      try {
+        if (!ev) return false;
+        // closed/done are never overdue
+        if ((typeof global.CalendarApp !== 'undefined'
+              && global.CalendarApp && global.CalendarApp.ui
+              && typeof global.CalendarApp.ui.isEventClosed === 'function'
+              && global.CalendarApp.ui.isEventClosed(ev)) || ev.done) return false;
+
+        function pad2(n) { return ('0' + n).slice(-2); }
+        function dayKey(src) {
+          if (!src) return '';
+          if (src instanceof Date) {
+            return src.getFullYear() + '-' + pad2(src.getMonth() + 1) + '-' + pad2(src.getDate());
+          }
+          var s = String(src).slice(0, 10);
+          var a = s.split('-');
+          if (a.length === 3) return a[0] + '-' + pad2(a[1]) + '-' + pad2(a[2]);
+          return s;
+        }
+        function toMin(hhmm) {
+          if (!hhmm) return null;
+          var a = String(hhmm).split(':');
+          if (a.length < 2) return null;
+          var h = parseInt(a[0], 10), m = parseInt(a[1], 10);
+          if (isNaN(h) || isNaN(m)) return null;
+          return h * 60 + m;
+        }
+
+        var startK = dayKey(ev._startDay || ev.start_date || ev.day || ev.dateISO || ev.date);
+        var endK = dayKey(ev._endDay || ev.end_date || ev.day_end || ev.date_to);
+        var todayK = dayKey(todayISO || new Date());
+        var isMulti = !!(endK && startK && endK !== startK);
+
+        if (isMulti) {
+          if (!startK || !endK) return false;
+          return (startK < todayK) && (endK < todayK);
+        }
+        if (!startK) return false;
+        if (startK < todayK) return true;
+        if (startK > todayK) return false;
+
+        var tMin = toMin(ev.time);
+        if (tMin === null) return false;
+        var nowMin = toMin(nowHM);
+        if (nowMin === null) return false;
+        return nowMin > tMin;
+      } catch (_) { return false; }
+    }
+
+    // Precompute "today" and "now" once per matcher
+    function pad2(n) { return ('0' + n).slice(-2); }
+    var now = new Date();
+    var todayISO = now.getFullYear() + '-' + pad2(now.getMonth() + 1) + '-' + pad2(now.getDate());
+    var nowHM = pad2(now.getHours()) + ':' + pad2(now.getMinutes());
+
     return function (ev) {
-      var typeOk = (t === 'all') || (ev.type === t);
-      if (!q) return typeOk;
+      var pass;
+      if (t === 'overdue') {
+        var fn = overdueFn || isOverdueLocal;
+        pass = !!fn(ev, todayISO, nowHM);
+      } else {
+        pass = (t === 'all') || (ev.type === t);
+      }
+      if (!pass) return false;
+
+      if (!q) return true;
       var hay = norm(((ev.title || '') + ' ' + (ev.owner || '')));
-      return typeOk && hay.indexOf(q) !== -1;
+      return hay.indexOf(q) !== -1;
     };
   }
 
