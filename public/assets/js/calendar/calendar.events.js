@@ -80,9 +80,9 @@
         if (!ev) return false;
         // closed/done are never overdue
         if ((typeof global.CalendarApp !== 'undefined'
-              && global.CalendarApp && global.CalendarApp.ui
-              && typeof global.CalendarApp.ui.isEventClosed === 'function'
-              && global.CalendarApp.ui.isEventClosed(ev)) || ev.done) return false;
+          && global.CalendarApp && global.CalendarApp.ui
+          && typeof global.CalendarApp.ui.isEventClosed === 'function'
+          && global.CalendarApp.ui.isEventClosed(ev)) || ev.done) return false;
 
         function pad2(n) { return ('0' + n).slice(-2); }
         function dayKey(src) {

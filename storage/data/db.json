@@ -55,14 +55,14 @@
     "2025-10-06": [],
     "2025-10-07": [
         {
-            "end_date": "2025-10-19",
+            "end_date": "2025-10-16",
             "id": "841291b6-3245-49aa-9587-3c63815270e5",
             "time": "03:00",
             "title": "ВКЗ ЖЕСТЬ іваіваіва",
             "owner": "Тім",
             "type": "nas",
             "urgent": false,
-            "done": false,
+            "done": true,
             "incoming_no": "12345",
             "outgoing_no": "12345",
             "description": "test",
@@ -87,7 +87,9 @@
             "user_id": 0,
             "start_date": "2025-10-08",
             "created_at": ""
-        },
+        }
+    ],
+    "2025-10-09": [
         {
             "end_date": null,
             "id": "e_5c760929b85f684b",
@@ -103,9 +105,24 @@
             "user_id": 0,
             "start_date": "2025-10-10",
             "created_at": ""
+        },
+        {
+            "end_date": null,
+            "id": "e_2247aec1ebb7127b",
+            "time": "15:00",
+            "title": "user_id",
+            "owner": "",
+            "type": "nas",
+            "urgent": false,
+            "done": false,
+            "incoming_no": "",
+            "outgoing_no": "",
+            "description": "",
+            "user_id": 0,
+            "start_date": "2025-10-10",
+            "created_at": ""
         }
     ],
-    "2025-10-09": [],
     "2025-10-10": [
         {
             "end_date": null,
@@ -146,27 +163,11 @@
             "owner": "",
             "type": "mi",
             "urgent": true,
-            "done": false,
+            "done": true,
             "incoming_no": "",
             "outgoing_no": "",
             "description": "",
             "user_id": 3,
-            "start_date": "2025-10-10",
-            "created_at": ""
-        },
-        {
-            "end_date": null,
-            "id": "e_2247aec1ebb7127b",
-            "time": "15:00",
-            "title": "user_id",
-            "owner": "",
-            "type": "nas",
-            "urgent": false,
-            "done": false,
-            "incoming_no": "",
-            "outgoing_no": "",
-            "description": "",
-            "user_id": 0,
             "start_date": "2025-10-10",
             "created_at": ""
         },
@@ -308,11 +309,12 @@
             "owner": "",
             "type": "evt",
             "urgent": false,
-            "done": false,
+            "done": true,
             "incoming_no": "",
             "outgoing_no": "",
             "description": "",
             "user_id": 1,
+            "start_date": "2025-10-13",
             "created_at": "2025-10-10T12:56:45+00:00"
         },
         {

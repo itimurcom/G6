@@ -93,8 +93,8 @@
       filterText.classList.remove('type-mi', 'type-nas', 'type-evt', 'type-other', 'ev--overdue-flash');
       // filterText.classList.add('type-' + b.getAttribute('data-type'));
       filterText.style.background = 'color-mix(in oklab, var(--type-' + tp + ') 20%, transparent)';
-       filterText.classList.add('active');
-      }
+      filterText.classList.add('active');
+    }
 
     withStableScroll(renderAllFn);
   });

@@ -4,8 +4,8 @@
   // === Multi-day segment helpers (declarations) ===
   function _segPosition(dk, startDay, endDay) {
     if (!endDay || !startDay) return "single";
-    var s = String(startDay).slice(0, 10), e = String(endDay).slice(0, 10), d = String(dk).slice(0, 10);
-    if (e < s) { var t = s; s = e; e = t; }
+    var s = String(startDay).slice(0,10), e = String(endDay).slice(0,10), d = String(dk).slice(0,10);
+    if (e < s){ var t=s; s=e; e=t; }
     if (d < s || d > e) return "single";
     if (s === e) return "single";
     if (d === s) return "start";
@@ -13,13 +13,14 @@
     return "mid";
   }
 
-  global.CalendarApp = global.CalendarApp || {};
-  global.CalendarApp.ui = global.CalendarApp.ui || {};
+    // global.PlanningToday = global.PlanningToday || {};
+  global.CalendarApp                = global.CalendarApp || {};
+  global.CalendarApp.ui             = global.CalendarApp.ui || {};
   global.CalendarApp.ui.renderAllFn = refreshPlanning;
-
-  var Data = (global.CalendarApp && global.CalendarApp.data) || {};
-  var Ev = (global.CalendarApp && global.CalendarApp.events) || {};
-
+  
+  var Data   = (global.CalendarApp && global.CalendarApp.data)   || {};
+  var Ev     = (global.CalendarApp && global.CalendarApp.events) || {};
+  
 
   // ---------- wait for Calendar UI (exported by loader bundle) ----------
   function waitForCalendarUI() {
@@ -80,30 +81,30 @@
   var MOUNT_ID = "planning-today";
   var TOOLBAR_ID = "planning-toolbar";
   var STATE = { scope: (localStorage.getItem("planning.scope") || "all"), userId: 0 };
-  function readCurrentUserId() {
-    try {
+  function readCurrentUserId(){
+    try{
       var m = document.getElementById(MOUNT_ID);
-      var id = m && m.dataset ? parseInt(m.dataset.userId || "0", 10) : 0;
-      return isNaN(id) ? 0 : id;
-    } catch (_) { return 0; }
+      var id = m && m.dataset ? parseInt(m.dataset.userId||"0",10) : 0;
+      return isNaN(id)?0:id;
+    }catch(_){return 0;}
   }
-  function ensureToolbar() {
+  function ensureToolbar(){
     var t = document.getElementById(TOOLBAR_ID);
-    if (!t) return;
+    if(!t) return;
     var inputs = t.querySelectorAll("input[name=planning-scope]");
-    for (var i = 0; i < inputs.length; i++) {
+    for(var i=0;i<inputs.length;i++){
       inputs[i].checked = (inputs[i].value === STATE.scope);
-      inputs[i].addEventListener("change", function (ev) {
+      inputs[i].addEventListener("change", function(ev){
         STATE.scope = ev.target.value === "my" ? "my" : "all";
         localStorage.setItem("planning.scope", STATE.scope);
         ensureStore(render);
       });
     }
   }
-  function applyScope(list) {
-    if (STATE.scope !== "my") return list;
-    var uid = STATE.userId || 0; if (!uid) return [];
-    var out = []; for (var i = 0; i < list.length; i++) { var it = list[i] || {}; var ev = it.ev || {}; var u = parseInt(ev.user_id || 0, 10); if (u === uid) out.push(it); }
+  function applyScope(list){
+    if(STATE.scope !== "my") return list;
+    var uid = STATE.userId||0; if(!uid) return [];
+    var out=[]; for(var i=0;i<list.length;i++){ var it=list[i]||{}; var ev=it.ev||{}; var u=parseInt(ev.user_id||0,10); if(u===uid) out.push(it); }
     return out;
   }
 
@@ -146,50 +147,50 @@
     var base = (Data.getEventsFor ? (Data.getEventsFor(dk) || []) : (store[dk] || [])).slice();
 
     // base-day items
-    for (var i = 0; i < base.length; i++) {
+    for (var i=0;i<base.length;i++){
       var ev = base[i] || {};
-      var t = ev.time || ev.start || "00:00";
+      var t  = ev.time || ev.start || "00:00";
       var dt = toDate(dk, t);
-      out.push({
+      out.push({ 
         start: dt,          // sort by actual time on start day
         display: dt,        // display the same time
-        ev: ev, dk: dk,
-        startDay: dk,
-        endDay: (ev.end_date || ev.end || dk)
+        ev: ev, dk: dk, 
+        startDay: dk, 
+        endDay: (ev.end_date || ev.end || dk) 
       });
     }
 
     // cross-day segments (mid/end)
-    (function includeSpans() {
+    (function includeSpans(){
       var cache = {};
       if (typeof Data._getCache === "function") cache = Data._getCache() || {};
       else cache = store || {};
 
       var keys = Object.keys(cache);
-      for (var idx = 0; idx < keys.length; idx++) {
+      for (var idx=0; idx<keys.length; idx++){
         var day = keys[idx];
         if (day === dk) continue;
         var list = cache[day] || [];
-        for (var j = 0; j < list.length; j++) {
+        for (var j=0;j<list.length;j++){
           var ev2 = list[j] || {};
           var endDay = ev2.end_date || ev2.end;
           if (!endDay) continue;
 
           // inside [start..end] ?
-          var a = String(day).slice(0, 10), b = String(endDay).slice(0, 10), d = String(dk).slice(0, 10);
-          var s = a, e = b; if (e < s) { var tmp = s; s = e; e = tmp; }
+          var a = String(day).slice(0,10), b = String(endDay).slice(0,10), d = String(dk).slice(0,10);
+          var s=a, e=b; if (e < s){ var tmp=s; s=e; e=tmp; }
           if (d < s || d > e) continue;
 
           // Sorting key -> 00:00 (keep segments at top), DISPLAY -> original start time
           var sortAt = toDate(dk, "00:00");
           var dispAt = toDate(dk, ev2.time || ev2.start || "00:00");
 
-          out.push({
-            start: sortAt,
-            display: dispAt,
-            ev: ev2, dk: dk,
-            startDay: day,
-            endDay: endDay
+          out.push({ 
+            start: sortAt, 
+            display: dispAt, 
+            ev: ev2, dk: dk, 
+            startDay: day, 
+            endDay: endDay 
           });
         }
       }
@@ -197,10 +198,10 @@
 
     out.sort(function (a, b) { return a.start - b.start; });
     return out;
-  }
+    }
 
 
-  (function ensurePlanningSegCss() {
+  (function ensurePlanningSegCss(){
     var id = "planning-seg-css";
     if (document.getElementById(id)) return;
     var css = [
@@ -211,7 +212,7 @@
       ".seg-li-start{background:rgba(34,197,94,.08)}",
       ".seg-li-mid{background:rgba(234,179,8,.06)}",
       ".seg-li-end{background:rgba(239,68,68,.06)}",
-
+      
     ].join("\\n");
     var el = document.createElement("style"); el.id = id; el.textContent = css; document.head.appendChild(el);
   })();
@@ -222,27 +223,27 @@
     typeof global.typeToClass === "function"
       ? global.typeToClass
       : function (t) {
-        return t === "mi"
-          ? "type-mi"
-          : t === "nas"
+          return t === "mi"
+            ? "type-mi"
+            : t === "nas"
             ? "type-nas"
             : t === "evt"
-              ? "type-evt"
-              : "type-other";
-      };
+            ? "type-evt"
+            : "type-other";
+        };
 
   var _labelForType =
     typeof global.labelForType === "function"
       ? global.labelForType
       : function (t) {
-        return t === "mi"
-          ? "ТЛГ: МИ"
-          : t === "nas"
+          return t === "mi"
+            ? "ТЛГ: МИ"
+            : t === "nas"
             ? "ТЛГ: НАС"
             : t === "evt"
-              ? "Захід"
-              : "Інше";
-      };
+            ? "Захід"
+            : "Інше";
+        };
 
   // ---------- ensure stable id & persist ----------
   function ensureEventId(dateISO, ev) {
@@ -318,30 +319,32 @@
 
       var li = document.createElement("li");
       li.className = "planning-today__item";
-
+      /* data-seg is set on chip */
+      
+      
       if (ev.urgent) li.classList.add("urgent");
       if (ev.done) li.classList.add("done");
       li.setAttribute("data-date", dk);
-
       // === Added: expose meta for filters ===
       try {
-        li.setAttribute("data-type", (String(ev.type || "other").toLowerCase() || "other"));
+        li.setAttribute("data-type", (String(ev.type||"other").toLowerCase() || "other"));
         li.setAttribute("data-owner", (ev.owner ? String(ev.owner) : ""));
         li.setAttribute("data-done", (ev.done ? "1" : "0"));
         li.setAttribute("data-urgent", (ev.urgent ? "1" : "0"));
         // event start date (best effort): prefer explicit ev.date -> startDay -> dk
-        var evStartDay = (ev.date || it.startDay || dk) ? String((ev.date || it.startDay || dk)).slice(0, 10) : "";
+        var evStartDay = (ev.date || it.startDay || dk) ? String((ev.date || it.startDay || dk)).slice(0,10) : "";
         li.setAttribute("data-ev-date", evStartDay);
         // end date if present
         var evEndDay = (it.endDay || ev.end_date || ev.end || "");
-        li.setAttribute("data-ev-end-date", evEndDay ? String(evEndDay).slice(0, 10) : "");
+        li.setAttribute("data-ev-end-date", evEndDay ? String(evEndDay).slice(0,10) : "");
         // times if present
         var evStartTime = (ev.time || ev.start || "");
-        if (evStartTime) li.setAttribute("data-ev-start", String(evStartTime).slice(0, 5));
+        if (evStartTime) li.setAttribute("data-ev-start", String(evStartTime).slice(0,5));
         var evEndTime = (ev.end_time || ev.endTime || "");
-        if (evEndTime) li.setAttribute("data-ev-end", String(evEndTime).slice(0, 5));
-      } catch (e) { /* safe */ }
+        if (evEndTime) li.setAttribute("data-ev-end", String(evEndTime).slice(0,5));
+      } catch(e){ /* safe */ }
       // === /Added ===
+      // if (eid) li.setAttribute("data-id", eid);
 
       var time = document.createElement("div");
       time.className = "planning-today__time";
@@ -372,19 +375,21 @@
       chip.setAttribute("role", "button");
       chip.setAttribute("tabindex", "0");
 
-      // NOTE: keeping original listeners as-is (project compatibility)
-      chip.addEventListener("click", function (e) {
+      chip.addEventListener("click", function(e){
         e.preventDefault(); e.stopPropagation();
         if (e.shiftKey) { openEdit(); } else { openInfo(); }
       });
-      chip.addEventListener("dblclick", function (e) {
+
+      chip.addEventListener("dblclick", function(e){
         e.preventDefault(); e.stopPropagation(); openEdit();
       });
-      chip.addEventListener("keydown", function (e) {
+
+      chip.addEventListener("keydown", function(e){
         if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openInfo(); }
         if (e.key.toLowerCase() === "e" && (e.ctrlKey || e.metaKey)) { e.preventDefault(); openEdit(); }
       });
-      chip.addEventListener("contextmenu", function (e) {
+
+      chip.addEventListener("contextmenu", function(e){
         e.preventDefault(); e.stopPropagation(); openInfo();
       });
 
@@ -413,12 +418,12 @@
       li.appendChild(details);
       ul.appendChild(li);
 
-      // Additional direct open (stable, uses captured infoDate/eid)
+      // ---- interactions (use captured dk/eid) ----
       chip.addEventListener("click", function (e) {
         e.preventDefault();
         e.stopPropagation();
-        let eid2 = e.currentTarget.getAttribute("id");
-        tryOpenInfo(infoDate, eid2);
+        let eid = e.currentTarget.getAttribute("id");
+        tryOpenInfo(infoDate, eid);
       });
     }
 
@@ -468,42 +473,42 @@
 
     // === Apply active legend filter after each render ===
     if (global.__planningLegendApply) {
-      try { global.__planningLegendApply(); } catch (e) { }
+      try { global.__planningLegendApply(); } catch(e){}
     }
   }
 
-
+  
   // ---------- delegated chip handlers (capture) ----------
-  (function installPlanningDelegatedHandlers() {
+  (function installPlanningDelegatedHandlers(){
     if (window.__planningDelegatedInstalled) return;
     window.__planningDelegatedInstalled = true;
     var mount = document.getElementById(MOUNT_ID);
     if (!mount) return;
 
-    function getChipPayload(el) {
+    function getChipPayload(el){
       var id = el.getAttribute("data-id");
       var date = el.getAttribute("data-date") || el.getAttribute("data-start") || null;
       // Fallback: try li data-date if present
-      if (!date) {
+      if (!date){
         var li = el.closest(".planning-today__item");
         if (li && li.getAttribute) date = li.getAttribute("data-date");
       }
       return { id: id, date: date };
     }
 
-    function openInfo(date, id) {
+    function openInfo(date, id){
       if (!date || !id) return;
       var fn = (window.CalendarApp && window.CalendarApp.ui && window.CalendarApp.ui.openModalInfo) ? window.CalendarApp.ui.openModalInfo : null;
       if (fn) fn(date, id); else tryOpenInfo(date, id);
     }
 
-    function openEdit(date, id) {
+    function openEdit(date, id){
       if (!date || !id) return;
       var fn = (window.CalendarApp && window.CalendarApp.ui && window.CalendarApp.ui.openModalEdit) ? window.CalendarApp.ui.openModalEdit : null;
       if (fn) fn(date, id); else tryOpenInfo(date, id);
     }
 
-    mount.addEventListener("click", function (e) {
+    mount.addEventListener("click", function(e){
       var el = e.target.closest && e.target.closest(".chip");
       if (!el) return;
       var pay = getChipPayload(el);
@@ -513,7 +518,7 @@
       else openInfo(pay.date, pay.id);
     }, true);
 
-    mount.addEventListener("dblclick", function (e) {
+    mount.addEventListener("dblclick", function(e){
       var el = e.target.closest && e.target.closest(".chip");
       if (!el) return;
       var pay = getChipPayload(el);
@@ -522,7 +527,7 @@
       openEdit(pay.date, pay.id);
     }, true);
 
-    mount.addEventListener("contextmenu", function (e) {
+    mount.addEventListener("contextmenu", function(e){
       var el = e.target.closest && e.target.closest(".chip");
       if (!el) return;
       var pay = getChipPayload(el);
@@ -572,7 +577,7 @@
       });
     }
   }
-
+  
 
   // встановлюємо обробку змін
   setInterval(() => {
@@ -581,39 +586,37 @@
   }, 10_000);
 
   /* ===================================================================
-     Inline Planning Legend Filters (+ Clear 'X' button)
+     Inline Planning Legend Filters
      - Binds to existing .legend buttons (span.lg ...)
-     - Adds clear button "X" that resets filters to 'all' and hides itself
      - No external CSS; uses inline style.display toggling
      - Filters: today, overdue, type-mi, type-nas, type-evt, type-other
      =================================================================== */
-  (function installLegendFilters() {
+  (function installLegendFilters(){
     if (global.__planningLegendInstalled) return;
     global.__planningLegendInstalled = true;
 
     var doc = global.document;
     var state = { active: 'all' };
-    var clearBtn = null; // span.lg with "X"
 
-    function $(sel, ctx) { return (ctx || doc).querySelector(sel); }
-    function $all(sel, ctx) { return Array.prototype.slice.call((ctx || doc).querySelectorAll(sel)); }
-    function pad2(n) { return ('0' + n).slice(-2); }
-    function todayISO() { var d = new Date(); return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate()); }
-    function nowHM() { var d = new Date(); return pad2(d.getHours()) + ':' + pad2(d.getMinutes()); }
-    function normalizeISO(s) {
-      if (!s) return null; s = String(s).trim();
+    function $(sel, ctx){ return (ctx||doc).querySelector(sel); }
+    function $all(sel, ctx){ return Array.prototype.slice.call((ctx||doc).querySelectorAll(sel)); }
+    function pad2(n){ return ('0'+n).slice(-2); }
+    function todayISO(){ var d=new Date(); return d.getFullYear()+'-'+pad2(d.getMonth()+1)+'-'+pad2(d.getDate()); }
+    function nowHM(){ var d=new Date(); return pad2(d.getHours())+':'+pad2(d.getMinutes()); }
+    function normalizeISO(s){
+      if (!s) return null; s=String(s).trim();
       if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
-      var m = s.match(/^(\d{2})\.(\d{2})\.(\d{4})$/); if (m) return m[3] + '-' + m[2] + '-' + m[1];
+      var m=s.match(/^(\d{2})\.(\d{2})\.(\d{4})$/); if (m) return m[3]+'-'+m[2]+'-'+m[1];
       return null;
     }
-    function normalizeHM(s) {
-      if (!s) return null; s = String(s).trim();
-      var m = s.match(/^(\d{1,2})[:.](\d{2})$/); if (m) return pad2(+m[1]) + ':' + pad2(+m[2]);
-      var m2 = s.match(/^(\d{1,2})$/); if (m2) return pad2(+m2[1]) + ':00';
+    function normalizeHM(s){
+      if (!s) return null; s=String(s).trim();
+      var m=s.match(/^(\d{1,2})[:.](\d{2})$/); if (m) return pad2(+m[1])+':'+pad2(+m[2]);
+      var m2=s.match(/^(\d{1,2})$/); if (m2) return pad2(+m2[1])+':00';
       return null;
     }
 
-    function parseMeta(el) {
+    function parseMeta(el){
       var type = (el.getAttribute('data-type') || 'other').toLowerCase();
       var done = (el.getAttribute('data-done') === '1') || el.classList.contains('done');
       var urgent = (el.getAttribute('data-urgent') === '1') || el.classList.contains('urgent');
@@ -624,32 +627,32 @@
       return { type: type, done: done, urgent: urgent, date: date, endDate: endDate, start: start, end: end };
     }
 
-    function containsToday(dateISO, endDateISO) {
+    function containsToday(dateISO, endDateISO){
       var t = todayISO();
       if (!dateISO) return false;
       if (!endDateISO) return dateISO === t;
       return dateISO <= t && t <= endDateISO;
     }
 
-    function isOverdueStrict(meta) {
+    function isOverdueStrict(meta){
       if (meta.done) return false;
       var t = todayISO(), hm = nowHM();
-      if (meta.endDate) {
+      if (meta.endDate){
         if (meta.endDate < t) return true;
         if (meta.endDate === t && meta.end && meta.end < hm) return true;
         return false;
       }
       if (!meta.date) return false;
       if (meta.date < t) return true;
-      if (meta.date === t) {
+      if (meta.date === t){
         if (meta.start && meta.start < hm) return true;
         return false;
       }
       return false;
     }
 
-    function matches(meta, filter) {
-      switch (filter) {
+    function matches(meta, filter){
+      switch(filter){
         case 'all': return true;
         case 'today': return containsToday(meta.date, meta.endDate);
         case 'overdue': return isOverdueStrict(meta);
@@ -661,24 +664,19 @@
       }
     }
 
-    function getAllItems() {
+    function getAllItems(){
       var mount = document.getElementById('planning-today');
       if (!mount) return [];
       return $all('.planning-today__item', mount);
     }
 
-    function updateClearVisibility() {
-      if (!clearBtn) return;
-      clearBtn.style.display = (state.active === 'all') ? 'none' : '';
-    }
-
-    function apply() {
+    function apply(){
       var items = getAllItems();
       var total = items.length, visible = 0;
-      for (var i = 0; i < items.length; i++) {
+      for (var i=0;i<items.length;i++){
         var el = items[i];
         var meta = parseMeta(el);
-        if (matches(meta, state.active)) {
+        if (matches(meta, state.active)){
           el.style.display = '';
           visible++;
         } else {
@@ -688,24 +686,22 @@
 
       // Hide empty sections (optional, cosmetic)
       var sections = $all('.planning-section', document.getElementById('planning-today'));
-      for (var s = 0; s < sections.length; s++) {
+      for (var s=0; s<sections.length; s++){
         var ul = sections[s].querySelector('.planning-today__list');
         if (!ul) continue;
-        var anyVisible = Array.prototype.some.call(ul.children || [], function (li) {
+        var anyVisible = Array.prototype.some.call(ul.children || [], function(li){
           return li && li.style.display !== 'none';
         });
         sections[s].style.display = anyVisible ? '' : 'none';
       }
 
-      updateClearVisibility();
-
       try {
         document.dispatchEvent(new CustomEvent('planning:filters-applied', { detail: { filter: state.active, visibleCount: visible, total: total } }));
-      } catch (e) { }
+      } catch(e){}
     }
 
-    function detectFilterFromLegendSpan(span) {
-      var txt = span.textContent.replace(/\s+/g, ' ').trim().toLowerCase();
+    function detectFilterFromLegendSpan(span){
+      var txt = span.textContent.replace(/\s+/g,' ').trim().toLowerCase();
       if (span.classList.contains('ev--overdue-flash') || txt.indexOf('простроч') !== -1) return 'overdue';
       if (txt.indexOf('сьогодні') !== -1) return 'today';
       if (txt.indexOf('тлг') !== -1 && txt.indexOf('ми') !== -1) return 'type-mi';
@@ -715,72 +711,44 @@
       return null;
     }
 
-    function setActiveLegend(legendEl, targetSpan) {
+    function setActiveLegend(legendEl, targetSpan){
       var spans = $all('.lg', legendEl);
-      for (var i = 0; i < spans.length; i++) {
+      for (var i=0;i<spans.length;i++){
         spans[i].classList.remove('is-active');
-        spans[i].setAttribute('aria-pressed', 'false');
+        spans[i].setAttribute('aria-pressed','false');
       }
-      if (targetSpan && targetSpan.getAttribute('data-filter') !== 'clear') {
+      if (targetSpan){
         targetSpan.classList.add('is-active');
-        targetSpan.setAttribute('aria-pressed', 'true');
+        targetSpan.setAttribute('aria-pressed','true');
       }
     }
 
-    function ensureClearButton(legend) {
-      // Reuse existing if already present
-      clearBtn = legend.querySelector('.lg[data-filter="clear"]');
-      if (clearBtn) { updateClearVisibility(); return; }
-
-      // Create new span.lg "X" to match design
-      clearBtn = document.createElement('span');
-      clearBtn.className = 'lg lg--clear';
-      clearBtn.setAttribute('data-filter', 'clear');
-      clearBtn.setAttribute('title', 'Скинути фільтри');
-      clearBtn.textContent = 'X';
-      clearBtn.style.cursor = 'pointer';
-      clearBtn.style.display = 'none'; // hidden by default
-
-      // Append at the end of legend
-      legend.appendChild(clearBtn);
-
-      clearBtn.addEventListener('click', function () {
-        var legendEl = document.querySelector('.legend');
-        state.active = 'all';
-        setActiveLegend(legendEl, null);
-        apply();
-      });
-    }
-
-    function wireLegend() {
+    function wireLegend(){
       var legend = document.querySelector('.legend');
       if (!legend) return;
       var spans = $all('.lg', legend);
-      spans.forEach(function (sp) {
+      spans.forEach(function(sp){
         var f = detectFilterFromLegendSpan(sp);
         if (f) sp.setAttribute('data-filter', f);
         sp.style.cursor = 'pointer';
-        sp.addEventListener('click', function () {
+        sp.addEventListener('click', function(){
           var filter = sp.getAttribute('data-filter');
-          if (!filter || filter === 'clear') return;
-          if (state.active === filter) {
+          if (!filter) return;
+          if (state.active === filter){
             state.active = 'all';
             setActiveLegend(legend, null);
           } else {
             state.active = filter;
             setActiveLegend(legend, sp);
           }
-          try { document.dispatchEvent(new CustomEvent('planning:filters-change', { detail: { filter: state.active } })); } catch (e) { }
+          try { document.dispatchEvent(new CustomEvent('planning:filters-change', { detail: { filter: state.active } })); } catch(e){}
           apply();
         });
       });
-
-      ensureClearButton(legend);
-      updateClearVisibility();
     }
 
     // Install on DOM ready
-    if (document.readyState === 'loading') {
+    if (document.readyState === 'loading'){
       document.addEventListener('DOMContentLoaded', wireLegend);
     } else {
       wireLegend();
@@ -790,7 +758,7 @@
     global.__planningLegendApply = apply;
 
     // Re-apply when external code asks
-    document.addEventListener('planning:rerender', function () { apply(); });
+    document.addEventListener('planning:rerender', apply);
   })();
 
 })(window);

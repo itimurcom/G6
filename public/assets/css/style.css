@@ -401,18 +401,21 @@ body {
 .ev--overdue-flash::after {
   content: "";
   position: absolute;
-  inset: 0;                          /* ВАЖЛИВО: без негативних inset */
+  inset: 0;
+  /* ВАЖЛИВО: без негативних inset */
   border-radius: inherit;
   pointer-events: none;
-  z-index: 1;                        /* під прапорцем, над фоном */
+  z-index: 1;
+  /* під прапорцем, над фоном */
   background: linear-gradient(var(--overdue-shine-angle),
-    rgba(var(--overdue-shine-color), 0) var(--overdue-shine-stop1),
-    rgba(var(--overdue-shine-color), var(--overdue-shine-alpha)) var(--overdue-shine-stop2),
-    rgba(var(--overdue-shine-color), 0) var(--overdue-shine-stop3)
-  );
-  background-size: 440% 220%;        /* більше за бокс — буде що рухати */
+      rgba(var(--overdue-shine-color), 0) var(--overdue-shine-stop1),
+      rgba(var(--overdue-shine-color), var(--overdue-shine-alpha)) var(--overdue-shine-stop2),
+      rgba(var(--overdue-shine-color), 0) var(--overdue-shine-stop3));
+  background-size: 440% 220%;
+  /* більше за бокс — буде що рухати */
   background-repeat: no-repeat;
-  background-position: 120% 0%;     /* старт зліва за межами */
+  background-position: 120% 0%;
+  /* старт зліва за межами */
   animation: overdue-bg-move var(--overdue-shine-duration) linear infinite;
 }
 
@@ -424,7 +427,9 @@ body {
 }
 
 @keyframes overdue-bg-move {
-  to { background-position: -120% 0%; }
+  to {
+    background-position: -120% 0%;
+  }
 }
 
 /* Accessibility */
@@ -433,5 +438,3 @@ body {
     animation: none;
   }
 }
-
-
