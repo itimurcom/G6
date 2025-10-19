@@ -54,7 +54,7 @@
             "owner": "Тім",
             "type": "nas",
             "urgent": false,
-            "done": true,
+            "done": false,
             "incoming_no": "12345",
             "outgoing_no": "12345",
             "description": "test",
