@@ -631,22 +631,24 @@
       return dateISO <= t && t <= endDateISO;
     }
 
-    function isOverdueStrict(meta) {
-      if (meta.done) return false;
-      var t = todayISO(), hm = nowHM();
-      if (meta.endDate) {
-        if (meta.endDate < t) return true;
-        if (meta.endDate === t && meta.end && meta.end < hm) return true;
-        return false;
-      }
-      if (!meta.date) return false;
-      if (meta.date < t) return true;
-      if (meta.date === t) {
-        if (meta.start && meta.start < hm) return true;
-        return false;
-      }
-      return false;
-    }
+function isOverdueStrict(meta) {
+  // Adapter-only: delegate to global isEventOverdueStrict(ev)
+  var ev = {
+    done: !!(meta && meta.done),
+
+    // dates in 'YYYY-MM-DD'
+    start_date: (meta && meta.date) ? String(meta.date).slice(0, 10) : '',
+    end_date:   (meta && meta.endDate) ? String(meta.endDate).slice(0, 10) : '',
+
+    // times in 'HH:MM'
+    time:       (meta && meta.start) ? String(meta.start).slice(0, 5) : '',
+    end_time:   (meta && meta.end) ? String(meta.end).slice(0, 5) : ''
+  };
+
+  if (typeof isEventOverdueStrict !== 'function') return false;
+  return !!isEventOverdueStrict(ev);
+}
+
 
     function matches(meta, filter) {
       switch (filter) {
