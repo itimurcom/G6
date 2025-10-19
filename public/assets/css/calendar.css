@@ -876,3 +876,6 @@ body.light .ev--multi,
 #filterText.active {
   border-color: var(--accent);
 }
+
+/* Adjacent month days (prev/next) */
+.cell.adjacent { opacity: .45; }

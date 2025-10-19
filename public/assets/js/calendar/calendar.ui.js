@@ -278,8 +278,73 @@
     grid.innerHTML = ''; cells = [];
     var first = ((new Date(state.year, state.month, 1)).getDay() + 6) % 7;
     var dim = new Date(state.year, state.month + 1, 0).getDate();
-    for (var i2 = 0; i2 < first; i2++) { var pad = document.createElement('div'); pad.className = 'cell pad'; pad.setAttribute('aria-hidden', 'true'); grid.appendChild(pad); }
-    for (var day = 1; day <= dim; day++) {
+    for (var i2 = first - 1; i2 >= 0; i2--) {
+  var pd = new Date(state.year, state.month, 0).getDate() - i2; // prev month day
+  var d2 = new Date(state.year, state.month - 1, pd);
+  var iso = Ev.toISODate(d2);
+
+  var cell = document.createElement('div');
+  cell.className = 'cell adjacent';
+  cell.setAttribute('role', 'gridcell');
+  cell.setAttribute('aria-label', longHeaderFmt.format(d2));
+  cell.dataset.date = iso;
+
+  var head = document.createElement('div'); head.className = 'cell-head';
+  var hplus = document.createElement('div'); hplus.className = 'cell-head-plus'; hplus.textContent = String('+');
+  var dn = document.createElement('div'); dn.className = 'day-num'; dn.textContent = String(d2.getDate());
+  head.appendChild(dn); head.appendChild(hplus); cell.appendChild(head);
+  var list = document.createElement('div'); list.className = 'events'; cell.appendChild(list);
+
+  var w = ((d2.getDay() + 6) % 7);
+  if (w >= 5) cell.classList.add('weekend');
+  if (Ev.sameDate(d2, today)) cell.classList.add('today');
+
+  // UI + DnD listeners (same behavior as main cells)
+  cell.addEventListener('click', function (ev) {
+    var openModalNew = global.CalendarApp && global.CalendarApp.ui && global.CalendarApp.ui.openModalNew;
+    if (!openModalNew) return;
+    var c = ev.currentTarget; var iso2 = c.dataset.date;
+    var headEl = c.querySelector('.cell-head'); var listEl = c.querySelector('.events');
+    if (ev.target === c || ev.target === headEl || ev.target === listEl || ev.target === headEl.firstChild) { openModalNew(iso2); }
+  });
+  cell.addEventListener('dragenter', function (e) { e.preventDefault(); this.classList.add('drop-target'); });
+  cell.addEventListener('dragover', function (e) {
+    try {
+      var types = e.dataTransfer && e.dataTransfer.types;
+      var hasMove = false, hasResize = false;
+      if (types) {
+        var arr = (typeof types.contains === 'function') ? types : { contains: function (t) { return Array.prototype.indexOf.call(types, t) !== -1; } };
+        hasMove = arr.contains('text/calendar-event');
+        hasResize = arr.contains('text/calendar-resize-end');
+      }
+      if (hasMove || hasResize) {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        this.classList.add('drop-target');
+      }
+    } catch (_) { }
+  });
+  cell.addEventListener('dragleave', function () { this.classList.remove('drop-target'); });
+  cell.addEventListener('drop', function (e) {
+    e.preventDefault(); this.classList.remove('drop-target');
+    try {
+      var payload = e.dataTransfer.getData('text/calendar-event'); if (!payload) return;
+      var obj = JSON.parse(payload); var fromDate = obj.fromDate; var id = obj.id; var toDate = this.dataset.date;
+      if (!fromDate || !id || toDate === fromDate) return;
+      var fromArr = Data.getEventsFor(fromDate); var idx = Ev.findIndexById(fromArr, id); if (idx === -1) return;
+      var moved = fromArr.splice(idx, 1)[0]; Data.setEventsFor(fromDate, fromArr);
+      renderAllCells(); var toArr = Data.getEventsFor(toDate); toArr.push(moved); Data.setEventsFor(toDate, toArr);
+      withStableScroll(renderAllFn);
+      var cFrom = cells.find(function (c) { return c.dataset.date === fromDate; }); if (cFrom) renderCell(cFrom);
+      renderCell(this); renderTodayPanel();
+      renderAllCells();
+    } catch (err) { console.warn('drop failed', err); }
+  });
+
+  grid.appendChild(cell); cells.push(cell);
+}
+    
+for (var day = 1; day <= dim; day++) {
       var d2 = new Date(state.year, state.month, day);
       var iso = Ev.toISODate(d2);
       var cell = document.createElement('div'); cell.className = 'cell'; cell.setAttribute('role', 'gridcell'); cell.setAttribute('aria-label', longHeaderFmt.format(d2)); cell.dataset.date = iso;
@@ -334,7 +399,78 @@
 
       grid.appendChild(cell); cells.push(cell);
     }
-    withStableScroll(renderAllFn);
+    
+// Trailing next-month days up to Sunday (adjacent cells)
+(function(){
+  var last = new Date(state.year, state.month, dim);
+  var lastW = ((last.getDay() + 6) % 7);
+  var trail = 6 - lastW; // 0..6 (Mon=0..Sun=6)
+  for (var nd = 1; nd <= trail; nd++) {
+    var d2 = new Date(state.year, state.month + 1, nd);
+    var iso = Ev.toISODate(d2);
+
+    var cell = document.createElement('div');
+    cell.className = 'cell adjacent';
+    cell.setAttribute('role', 'gridcell');
+    cell.setAttribute('aria-label', longHeaderFmt.format(d2));
+    cell.dataset.date = iso;
+
+    var head = document.createElement('div'); head.className = 'cell-head';
+    var hplus = document.createElement('div'); hplus.className = 'cell-head-plus'; hplus.textContent = String('+');
+    var dn = document.createElement('div'); dn.className = 'day-num'; dn.textContent = String(d2.getDate());
+    head.appendChild(dn); head.appendChild(hplus); cell.appendChild(head);
+    var list = document.createElement('div'); list.className = 'events'; cell.appendChild(list);
+
+    var w = ((d2.getDay() + 6) % 7);
+    if (w >= 5) cell.classList.add('weekend');
+    if (Ev.sameDate(d2, today)) cell.classList.add('today');
+
+    // UI + DnD listeners (same behavior as main cells)
+    cell.addEventListener('click', function (ev) {
+      var openModalNew = global.CalendarApp && global.CalendarApp.ui && global.CalendarApp.ui.openModalNew;
+      if (!openModalNew) return;
+      var c = ev.currentTarget; var iso2 = c.dataset.date;
+      var headEl = c.querySelector('.cell-head'); var listEl = c.querySelector('.events');
+      if (ev.target === c || ev.target === headEl || ev.target === listEl || ev.target === headEl.firstChild) { openModalNew(iso2); }
+    });
+    cell.addEventListener('dragenter', function (e) { e.preventDefault(); this.classList.add('drop-target'); });
+    cell.addEventListener('dragover', function (e) {
+      try {
+        var types = e.dataTransfer && e.dataTransfer.types;
+        var hasMove = false, hasResize = false;
+        if (types) {
+          var arr = (typeof types.contains === 'function') ? types : { contains: function (t) { return Array.prototype.indexOf.call(types, t) !== -1; } };
+          hasMove = arr.contains('text/calendar-event');
+          hasResize = arr.contains('text/calendar-resize-end');
+        }
+        if (hasMove || hasResize) {
+          e.preventDefault();
+          e.dataTransfer.dropEffect = 'move';
+          this.classList.add('drop-target');
+        }
+      } catch (_) { }
+    });
+    cell.addEventListener('dragleave', function () { this.classList.remove('drop-target'); });
+    cell.addEventListener('drop', function (e) {
+      e.preventDefault(); this.classList.remove('drop-target');
+      try {
+        var payload = e.dataTransfer.getData('text/calendar-event'); if (!payload) return;
+        var obj = JSON.parse(payload); var fromDate = obj.fromDate; var id = obj.id; var toDate = this.dataset.date;
+        if (!fromDate || !id || toDate === fromDate) return;
+        var fromArr = Data.getEventsFor(fromDate); var idx = Ev.findIndexById(fromArr, id); if (idx === -1) return;
+        var moved = fromArr.splice(idx, 1)[0]; Data.setEventsFor(fromDate, fromArr);
+        renderAllCells(); var toArr = Data.getEventsFor(toDate); toArr.push(moved); Data.setEventsFor(toDate, toArr);
+        withStableScroll(renderAllFn);
+        var cFrom = cells.find(function (c) { return c.dataset.date === fromDate; }); if (cFrom) renderCell(cFrom);
+        renderCell(this); renderTodayPanel();
+        renderAllCells();
+      } catch (err) { console.warn('drop failed', err); }
+    });
+
+    grid.appendChild(cell); cells.push(cell);
+  }
+})();
+withStableScroll(renderAllFn);
   }
 
   function renderAllCells() { for (var i = 0; i < cells.length; i++) { renderCell(cells[i]); } if (typeof enableResizeDnDOnCells === 'function') { enableResizeDnDOnCells(); } }
