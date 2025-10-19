@@ -47,11 +47,19 @@
 
     if (!btnTypeMi) return;
     btnTypeMi.classList.toggle('active', currentType === 'mi');
+    btnTypeMi.style.cursor = 'pointer';
     btnTypeNas.classList.toggle('active', currentType === 'nas');
+    btnTypeNas.style.cursor = 'pointer';
     btnTypeEvt.classList.toggle('active', currentType === 'evt');
+    btnTypeEvt.style.cursor = 'pointer';
     btnTypeOther.classList.toggle('active', currentType === 'other');
+    btnTypeOther.style.cursor = 'pointer';
     btnTypeOverdue.classList.toggle('active', currentType === 'overdue');
-    if (btnTypeReset) btnTypeReset.style.display = (currentType === 'all') ? 'none' : 'inline-grid';
+    btnTypeOverdue.style.cursor = 'pointer';
+    if (btnTypeReset) {
+      btnTypeReset.style.display = (currentType === 'all') ? 'none' : 'inline-grid';
+      btnTypeReset.style.cursor = 'pointer';
+      }
   }
 
   function setTypeFilter(t) {

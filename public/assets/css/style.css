@@ -438,3 +438,7 @@ body {
     animation: none;
   }
 }
+
+.footer-switches{
+display:flex; gap:10px; align-items:center;
+}

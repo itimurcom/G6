@@ -53,7 +53,7 @@
             "title": "ВКЗ ЖЕСТЬ іваіваіва",
             "owner": "Тім",
             "type": "nas",
-            "urgent": true,
+            "urgent": false,
             "done": true,
             "incoming_no": "12345",
             "outgoing_no": "12345",
