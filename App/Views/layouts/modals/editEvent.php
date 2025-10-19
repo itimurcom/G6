@@ -3,12 +3,6 @@
     <header>
       <div class="left">
         <div id="modalTitle">Нова подія</div>
-        <label id="urgentSwitch" class="urgent-switch" title="Позначити як терміново">
-          <input type="checkbox" id="inputUrgent"> Терміново
-        </label>
-        <label id="doneSwitch" class="done-switch" title="Позначити як виконано" style="margin-left:10px">
-          <input type="checkbox" id="inputDone"> Виконано
-        </label>
       </div>
       <button type="button" id="btnClose" class="event-btn" aria-label="Закрити">×</button>
     </header>
@@ -73,7 +67,15 @@
     </div>
 
     <footer>
-      <span></span>
+      
+      <div class="footer-switches" style="display:flex; gap:10px; align-items:center;">
+        <label id="urgentSwitch" class="urgent-switch" title="Позначити як терміново">
+          <input type="checkbox" id="inputUrgent"> Терміново
+        </label>
+        <label id="doneSwitch" class="done-switch" title="Позначити як виконано">
+          <input type="checkbox" id="inputDone"> Виконано
+        </label>
+      </div>
       <div style="display:flex; gap:10px;">
         <button type="button" class="btn" id="btnCancel">Скасувати</button>
         <button type="submit" class="btn" style="background:var(--accent);border-color:var(--accent);color:#fff">Зберегти</button>
