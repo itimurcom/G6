@@ -339,7 +339,35 @@
     infoModal.classList.add(t === 'mi' ? 'type-mi' : t === 'nas' ? 'type-nas' : t === 'evt' ? 'type-evt' : 'type-other');
   }
 
-  function openInfo(dateISO, id) {
+  function openInfo(
+dateISO, id) {
+  // Move header edit button to footer and restyle (green, text "редагувати")
+  try {
+    var modal = document.getElementById('infoEventModal');
+    if (modal) {
+      var editBtn = modal.querySelector('#editEvBtn');
+      var btnBox = modal.querySelector('#infoButtons');
+      if (editBtn && btnBox) {
+        // Move node to footer
+        if (editBtn.parentElement !== btnBox) {
+          btnBox.insertBefore(editBtn, btnBox.firstChild);
+        }
+        // Restyle
+        editBtn.className = 'btn btn--green';
+        editBtn.removeAttribute('hidden');
+        editBtn.removeAttribute('aria-hidden');
+        editBtn.removeAttribute('title');
+        editBtn.setAttribute('aria-label', 'Редагувати');
+        editBtn.textContent = 'редагувати';
+      }
+      // Hide any leftover pencil icon buttons in header (if duplicated by server render)
+      var headerPencil = modal.querySelector('header #editEvBtn');
+      if (headerPencil && headerPencil !== (modal.querySelector('#infoButtons #editEvBtn'))) {
+        headerPencil.style.display = 'none';
+      }
+    }
+  } catch (e) { /* noop */ }
+
     var infoContent = $id('infoContent');
 
     var arr = Data.getEventsFor(dateISO) || [];

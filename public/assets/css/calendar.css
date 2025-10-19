@@ -877,5 +877,15 @@ body.light .ev--multi,
   border-color: var(--accent);
 }
 
-/* Adjacent month days (prev/next) */
-.cell.adjacent { opacity: .45; }
+/* Green action button for edit */
+.btn--green {
+  background: #22c55e;      /* emerald-500 */
+  border-color: #22c55e;
+  color: #fff;
+}
+.btn--green:hover {
+  filter: brightness(1.05);
+}
+.btn--green:active {
+  filter: brightness(0.95);
+}

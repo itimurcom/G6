@@ -47,14 +47,14 @@
     "2025-09-28": [],
     "2025-09-29": [
         {
-            "end_date": "2025-10-19",
+            "end_date": "2025-10-18",
             "id": "841291b6-3245-49aa-9587-3c63815270e5",
             "time": "03:00",
             "title": "ВКЗ ЖЕСТЬ іваіваіва",
             "owner": "Тім",
             "type": "nas",
             "urgent": false,
-            "done": false,
+            "done": true,
             "incoming_no": "12345",
             "outgoing_no": "12345",
             "description": "test",
