@@ -6,7 +6,11 @@
       <div class="title" id="authTitle">Вхід</div>
     </header>
     <div class="content">
-      <div class="auth-brand"><a id="g6-brand" href="/" aria-label="G6"><span class="g6-logo" aria-hidden="true"></span></a></div>
+<div class="auth-brand">
+        <img class="g6-auth-logo g6-auth-logo--light" src="/assets/img/g6/g6-light.png" alt="G6">
+        <img class="g6-auth-logo g6-auth-logo--dark"  src="/assets/img/g6/g6-dark.png"  alt="G6">
+      </div>
+
       <?php if ($err): ?>
         <div class="alert alert--error">
           <?= htmlspecialchars($err) ?>

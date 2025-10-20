@@ -445,5 +445,9 @@ display:flex; gap:10px; align-items:center;
 
 .cell.adjacent { opacity: .45; }
 
-/* auth: tighten logo spacing */
-.auth-modal .auth-brand{ margin-bottom: 0 !important; }
+/* === G6 auth logo (IMG-based, inside content) === */
+.auth-modal .auth-brand{display:flex;justify-content:center;align-items:center;margin:0}
+.g6-auth-logo{display:block;width:clamp(96px,16.7%,240px);height:auto;padding:clamp(6px,0.8vw,12px)}
+.g6-auth-logo--dark{display:none}
+html.dark .g6-auth-logo--light, html[data-theme="dark"] .g6-auth-logo--light{display:none}
+html.dark .g6-auth-logo--dark,  html[data-theme="dark"] .g6-auth-logo--dark{display:block}
