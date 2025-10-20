@@ -15,7 +15,7 @@ final class AuthController extends Controller
                 '/assets/css/calendar.css',
                 '/assets/css/icons.css',
             ],
-            'extra_js'   => [],
+            'extra_js'   => ['/assets/js/app.js'],
             'modules_js' => [],
         ]);
     }
@@ -27,7 +27,7 @@ final class AuthController extends Controller
                 '/assets/css/calendar.css',
                 '/assets/css/icons.css',
             ],
-            'extra_js'   => [],
+            'extra_js'   => ['/assets/js/app.js'],
             'modules_js' => [],
         ]);
     }

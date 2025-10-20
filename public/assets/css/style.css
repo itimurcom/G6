@@ -444,3 +444,6 @@ display:flex; gap:10px; align-items:center;
 }
 
 .cell.adjacent { opacity: .45; }
+
+/* auth: tighten logo spacing */
+.auth-modal .auth-brand{ margin-bottom: 0 !important; }

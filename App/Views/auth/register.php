@@ -6,6 +6,7 @@
       <div class="title" id="regTitle">Реєстрація</div>
     </header>
     <div class="content">
+      <div class="auth-brand"><a id="g6-brand" href="/" aria-label="G6"><span class="g6-logo" aria-hidden="true"></span></a></div>
       <?php if ($err): ?>
         <div class="alert alert--error">
           <?= htmlspecialchars($err) ?>
