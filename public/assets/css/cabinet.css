@@ -121,3 +121,23 @@
   border-color: var(--cabinet-primary-border);
   color: var(--cabinet-primary-text);
 }
+
+/* AUDIT: BEGIN styles (inline in cabinet.css) */
+#audit-block .audit-toolbar { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:6px 0 10px 0; }
+#audit-block .audit-toolbar .right > * { margin-left:8px; }
+#audit-block .audit-list { max-height: 50vh; overflow:auto; padding: 8px 0; display:flex; flex-direction:column; gap:8px; }
+#audit-block .audit-item { border:1px solid #2a2a2a; border-left-width:4px; padding:8px 10px; border-radius:10px; background:#0c0f14; }
+#audit-block .audit-item .head { display:grid; grid-template-columns: auto 1fr auto auto; gap:8px; font-size:12px; color:#9aa4b2; }
+#audit-block .audit-item .body { margin-top:6px; }
+#audit-block .audit-item .msg { color:#cbd5e1; }
+#audit-block .audit-item .delta { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace; font-size:12px; color:#a0aec0; background:#0a0d12; padding:6px; border-radius:8px; white-space:pre-wrap; }
+#audit-block .audit-item .result.success { color:#22c55e; }
+#audit-block .audit-item .result.error { color:#ef4444; }
+#audit-block .audit-item.t-login  { border-left-color:#22c55e33; }
+#audit-block .audit-item.t-logout { border-left-color:#94a3b833; }
+#audit-block .audit-item.t-create { border-left-color:#22c55e; }
+#audit-block .audit-item.t-update { border-left-color:#eab308; }
+#audit-block .audit-item.t-delete { border-left-color:#ef4444; }
+#audit-block .audit-item.t-other  { border-left-color:#6b7280; }
+#audit-block .audit-pager { display:flex; justify-content:space-between; padding:8px 0; }
+/* AUDIT: END styles */

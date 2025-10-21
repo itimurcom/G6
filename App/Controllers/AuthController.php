@@ -5,6 +5,7 @@ use App\Core\Controller;
 use App\Core\Request;
 use App\Core\Auth;
 use App\Core\Session;
+use App\Services\Audit\ActionLogger; // AUDIT: ADD ONLY
 
 final class AuthController extends Controller
 {
@@ -35,6 +36,7 @@ final class AuthController extends Controller
     public function login(Request $r): string {
         $login = trim((string)$r->input('login'));
         $pass  = (string)$r->input('password');
+        $___audit = new ActionLogger(); // AUDIT: ADD ONLY
 
         // Find user by login/email using repository (supports wrapper format)
         $repo = new \App\Models\UserFileRepository();
@@ -56,11 +58,14 @@ final class AuthController extends Controller
         // Normal login via existing Auth class
         $ok = Auth::login($login, $pass);
         if ($ok) {
+            $u = $_SESSION['user'] ?? null; // AUDIT: ADD ONLY
+            $___audit->logAuth('auth.login', isset($u['id'])?(int)$u['id']:null, $u['name']??null, 'success'); // AUDIT: ADD ONLY
             header('Location: /cabinet', true, 302);
             return '';
         }
 
         Session::flash('error', 'Invalid credentials');
+        $___audit->logAuth('auth.login', null, null, 'error', 'Invalid credentials'); // AUDIT: ADD ONLY
         header('Location: /login', true, 302);
         return '';
     }
@@ -69,6 +74,7 @@ final class AuthController extends Controller
         $name  = trim((string)$r->input('name'));
         $login = trim((string)$r->input('login'));
         $pass  = (string)$r->input('password');
+        $___audit = new ActionLogger(); // AUDIT: ADD ONLY
 
         if ($name === '' || $login === '' || \strlen($pass) < 6) {
             Session::flash('error', 'Fill all fields (min password length 6). Login is required.');
@@ -88,7 +94,9 @@ final class AuthController extends Controller
     }
 
     public function logout(Request $r): string {
+        $__u = $_SESSION['user'] ?? null; // AUDIT: ADD ONLY
         Auth::logout();
+        (new ActionLogger())->logAuth('auth.logout', isset($__u['id'])?(int)$__u['id']:null, $__u['name']??null, 'success'); // AUDIT: ADD ONLY
         header('Location: /', true, 302);
         return '';
     }

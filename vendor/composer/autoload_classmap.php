@@ -6,9 +6,9 @@ $vendorDir = dirname(__DIR__);
 $baseDir = dirname($vendorDir);
 
 return array(
+    'App\\Controllers\\ApiAuditController' => $baseDir . '/App/Controllers/ApiAuditController.php',
     'App\\Controllers\\ApiBackupController' => $baseDir . '/App/Controllers/ApiBackupController.php',
     'App\\Controllers\\ApiEventsController' => $baseDir . '/App/Controllers/ApiEventsController.php',
-    'App\\Controllers\\ApiMysqlEventsController' => $baseDir . '/App/Controllers/ApiMysqlEventsController.php',
     'App\\Controllers\\ApiUserNameController' => $baseDir . '/App/Controllers/ApiUserNameController.php',
     'App\\Controllers\\ApiUsersController' => $baseDir . '/App/Controllers/ApiUsersController.php',
     'App\\Controllers\\AuthController' => $baseDir . '/App/Controllers/AuthController.php',
@@ -30,6 +30,7 @@ return array(
     'App\\Models\\UserNameResolver' => $baseDir . '/App/Models/UserNameResolver.php',
     'App\\Models\\UserRepositoryInterface' => $baseDir . '/App/Models/UserRepositoryInterface.php',
     'App\\Security\\Csrf' => $baseDir . '/App/Security/Csrf.php',
+    'App\\Services\\Audit\\ActionLogger' => $baseDir . '/App/Services/Audit/ActionLogger.php',
     'Composer\\InstalledVersions' => $vendorDir . '/composer/InstalledVersions.php',
     'DeepCopy\\DeepCopy' => $vendorDir . '/myclabs/deep-copy/src/DeepCopy/DeepCopy.php',
     'DeepCopy\\Exception\\CloneException' => $vendorDir . '/myclabs/deep-copy/src/DeepCopy/Exception/CloneException.php',

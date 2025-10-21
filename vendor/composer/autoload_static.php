@@ -60,9 +60,9 @@ class ComposerStaticInitf502405953d43c522bce30c01bf37ad3
     );
 
     public static $classMap = array (
+        'App\\Controllers\\ApiAuditController' => __DIR__ . '/../..' . '/App/Controllers/ApiAuditController.php',
         'App\\Controllers\\ApiBackupController' => __DIR__ . '/../..' . '/App/Controllers/ApiBackupController.php',
         'App\\Controllers\\ApiEventsController' => __DIR__ . '/../..' . '/App/Controllers/ApiEventsController.php',
-        'App\\Controllers\\ApiMysqlEventsController' => __DIR__ . '/../..' . '/App/Controllers/ApiMysqlEventsController.php',
         'App\\Controllers\\ApiUserNameController' => __DIR__ . '/../..' . '/App/Controllers/ApiUserNameController.php',
         'App\\Controllers\\ApiUsersController' => __DIR__ . '/../..' . '/App/Controllers/ApiUsersController.php',
         'App\\Controllers\\AuthController' => __DIR__ . '/../..' . '/App/Controllers/AuthController.php',
@@ -84,6 +84,7 @@ class ComposerStaticInitf502405953d43c522bce30c01bf37ad3
         'App\\Models\\UserNameResolver' => __DIR__ . '/../..' . '/App/Models/UserNameResolver.php',
         'App\\Models\\UserRepositoryInterface' => __DIR__ . '/../..' . '/App/Models/UserRepositoryInterface.php',
         'App\\Security\\Csrf' => __DIR__ . '/../..' . '/App/Security/Csrf.php',
+        'App\\Services\\Audit\\ActionLogger' => __DIR__ . '/../..' . '/App/Services/Audit/ActionLogger.php',
         'Composer\\InstalledVersions' => __DIR__ . '/..' . '/composer/InstalledVersions.php',
         'DeepCopy\\DeepCopy' => __DIR__ . '/..' . '/myclabs/deep-copy/src/DeepCopy/DeepCopy.php',
         'DeepCopy\\Exception\\CloneException' => __DIR__ . '/..' . '/myclabs/deep-copy/src/DeepCopy/Exception/CloneException.php',

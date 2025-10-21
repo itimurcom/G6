@@ -59,6 +59,7 @@ $router->get('/cabinet',                    [\App\Controllers\CabinetController:
 // ---- API V2 (table-like) ----
 $router->get('/api/events/by-date',         [\App\Controllers\ApiEventsController::class,       'byDate']);
 $router->get('/api/events/by-range',        [\App\Controllers\ApiEventsController::class,       'byRange']);
+$router->get('/api/audit/list',             [\App\Controllers\ApiAuditController::class,     'list']); // AUDIT: ADD ONLY
 $router->get('/api/events/get',             [\App\Controllers\ApiEventsController::class,       'get']);
 $router->get('/api/events/search',          [\App\Controllers\ApiEventsController::class,       'search']);
 
@@ -92,19 +93,6 @@ $router->post('/cabinet/profile/update',    [\App\Controllers\CabinetController:
 $router->post('/cabinet/password/change',   [\App\Controllers\CabinetController::class, 'changePassword']);
 
 $router->get('/logout',                    [\App\Controllers\AuthController::class, 'logout']);
-
-
-// MySQL conrollers
-// $router->get('/api/mysql/diag',             [\App\Controllers\ApiMysqlEventsController::class,  'diag']);
-// $router->get('/api/mysql/events/by-date',   [\App\Controllers\ApiMysqlEventsController::class,  'listByDate']);
-// $router->get('/api/mysql/events/by-range',  [\App\Controllers\ApiMysqlEventsController::class,  'listByRange']);
-// $router->get('/api/mysql/events/get',       [\App\Controllers\ApiMysqlEventsController::class,  'getById']);
-
-// $router->post('/api/mysql/events/create',   [\App\Controllers\ApiMysqlEventsController::class,  'create']);
-// $router->post('/api/mysql/events/update',   [\App\Controllers\ApiMysqlEventsController::class,  'update']);
-// $router->post('/api/mysql/events/delete',   [\App\Controllers\ApiMysqlEventsController::class,  'delete']);
-// $router->post('/api/mysql/events/done',     [\App\Controllers\ApiMysqlEventsController::class,  'setDone']);
-// $router->post('/api/mysql/events/urgent',   [\App\Controllers\ApiMysqlEventsController::class,  'setUrgent']);
 
 
 // === Users/Auth (MVP) ===
