@@ -11,11 +11,12 @@ $isOwnCabinet = ((int)($_SESSION['user_id'] ?? 0) === (int)($u['id'] ?? 0));
 ?>
 <header class="cal-header">
 <div class="title">Кабінет</div>
+<nav class="cab-tabs"><button class="cab-tab is-active" data-tab="profile">Профіль</button><button class="cab-tab" data-tab="security">Безпека</button><button class="cab-tab" data-tab="users">Користувачі</button><button class="cab-tab" data-tab="journal">Журнал</button></nav>
 <span class="user--name" data-user-id="<?= (int)($u['id'] ?? 0) ?>">loading…</span>
 </header>
 <div class="cabinet-wrap">
   <div class="cabinet-grid">
-    <section class="cabinet-card">
+    <section class="cabinet-card" data-tab="profile">
       <h3>Профіль</h3>
         <table>
           <tr>
@@ -83,19 +84,16 @@ $isOwnCabinet = ((int)($_SESSION['user_id'] ?? 0) === (int)($u['id'] ?? 0));
   </section>  
 <?php endif; ?>
 
-  
-    <!-- AUDIT: BEGIN Journal block (inline, no extra template files) -->
-    <section class="cabinet-card" id="audit-block">
+  </div>
+
+    <!-- AUDIT: BEGIN Journal block (added by Patch #4) -->
+    <section class="cabinet-card" id="audit-block" data-tab="journal">
       <h3>Журнал дій</h3>
       <header class="audit-toolbar">
         <div class="left">
           <strong>Journal</strong>
-          <?php if (!empty($is_admin)): ?>
           <label><input type="radio" name="audit_scope" value="me" checked> Мої дії</label>
-          <label><input type="radio" name="audit_scope" value="all"> Всі дії</label>
-          <?php else: ?>
-          <label><input type="radio" name="audit_scope" value="me" checked> Мої дії</label>
-          <?php endif; ?>
+          <label class="admin-only"><input type="radio" name="audit_scope" value="all"> Всі дії</label>
         </div>
         <div class="right">
           <input id="audit-q" type="search" placeholder="Пошук (текст/користувач/поле)">
@@ -107,23 +105,17 @@ $isOwnCabinet = ((int)($_SESSION['user_id'] ?? 0) === (int)($u['id'] ?? 0));
             <option value="event.update">Зміна події</option>
             <option value="event.delete">Видалення події</option>
           </select>
-          <select id="audit-limit">
-            <option>20</option><option selected>50</option><option>100</option>
-          </select>
+          <select id="audit-limit"><option>20</option><option selected>50</option><option>100</option></select>
           <button id="audit-refresh" type="button">Оновити</button>
         </div>
       </header>
-
       <div id="audit-list" class="audit-list" data-is-admin="<?= !empty($is_admin) ? 1 : 0 ?>"></div>
-
       <footer class="audit-pager">
         <button id="audit-prev" type="button">◀ Новіші</button>
         <button id="audit-next" type="button">Старіші ▶</button>
       </footer>
     </section>
-
     <script>
-    // AUDIT: BEGIN inline JS (offset-based pagination), ADD ONLY
     (function () {
       var elList = document.getElementById('audit-list');
       if (!elList) return;
@@ -135,16 +127,13 @@ $isOwnCabinet = ((int)($_SESSION['user_id'] ?? 0) === (int)($u['id'] ?? 0));
       var btnPrev = document.getElementById('audit-prev');
       var btnNext = document.getElementById('audit-next');
       var btnRefresh = document.getElementById('audit-refresh');
-
       var cursors = { next: null, prev: null };
       var offset = 0;
-
       function currentScope() {
         if (!isAdmin) return 'me';
         var r = Array.prototype.slice.call(scopeRadios).find(function (r) { return r.checked; });
         return r ? r.value : 'me';
       }
-
       function apiUrl(extra) {
         var base = '/api/audit/list';
         var p = new URLSearchParams();
@@ -155,7 +144,6 @@ $isOwnCabinet = ((int)($_SESSION['user_id'] ?? 0) === (int)($u['id'] ?? 0));
         p.set('offset', String(extra && typeof extra.offset === 'number' ? extra.offset : offset));
         return base + '?' + p.toString();
       }
-
       function renderItem(it) {
         var li = document.createElement('div');
         li.className = 'audit-item ' + cssType(it);
@@ -164,18 +152,17 @@ $isOwnCabinet = ((int)($_SESSION['user_id'] ?? 0) === (int)($u['id'] ?? 0));
         li.innerHTML =
           '<div class="head">' +
             '<span class="ts" title="' + (it.ts||'') + '">' + (isNaN(ts.getTime()) ? (it.ts||'') : ts.toLocaleString()) + '</span>' +
-            '<span class="user">' + escapeHtml(it.user_name || '—') + '</span>' +
-            '<span class="action">' + escapeHtml(it.action || '') + '</span>' +
+            '<span class="user">' + esc(it.user_name || '—') + '</span>' +
+            '<span class="action">' + esc(it.action || '') + '</span>' +
             '<span class="result ' + (it.result||'') + '">' + (it.result||'') + '</span>' +
           '</div>' +
           '<div class="body">' +
-            (it.message ? '<div class="msg">' + escapeHtml(it.message) + '</div>' : '') +
-            (it.entity_type ? '<div class="entity">' + escapeHtml(it.entity_type) + '#' + escapeHtml(it.entity_id || '') + '</div>' : '') +
-            (it.delta ? '<pre class="delta">' + escapeHtml(renderDelta(it.delta)) + '</pre>' : '') +
+            (it.message ? '<div class="msg">' + esc(it.message) + '</div>' : '') +
+            (it.entity_type ? '<div class="entity">' + esc(it.entity_type) + '#' + esc(it.entity_id || '') + '</div>' : '') +
+            (it.delta ? '<pre class="delta">' + esc(renderDelta(it.delta)) + '</pre>' : '') +
           '</div>';
         return li;
       }
-
       function cssType(it) {
         if (it.action === 'auth.login') return 't-login';
         if (it.action === 'auth.logout') return 't-logout';
@@ -184,19 +171,16 @@ $isOwnCabinet = ((int)($_SESSION['user_id'] ?? 0) === (int)($u['id'] ?? 0));
         if (it.action === 'event.delete') return 't-delete';
         return 't-other';
       }
-
       function renderDelta(delta) {
         try { if (typeof delta === 'string') delta = JSON.parse(delta); } catch(e) {}
         if (!delta) return '';
-        return Object.keys(delta).map(function (k) { return k + ': ' + delta[k]; }).join('\n');
+        return Object.entries(delta || {}).map(function(kv){ return kv[0]+': '+kv[1]; }).join('\n');
       }
-
-      function escapeHtml(s) {
-        s = (s||'').toString();
-        return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-      }
-
-      function draw(j, mode, newOffset) {
+      function esc(s){ s=(s||'').toString(); return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+      async function loadAt(newOffset, mode) {
+        var url = apiUrl({ offset: newOffset });
+        var r = await fetch(url);
+        var j = await r.json();
         var frag = document.createDocumentFragment();
         (j.items||[]).forEach(function (it) { frag.appendChild(renderItem(it)); });
         if (mode === 'replace') { elList.innerHTML = ''; elList.appendChild(frag); }
@@ -204,30 +188,36 @@ $isOwnCabinet = ((int)($_SESSION['user_id'] ?? 0) === (int)($u['id'] ?? 0));
         if (mode === 'prepend') { elList.prepend(frag); }
         cursors.next = j.next; cursors.prev = j.prev;
         btnNext.disabled = !cursors.next; btnPrev.disabled = !cursors.prev;
-        if (typeof newOffset === 'number') offset = newOffset;
+        offset = newOffset;
       }
-
-      async function loadAt(newOffset, mode) {
-        var url = apiUrl({ offset: newOffset });
-        var r = await fetch(url);
-        var j = await r.json();
-        draw(j, mode, newOffset);
-      }
-
       async function loadInitial() { await loadAt(0, 'replace'); }
       async function loadNext()    { if (cursors.next)  await loadAt(cursors.next.offset,  'append'); }
       async function loadPrev()    { if (cursors.prev)  await loadAt(cursors.prev.offset,  'prepend'); }
-
       btnRefresh.addEventListener('click', loadInitial);
       btnNext.addEventListener('click', loadNext);
       btnPrev.addEventListener('click', loadPrev);
       [q, selAction, selLimit].forEach(function (el) { el.addEventListener('change', loadInitial); });
       Array.prototype.slice.call(scopeRadios).forEach(function (r) { r.addEventListener('change', loadInitial); });
-
       loadInitial();
     })();
-    // AUDIT: END inline JS
     </script>
     <!-- AUDIT: END Journal block -->
-</div>
-</div>
+    </div>
+
+
+<script>
+// Tabs controller — ADD ONLY
+(function(){
+  var tabs = document.querySelectorAll('.cab-tab');
+  function setTab(name){
+    tabs.forEach(function(t){ t.classList.toggle('is-active', t.dataset.tab===name); });
+    var cards = document.querySelectorAll('.cabinet-card');
+    cards.forEach(function(el){
+      var tab = el.getAttribute('data-tab') || 'profile';
+      el.style.display = (tab===name) ? '' : 'none';
+    });
+  }
+  tabs.forEach(function(t){ t.addEventListener('click', function(){ setTab(t.dataset.tab); }); });
+  setTab('profile');
+})();
+</script>

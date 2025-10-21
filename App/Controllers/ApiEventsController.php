@@ -4,7 +4,7 @@ declare(strict_types=1);
 namespace App\Controllers;
 
 use App\Models\FileEventRepository;
-use App\Services\Audit\ActionLogger; // AUDIT: ADD ONLY
+use App\Models\LoggingEventRepository; // AUDIT: ADD ONLY
 
 final class ApiEventsController
 {
@@ -13,7 +13,7 @@ final class ApiEventsController
 
     public function __construct()
     {
-        $this->repo = new FileEventRepository();
+        $this->repo = new LoggingEventRepository(new FileEventRepository()); // AUDIT: ADD ONLY
     }
 
     private function json($data, int $code = 200): void
@@ -80,8 +80,6 @@ final class ApiEventsController
             // never trust client-supplied user_id
             if (isset($payload['event']) && is_array($payload['event'])) { unset($payload['event']['user_id']); }
             $id = $this->repo->create($payload['date'] ?? '', $payload);
-            $auth = $_SESSION['user'] ?? null; // AUDIT: ADD ONLY
-            (new ActionLogger())->logEvent('event.create', (string)$id, (int)($auth['id'] ?? 0), (string)($auth['name'] ?? ''), $payload, 'success', 'Event created'); // AUDIT: ADD ONLY
             $this->json(['ok'=>true,'id'=>$id], 201);
         } catch (\Throwable $e) {
             $this->json(['ok'=>false,'error'=>$e->getMessage()], 400);
@@ -98,8 +96,6 @@ final class ApiEventsController
         try {
             if (isset($payload['event']) && is_array($payload['event'])) { unset($payload['event']['user_id']); }
             $ok = $this->repo->updateById($id, $payload);
-            $auth = $_SESSION['user'] ?? null; // AUDIT: ADD ONLY
-            (new ActionLogger())->logEvent('event.update', (string)$id, (int)($auth['id'] ?? 0), (string)($auth['name'] ?? ''), $payload, $ok ? 'success' : 'error', $ok ? 'Event updated' : 'Update failed'); // AUDIT: ADD ONLY
             $this->json(['ok'=>(bool)$ok]);
         } catch (\Throwable $e) {
             $this->json(['ok'=>false,'error'=>'internal','message'=>$e->getMessage()], 500);
@@ -114,8 +110,6 @@ final class ApiEventsController
         if ($id === '') { $this->json(['ok'=>false,'error'=>'id required'], 400); return; }
         try {
             $ok = $this->repo->deleteById($id);
-            $auth = $_SESSION['user'] ?? null; // AUDIT: ADD ONLY
-            (new ActionLogger())->logEvent('event.delete', (string)$id, (int)($auth['id'] ?? 0), (string)($auth['name'] ?? ''), [], $ok ? 'success' : 'error', $ok ? 'Event deleted' : 'Delete failed'); // AUDIT: ADD ONLY
             $this->json(['ok'=>(bool)$ok]);
         } catch (\Throwable $e) {
             $this->json(['ok'=>false,'error'=>'internal','message'=>$e->getMessage()], 500);
