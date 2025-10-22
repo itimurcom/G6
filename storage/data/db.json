@@ -98,7 +98,7 @@
             "owner": "Дмитро",
             "type": "evt",
             "urgent": false,
-            "done": true,
+            "done": false,
             "incoming_no": "",
             "outgoing_no": "",
             "description": "укеуке",
@@ -266,22 +266,6 @@
     "2025-10-19": [
         {
             "end_date": null,
-            "id": "e_e463225145c154bc",
-            "time": "12:00",
-            "title": "додав подію",
-            "owner": "",
-            "type": "evt",
-            "urgent": false,
-            "done": false,
-            "incoming_no": "",
-            "outgoing_no": "",
-            "description": "",
-            "user_id": 1,
-            "start_date": "2025-10-19",
-            "created_at": ""
-        },
-        {
-            "end_date": null,
             "id": "e_9dae1b4026072efc",
             "time": "11:14",
             "title": "тест 50",
@@ -314,6 +298,25 @@
         }
     ],
     "2025-10-20": [
+        {
+            "end_date": "2025-10-22",
+            "id": "e_a20a127f401c0767",
+            "time": "12:00",
+            "title": "Завтра провести ВКЗ",
+            "owner": "",
+            "type": "evt",
+            "urgent": false,
+            "done": false,
+            "incoming_no": "",
+            "outgoing_no": "",
+            "description": "",
+            "user_id": 1,
+            "start_date": "2025-10-11",
+            "created_at": ""
+        }
+    ],
+    "2025-10-21": [],
+    "2025-10-22": [
         {
             "end_date": null,
             "id": "cbfc93e4-bc78-4e95-b4e6-662c6b0a2beb",
@@ -363,10 +366,10 @@
             "created_at": ""
         },
         {
-            "end_date": "2025-10-21",
-            "id": "e_a20a127f401c0767",
+            "end_date": null,
+            "id": "e_e463225145c154bc",
             "time": "12:00",
-            "title": "Завтра провести ВКЗ",
+            "title": "додав подію",
             "owner": "",
             "type": "evt",
             "urgent": false,
@@ -375,12 +378,10 @@
             "outgoing_no": "",
             "description": "",
             "user_id": 1,
-            "start_date": "2025-10-11",
+            "start_date": "2025-10-19",
             "created_at": ""
         }
     ],
-    "2025-10-21": [],
-    "2025-10-22": [],
     "2025-10-23": [],
     "2025-10-24": [],
     "2025-10-25": [],

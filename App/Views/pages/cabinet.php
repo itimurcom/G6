@@ -1,4 +1,13 @@
 <?php
+// Ensure $is_admin is available in the view
+if (!isset($is_admin)) {
+    try {
+        $me = \App\Core\Auth::user();
+        $role = mb_strtolower((string)($me['role'] ?? ''));
+        $is_admin = (($me['is_admin'] ?? false) === true) || ((int)($me['is_admin'] ?? 0) === 1) || in_array($role, ['admin','superadmin','root'], true);
+    } catch (\Throwable $___e) { $is_admin = false; }
+}
+?><?php
 /** Resolve cabinet view user (by resolved CABINET_VIEW_USER_ID / GET / SESSION) */
 $__viewId = defined('CABINET_VIEW_USER_ID')
     ? (int)CABINET_VIEW_USER_ID

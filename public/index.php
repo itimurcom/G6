@@ -72,6 +72,8 @@ $router->post('/api/events/urgent',         [\App\Controllers\ApiEventsControlle
 $router->get('/api/users/get'
 ,          [\App\Controllers\ApiUsersController::class, 'get']);
 $router->get('/api/users/name',         [\App\Controllers\ApiUserNameController::class, 'name']);
+$router->get('/api/audit/list',           [\App\Controllers\ApiAuditController::class, 'list']);
+
 
 
 

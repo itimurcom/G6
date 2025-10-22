@@ -1,81 +1,79 @@
 <?php
+declare(strict_types=1);
+
 namespace App\Services\Audit;
 
-use DateTimeImmutable;
-
+/**
+ * Append-only NDJSON logger for user actions.
+ * File: App/storage/logs/audit.ndjson
+ */
 final class ActionLogger
 {
+    /** @var string */
     private string $file;
 
     public function __construct(?string $file = null)
     {
-        // Single global file inside storage/logs/
-        $this->file = $file ?: __DIR__ . '/../../../storage/logs/audit.ndjson';
-        $dir = dirname($this->file);
-        if (!is_dir($dir)) {
-            @mkdir($dir, 0775, true);
-        }
+        // __DIR__ = App/Services/Audit
+        $appRoot = \dirname(__DIR__, 2);      // -> App
+        $logsDir = $appRoot . '/storage/logs'; // App/storage/logs
+        if (!is_dir($logsDir)) { @mkdir($logsDir, 0775, true); }
+        $this->file = $file ?: ($logsDir . '/audit.ndjson');
     }
 
-    /** Append a single NDJSON line (append-only). */
-    public function log(array $data): void
+    /** Generic context from current request/session */
+    private function context(): array
     {
-        $now = new DateTimeImmutable('now', new \DateTimeZone('UTC'));
-        $record = [
-            'id'          => $data['id'] ?? bin2hex(random_bytes(16)),
-            'ts'          => $data['ts'] ?? $now->format('Y-m-d\TH:i:s.v\Z'),
-            'user_id'     => $data['user_id'] ?? null,
-            'user_name'   => $data['user_name'] ?? null,
-            'action'      => $data['action'] ?? 'unknown',
-            'entity_type' => $data['entity_type'] ?? null,
-            'entity_id'   => $data['entity_id'] ?? null,
-            'result'      => $data['result'] ?? 'success',
-            'ip'          => $data['ip'] ?? ($_SERVER['REMOTE_ADDR'] ?? null),
-            'user_agent'  => $data['user_agent'] ?? ($_SERVER['HTTP_USER_AGENT'] ?? null),
-            'request_id'  => $data['request_id'] ?? ($_SERVER['HTTP_X_REQUEST_ID'] ?? null),
-            'session_id'  => $data['session_id'] ?? (session_id() ?: null),
-            'message'     => $data['message'] ?? null,
-            'delta'       => $data['delta'] ?? null,
-            'details'     => $data['details'] ?? null,
+        $u = $_SESSION['user'] ?? null;
+        $uid = isset($u['id']) ? (int)$u['id'] : null;
+        $uname = is_array($u) ? ($u['name'] ?? null) : null;
+
+        return [
+            'user_id'   => $uid,
+            'user_name' => $uname,
+            'ip'        => $_SERVER['REMOTE_ADDR']   ?? null,
+            'ua'        => $_SERVER['HTTP_USER_AGENT'] ?? null,
         ];
+    }
 
-        $line = json_encode($record, JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES) . "\n";
-        $fh = @fopen($this->file, 'ab');
-        if ($fh) {
-            if (@flock($fh, LOCK_EX)) {
-                @fwrite($fh, $line);
-                @fflush($fh);
-                @flock($fh, LOCK_UN);
-            }
-            @fclose($fh);
+    /** Low-level writer: append one NDJSON line */
+    private function write(array $row): bool
+    {
+        if (!isset($row['ts'])) {
+            $row['ts'] = date('Y-m-d H:i:s');
         }
+        $json = json_encode($row, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        if ($json === false) return false;
+
+        $fh = @fopen($this->file, 'ab');
+        if (!$fh) return false;
+        $ok = @fwrite($fh, $json . "\n") !== false;
+        @fclose($fh);
+        return $ok;
     }
 
-    public function logAuth(string $type, ?int $userId, ?string $userName, string $result = 'success', ?string $message = null): void
+    /** Log authentication events */
+    public function logAuth(string $action, $userId = null, $userName = null, string $result = 'success', array $meta = []): void
     {
-        $this->log([
-            'action'      => $type,   // auth.login | auth.logout
-            'entity_type' => 'auth',
-            'entity_id'   => null,
-            'user_id'     => $userId,
-            'user_name'   => $userName,
-            'result'      => $result,
-            'message'     => $message,
+        $ctx = $this->context();
+        if ($userId !== null)   { $ctx['user_id'] = $userId; }
+        if ($userName !== null) { $ctx['user_name'] = $userName; }
+        $row = array_merge($ctx, $meta, [
+            'type'   => 'auth',
+            'action' => $action,
+            'result' => $result,
         ]);
+        $this->write($row);
     }
 
-    public function logEvent(string $action, string $eventId, int $userId, string $userName, array $delta = [], string $result = 'success', ?string $message = null): void
+    /** Log generic application actions */
+    public function log(string $action, string $result = 'success', array $meta = []): void
     {
-        $this->log([
-            'action'      => $action,   // event.create | event.update | event.delete
-            'entity_type' => 'event',
-            'entity_id'   => $eventId,
-            'user_id'     => $userId,
-            'user_name'   => $userName,
-            'result'      => $result,
-            'message'     => $message,
-            'delta'       => $delta,
-            'details'     => ['fields' => array_keys($delta)],
+        $row = array_merge($this->context(), $meta, [
+            'type'   => 'app',
+            'action' => $action,
+            'result' => $result,
         ]);
+        $this->write($row);
     }
 }

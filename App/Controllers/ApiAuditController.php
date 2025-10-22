@@ -1,90 +1,110 @@
 <?php
+declare(strict_types=1);
+
 namespace App\Controllers;
 
-final class ApiAuditController
-{
-    private string $file;
+use App\Core\Controller;
+use App\Core\Request;
 
-    public function __construct(?string $file = null)
+final class ApiAuditController extends Controller
+{
+    private function isAdmin(): bool
     {
-        // Single global file inside storage/logs/
-        $this->file = $file ?: __DIR__ . '/../../storage/logs/audit.ndjson';
+        $u = $_SESSION['user'] ?? null;
+        if (!is_array($u)) return false;
+        $role = isset($u['role']) ? (string)$u['role'] : '';
+        if (mb_strtolower($role) === 'admin') return true;
+        return !empty($u['is_admin']);
     }
 
-    /**
-     * GET /api/audit/list
-     * Query: limit (20/50/100), offset (int), scope (me|all), q, action, user_id
-     */
-    public function list(): void
+    private function logFile(): string
     {
-        header('Content-Type: application/json; charset=utf-8');
+        // __DIR__ = App/Controllers
+        $appDir = \dirname(__DIR__); // -> App
+        return $appDir . '/storage/logs/audit.ndjson';
+    }
 
-        $limit = max(1, min((int)($_GET['limit'] ?? 50), 100));
-        $offset = max(0, (int)($_GET['offset'] ?? 0));
-        $scope = $_GET['scope'] ?? 'me';
-        $q = trim($_GET['q'] ?? '');
-        $action = $_GET['action'] ?? '';
-        $userId = isset($_GET['user_id']) ? (int)$_GET['user_id'] : null;
+    public function list(Request $r): string
+    {
+        @header('Content-Type: application/json; charset=utf-8');
+        @header('Cache-Control: no-store');
 
-        $auth = $this->currentUser();
-        $isAdmin = $auth && (($auth['role'] ?? '') === 'admin');
-        if (!$isAdmin) { $scope = 'me'; }
+        $limit  = max(1, min(500, (int)($r->input('limit')  ?? 50)));
+        $offset = max(0,        (int)($r->input('offset') ?? 0));
+        $scope  = (string)($r->input('scope') ?? 'me'); // me|all
+        $q      = trim((string)($r->input('q') ?? ''));
+        $action = trim((string)($r->input('action') ?? ''));
 
-        $items = $this->readAll();
-        $filtered = [];
-        foreach ($items as $rec) {
-            if ($scope === 'me' && isset($auth['id']) && $rec['user_id'] !== $auth['id']) continue;
-            if ($userId !== null && $rec['user_id'] !== $userId) continue;
-            if ($action !== '' && ($rec['action'] ?? null) !== $action) continue;
-            if ($q !== '') {
-                $hay = json_encode([$rec['message'] ?? '', $rec['user_name'] ?? '', $rec['delta'] ?? '', $rec['details'] ?? ''], JSON_UNESCAPED_UNICODE);
-                if (stripos($hay, $q) === false) continue;
-            }
-            $filtered[] = $rec;
+        $isAdmin = $this->isAdmin();
+        if ($scope !== 'me' && !$isAdmin) $scope = 'me';
+
+        $uid = (int)($_SESSION['user']['id'] ?? 0);
+
+        $file = $this->logFile();
+        if (!is_file($file)) {
+            return json_encode(['ok' => true, 'items' => [], 'next' => null, 'prev' => null], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
         }
 
-        usort($filtered, function($a, $b) {
-            $ta = $a['ts'] ?? '';
-            $tb = $b['ts'] ?? '';
-            if ($ta === $tb) return strcmp($b['id'] ?? '', $a['id'] ?? '');
-            return strcmp($tb, $ta);
+        $lines = @file($file, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+        if (!is_array($lines)) {
+            http_response_code(500);
+            return json_encode(['ok' => false, 'error' => 'read_failed']);
+        }
+
+        // Parse & filter
+        $rows = [];
+        foreach ($lines as $ln) {
+            $j = json_decode($ln, true);
+            if (!is_array($j)) continue;
+
+            // Scope filter
+            if ($scope === 'me') {
+                $jUid = isset($j['user_id']) ? (int)$j['user_id'] : 0;
+                if ($uid <= 0 || $jUid !== $uid) continue;
+            }
+
+            // Action filter
+            if ($action !== '' && (string)($j['action'] ?? '') !== $action) continue;
+
+            // Query filter (search few fields)
+            if ($q !== '') {
+                $hay = [
+                    (string)($j['action'] ?? ''),
+                    (string)($j['result'] ?? ''),
+                    (string)($j['message'] ?? ''),
+                    (string)($j['user_name'] ?? ''),
+                    (string)($j['ip'] ?? ''),
+                    (string)($j['ua'] ?? ''),
+                ];
+                $found = false;
+                foreach ($hay as $h) {
+                    if ($h !== '' && mb_stripos($h, $q) !== false) { $found = true; break; }
+                }
+                if (!$found) continue;
+            }
+
+            $rows[] = $j;
+        }
+
+        // Sort: newest first by ts (fallback keep as is then reverse)
+        usort($rows, function($a, $b){
+            $ta = strtotime((string)($a['ts'] ?? '')) ?: 0;
+            $tb = strtotime((string)($b['ts'] ?? '')) ?: 0;
+            return $tb <=> $ta;
         });
 
-        $total = count($filtered);
-        $slice = array_slice($filtered, $offset, $limit);
+        $total = count($rows);
+        $slice = array_slice($rows, $offset, $limit);
 
-        $next = null; $prev = null;
-        if ($offset + $limit < $total) $next = ['offset' => $offset + $limit];
-        if ($offset > 0) $prev = ['offset' => max(0, $offset - $limit)];
+        $prev = $offset > 0 ? ['offset' => max(0, $offset - $limit)] : null;
+        $next = ($offset + $limit) < $total ? ['offset' => ($offset + $limit)] : null;
 
-        echo json_encode([
+        return json_encode([
+            'ok'    => true,
             'items' => $slice,
-            'count' => count($slice),
+            'prev'  => $prev,
+            'next'  => $next,
             'total' => $total,
-            'next' => $next,
-            'prev' => $prev
-        ], JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES);
-    }
-
-    private function currentUser(): ?array
-    {
-        // The app stores the current user in PHP session
-        return $_SESSION['user'] ?? null;
-    }
-
-    private function readAll(): array
-    {
-        $items = [];
-        if (!is_file($this->file)) return $items;
-        $fh = @fopen($this->file, 'rb');
-        if (!$fh) return $items;
-        while (($line = fgets($fh)) !== false) {
-            $line = trim($line);
-            if ($line === '') continue;
-            $j = json_decode($line, true);
-            if (is_array($j)) $items[] = $j;
-        }
-        @fclose($fh);
-        return $items;
+        ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
     }
 }
