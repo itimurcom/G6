@@ -1,0 +1,5 @@
+{"action":"diag.selftest","result":"success","user_id":1,"message":"Self-test write from \/api\/audit\/selftest","ts":"2025-10-21 13:52:24"}
+{"action":"diag.selftest","result":"success","user_id":1,"message":"Self-test write from \/api\/audit\/selftest","ts":"2025-10-21 13:52:52"}
+{"action":"diag.selftest","result":"success","user_id":1,"message":"Self-test write from \/api\/audit\/selftest","ts":"2025-10-21 14:03:17"}
+{"action":"diag.selftest","result":"success","user_id":1,"message":"Self-test write from \/api\/audit\/selftest","ts":"2025-10-21 14:03:18"}
+{"action":"diag.selftest","result":"success","user_id":1,"message":"Self-test write from \/api\/audit\/selftest","ts":"2025-10-21 14:13:31"}
