@@ -135,6 +135,7 @@
 .lg.is-active,
 .lg.active {
   border-color: var(--accent);
+  color: var(--fg);
 }
 
 .tbtn.reset-type {
@@ -181,6 +182,7 @@
 .input,
 .modal textarea,
 .modal input,
+select,
 .modal select {
   width: 100%;
   padding: 9px 12px;

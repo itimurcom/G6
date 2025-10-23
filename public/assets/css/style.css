@@ -153,6 +153,13 @@ body {
 .title {
   font-size: clamp(20px, 2.6vw, 28px);
   font-weight: 800;
+  margin-bottom: .4em;
+}
+
+.sub-title {
+   font-size: clamp(20px, .6vw, 200px);
+   font-weight: 800;
+   margin-bottom: .8em;
 }
 
 .subtle {
