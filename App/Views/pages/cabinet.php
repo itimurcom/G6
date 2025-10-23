@@ -124,5 +124,4 @@ $isOwnCabinet = ((int)($_SESSION['user_id'] ?? 0) === (int)($u['id'] ?? 0));
         <button id="audit-next" type="button" class='btn'>Старіші ▶</button>
       </footer>
     </section>
-    <!-- AUDIT: END Journal block -->
     </div>
