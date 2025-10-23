@@ -101,16 +101,11 @@ $isOwnCabinet = ((int)($_SESSION['user_id'] ?? 0) === (int)($u['id'] ?? 0));
 <?php endif; ?>
 
 
-    <!-- AUDIT: BEGIN Journal block (added by Patch #4) -->
     <section class="cabinet-tab" id="audit-block" data-tab="journal">
       <div class='sub-title'>Журнал дій</div>
       <header class="audit-toolbar">
-        <div class="left">
-          <strong>Journal</strong>
+          <label class="admin-only"><input type="radio" name="audit_scope" value="all">Дії користувача</label>
           <label><input type="radio" name="audit_scope" value="me" checked> Мої дії</label>
-          <label class="admin-only"><input type="radio" name="audit_scope" value="all"> Всі дії</label>
-        </div>
-        <div class="right">
           <input id="audit-q" type="search" class="input" placeholder="Пошук (текст/користувач/поле)">
           <select id="audit-action">
             <option value="">Будь-яка дія</option>
@@ -122,7 +117,6 @@ $isOwnCabinet = ((int)($_SESSION['user_id'] ?? 0) === (int)($u['id'] ?? 0));
           </select>
           <select id="audit-limit"><option>20</option><option selected>50</option><option>100</option></select>
           <button id="audit-refresh"  class='btn' type="button">Оновити</button>
-        </div>
       </header>
       <div id="audit-list" class="audit-list" data-is-admin="<?= !empty($is_admin) ? 1 : 0 ?>"></div>
       <footer class="audit-pager">

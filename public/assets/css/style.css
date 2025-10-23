@@ -458,3 +458,26 @@ display:flex; gap:10px; align-items:center;
 .g6-auth-logo--dark{display:none}
 html.dark .g6-auth-logo--light, html[data-theme="dark"] .g6-auth-logo--light{display:none}
 html.dark .g6-auth-logo--dark,  html[data-theme="dark"] .g6-auth-logo--dark{display:block}
+
+/* Toolbar */
+.planning-toolbar,
+.audit-toolbar {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  margin: 8px 0 12px;
+}
+
+.planning-toolbar label,
+.audit-toolbar label {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  cursor: pointer;
+  opacity: .85
+}
+
+.planning-toolbar input[type=radio],
+.audit-toolbar input[type=radio] {
+  accent-color: #4b9;
+}
