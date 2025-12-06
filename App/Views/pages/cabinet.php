@@ -30,7 +30,21 @@ $isOwnCabinet = ((int)($_SESSION['user_id'] ?? 0) === (int)($u['id'] ?? 0));
 </header>
 
 <div tabs="cabinet-wrap">
-    
+
+<?php
+$flashError   = \App\Core\Session::flash('error');
+$flashSuccess = \App\Core\Session::flash('success');
+if ($flashError): ?>
+  <div class="alert alert--error">
+    <?= htmlspecialchars($flashError, ENT_QUOTES) ?>
+  </div>
+<?php endif; ?>
+<?php if ($flashSuccess): ?>
+  <div class="alert alert--success">
+    <?= htmlspecialchars($flashSuccess, ENT_QUOTES) ?>
+  </div>
+<?php endif; ?>
+
     <section class="cabinet-tab" data-tab="profile">
       <div class='sub-title'>Профіль</div>
         <table>
