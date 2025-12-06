@@ -24,6 +24,8 @@ class CabinetController extends Controller
 
         public function cabinet(Request $request): string
     {
+        CabinetView::resolveUserIdAndAttach();
+
         $data = [
             'title'     => 'Мій кабінет',
             'extra_css' => [

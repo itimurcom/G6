@@ -117,6 +117,20 @@ $router->post('/password/setup', [\App\Controllers\AuthController::class, 'passw
 $_PROTECTED = ['/', '/calendar', '/calendar/', '/cabinet', '/cabinet/'];
 
 $path = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?? '/';
+
+if (strpos($path, '/api/') === 0) {
+    if (!\App\Core\Auth::check()) {
+        http_response_code(401);
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode([
+            'ok'      => false,
+            'error'   => 'unauthorized',
+            'message' => 'Authentication required',
+        ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        exit;
+    }
+}
+
 if (!\App\Core\Auth::check() && in_array($path, $_PROTECTED, true)) {
     header('Location: /login', true, 302);
     exit;

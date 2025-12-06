@@ -18,14 +18,15 @@ class ApiBackupController
     /** alias of export for legacy */
     public function events(): void
     {
+        if (!$this->requireAdmin()) { return; }
         $this->json($this->store->read());
     }
 
     /** alias of import for legacy */
     public function store(): void
     {
+        if (!$this->requireAdmin()) { return; }
         if (!$this->requireCsrf()) { return; }
-
         $payload = $this->readJson();
         if (isset($payload['data']) && is_array($payload['data'])) { $payload = $payload['data']; }
         if (isset($payload['store']) && is_array($payload['store'])) { $payload = $payload['store']; }
@@ -35,13 +36,14 @@ class ApiBackupController
 
     public function export(): void
     {
+        if (!$this->requireAdmin()) { return; }
         $this->json($this->store->read());
     }
 
     public function import(): void
     {
+        if (!$this->requireAdmin()) { return; }
         if (!$this->requireCsrf()) { return; }
-
         $payload = $this->readJson();
         if (isset($payload['data']) && is_array($payload['data'])) { $payload = $payload['data']; }
         if (isset($payload['store']) && is_array($payload['store'])) { $payload = $payload['store']; }
@@ -51,6 +53,7 @@ class ApiBackupController
 
     public function diag(): void
     {
+        if (!$this->requireAdmin()) { return; }
         if (isset($_GET['repair'])) {
             $dry = isset($_GET['dry_run']) ? filter_var($_GET['dry_run'], FILTER_VALIDATE_BOOLEAN) : true;
             $summary = $this->store->repairSummary(!$dry);
@@ -67,6 +70,7 @@ class ApiBackupController
     /** simple route for repair */
     public function repair(): void
     {
+        if (!$this->requireAdmin()) { return; }
         $dry = isset($_GET['dry_run']) ? filter_var($_GET['dry_run'], FILTER_VALIDATE_BOOLEAN) : true;
         $summary = $this->store->repairSummary(!$dry);
         $path = $this->store->getPath();
@@ -75,11 +79,31 @@ class ApiBackupController
     }
 
     // --- helpers (protected for tests) ---
-    protected function readJson(): array
+    protected function requireAdmin(): bool
     {
-        $raw = file_get_contents('php://input');
-        $json = json_decode($raw ?: "{}", true);
-        return is_array($json) ? $json : [];
+        if (session_status() !== \PHP_SESSION_ACTIVE) { @session_start(); }
+
+        $u = $_SESSION['user'] ?? null;
+        $role = is_array($u) ? (string)($u['role'] ?? '') : '';
+        $isAdmin = false;
+        if (is_array($u)) {
+            $flag = $u['is_admin'] ?? false;
+            $isAdmin =
+                ($flag === true) ||
+                ((int)$flag === 1) ||
+                in_array(mb_strtolower($role), ['admin','superadmin','root'], true);
+        }
+
+        if ($isAdmin) {
+            return true;
+        }
+
+        $this->json([
+            'ok'      => false,
+            'error'   => 'forbidden',
+            'message' => 'Admin only',
+        ], 403);
+        return false;
     }
 
     protected function requireCsrf(): bool
@@ -87,12 +111,20 @@ class ApiBackupController
         if (\App\Security\Csrf::validateHeader()) {
             return true;
         }
+
         $this->json([
             'ok'      => false,
             'error'   => 'csrf',
             'message' => 'Invalid or missing CSRF token',
         ], 403);
         return false;
+    }
+
+    protected function readJson(): array
+    {
+        $raw = file_get_contents('php://input');
+        $json = json_decode($raw ?: "{}", true);
+        return is_array($json) ? $json : [];
     }
 
     protected function json($data, int $code = 200): void

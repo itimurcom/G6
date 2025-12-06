@@ -40,7 +40,7 @@ final class Auth
                     \App\Core\Session::flash('info', 'Потрібно встановити пароль для цього акаунта.');
                 }
                 header('Location: /password/setup', true, 302);
-                return '';
+                return false;
             }
         if (!password_verify($password, $user['password_hash'])) return false;
         Session::set('user_id', (int)$user['id']);
