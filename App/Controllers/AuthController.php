@@ -38,6 +38,16 @@ final class AuthController extends Controller
         $pass  = (string)$r->input('password');
         $___audit = new ActionLogger(); // AUDIT: ADD ONLY
 
+        $token = (string)$r->input('_csrf');
+        if (!\App\Security\Csrf::validate($token)) {
+            if (method_exists(Session::class, 'flash')) {
+                Session::flash('error', 'Сесія форми завершилась. Оновіть сторінку та спробуйте ще раз.');
+            }
+            $___audit->logAuth('auth.login', null, null, 'error', 'csrf_failed'); // AUDIT: ADD ONLY
+            header('Location: /login', true, 302);
+            return '';
+        }
+
         // Find user by login/email using repository (supports wrapper format)
         $repo = new \App\Models\UserFileRepository();
         $user = $repo->findByLogin($login);
@@ -75,6 +85,16 @@ final class AuthController extends Controller
         $login = trim((string)$r->input('login'));
         $pass  = (string)$r->input('password');
         $___audit = new ActionLogger(); // AUDIT: ADD ONLY
+
+        $token = (string)$r->input('_csrf');
+        if (!\App\Security\Csrf::validate($token)) {
+            if (method_exists(Session::class, 'flash')) {
+                Session::flash('error', 'Сесія форми завершилась. Оновіть сторінку та спробуйте ще раз.');
+            }
+            $___audit->logAuth('auth.register', null, null, 'error', 'csrf_failed'); // AUDIT: ADD ONLY
+            header('Location: /register', true, 302);
+            return '';
+        }
 
         if ($name === '' || $login === '' || \strlen($pass) < 6) {
             Session::flash('error', 'Fill all fields (min password length 6). Login is required.');

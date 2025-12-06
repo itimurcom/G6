@@ -15,12 +15,23 @@ final class Csrf
             self::setCookie($token);
             return $token;
         }
-        return $cookie;
+
+        // Always return string cookie value
+        return (string)$cookie;
     }
 
-    public static function setCookie(string $token): void
+    /**
+     * Ensure that CSRF cookie exists without returning its value.
+     */
+    public static function ensureToken(): void
     {
-        @setcookie(self::COOKIE, $token, [
+        self::token();
+    }
+
+    private static function setCookie(string $token): void
+    {
+        // 7 days lifetime is enough for normal sessions
+        setcookie(self::COOKIE, $token, [
             'expires'  => time() + 86400 * 7,
             'path'     => '/',
             'domain'   => '',
@@ -28,11 +39,45 @@ final class Csrf
             'httponly' => false,
             'samesite' => 'Lax',
         ]);
+        // Also keep superglobal in sync for current request
+        $_COOKIE[self::COOKIE] = $token;
     }
 
+    /**
+     * Validate CSRF token coming from classic HTML form field.
+     */
     public static function validate(?string $provided): bool
     {
         $cookie = $_COOKIE[self::COOKIE] ?? '';
-        return is_string($provided) && is_string($cookie) && $cookie !== '' && hash_equals($cookie, $provided);
+        return is_string($provided)
+            && is_string($cookie)
+            && $cookie !== ''
+            && hash_equals($cookie, $provided);
+    }
+
+    /**
+     * Validate CSRF token passed in X-CSRF-Token header (used by fetch()).
+     */
+    public static function validateHeader(): bool
+    {
+        $header = $_SERVER['HTTP_X_CSRF_TOKEN'] ?? null;
+        if (!is_string($header) || $header === '') {
+            return false;
+        }
+        $cookie = $_COOKIE[self::COOKIE] ?? '';
+        return is_string($cookie)
+            && $cookie !== ''
+            && hash_equals($cookie, $header);
+    }
+
+    /**
+     * Validate token from either form field or header.
+     */
+    public static function validateAny(?string $provided): bool
+    {
+        if (self::validate($provided)) {
+            return true;
+        }
+        return self::validateHeader();
     }
 }

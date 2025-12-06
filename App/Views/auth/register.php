@@ -36,6 +36,6 @@
         <button type="submit" class="btn btn--primary">Створити</button>
       </div>
     </footer>
+    <input type="hidden" name="_csrf" value="<?= htmlspecialchars(\App\Security\Csrf::token(), ENT_QUOTES) ?>">
 </form>
 </div>
-<input type="hidden" name="_csrf" value="<?= htmlspecialchars(\App\Security\Csrf::token(), ENT_QUOTES) ?>">

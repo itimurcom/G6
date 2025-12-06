@@ -34,6 +34,20 @@ final class ApiEventsController
         return is_array($payload) ? $payload : null;
     }
 
+    private function requireCsrf(): bool
+    {
+        if (\App\Security\Csrf::validateHeader()) {
+            return true;
+        }
+        $this->json([
+            'ok'      => false,
+            'error'   => 'csrf',
+            'message' => 'Invalid or missing CSRF token',
+        ], 403);
+        return false;
+    }
+
+
     public function byDate(): void
     {
         $date = (string)($_GET['date'] ?? '');
@@ -74,6 +88,8 @@ final class ApiEventsController
 
     public function create(): void
     {
+        if (!$this->requireCsrf()) { return; }
+
         $payload = $this->parseJson();
         if ($payload === null) { $this->json(['ok'=>false,'error'=>'invalid json'], 400); return; }
         try {
@@ -88,6 +104,8 @@ final class ApiEventsController
 
     public function update(): void
     {
+        if (!$this->requireCsrf()) { return; }
+
         $payload = $this->parseJson();
         if ($payload === null) { $this->json(['ok'=>false,'error'=>'invalid json'], 400); return; }
         $id = (string)($payload['id'] ?? '');
@@ -104,6 +122,8 @@ final class ApiEventsController
 
     public function delete(): void
     {
+        if (!$this->requireCsrf()) { return; }
+
         $payload = $this->parseJson();
         if ($payload === null) { $this->json(['ok'=>false,'error'=>'invalid json'], 400); return; }
         $id = (string)($payload['id'] ?? '');
@@ -118,6 +138,8 @@ final class ApiEventsController
 
     public function done(): void
     {
+        if (!$this->requireCsrf()) { return; }
+
         $payload = $this->parseJson();
         if ($payload === null) { $this->json(['ok'=>false,'error'=>'invalid json'], 400); return; }
         $id   = (string)($payload['id'] ?? '');
@@ -133,6 +155,8 @@ final class ApiEventsController
 
     public function urgent(): void
     {
+        if (!$this->requireCsrf()) { return; }
+
         $payload = $this->parseJson();
         if ($payload === null) { $this->json(['ok'=>false,'error'=>'invalid json'], 400); return; }
         $id     = (string)($payload['id'] ?? '');

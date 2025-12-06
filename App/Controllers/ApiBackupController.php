@@ -24,6 +24,8 @@ class ApiBackupController
     /** alias of import for legacy */
     public function store(): void
     {
+        if (!$this->requireCsrf()) { return; }
+
         $payload = $this->readJson();
         if (isset($payload['data']) && is_array($payload['data'])) { $payload = $payload['data']; }
         if (isset($payload['store']) && is_array($payload['store'])) { $payload = $payload['store']; }
@@ -38,6 +40,8 @@ class ApiBackupController
 
     public function import(): void
     {
+        if (!$this->requireCsrf()) { return; }
+
         $payload = $this->readJson();
         if (isset($payload['data']) && is_array($payload['data'])) { $payload = $payload['data']; }
         if (isset($payload['store']) && is_array($payload['store'])) { $payload = $payload['store']; }
@@ -76,6 +80,19 @@ class ApiBackupController
         $raw = file_get_contents('php://input');
         $json = json_decode($raw ?: "{}", true);
         return is_array($json) ? $json : [];
+    }
+
+    protected function requireCsrf(): bool
+    {
+        if (\App\Security\Csrf::validateHeader()) {
+            return true;
+        }
+        $this->json([
+            'ok'      => false,
+            'error'   => 'csrf',
+            'message' => 'Invalid or missing CSRF token',
+        ], 403);
+        return false;
     }
 
     protected function json($data, int $code = 200): void
