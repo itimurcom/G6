@@ -43,7 +43,7 @@ final class AuthController extends Controller
             if (method_exists(Session::class, 'flash')) {
                 Session::flash('error', 'Сесія форми завершилась. Оновіть сторінку та спробуйте ще раз.');
             }
-            $___audit->logAuth('auth.login', null, null, 'error', 'csrf_failed'); // AUDIT: ADD ONLY
+            $___audit->logAuth('auth.login', null, null, 'error', ['reason' => 'csrf_failed']);
             header('Location: /login', true, 302);
             return '';
         }
@@ -75,7 +75,7 @@ final class AuthController extends Controller
         }
 
         Session::flash('error', 'Invalid credentials');
-        $___audit->logAuth('auth.login', null, null, 'error', 'Invalid credentials'); // AUDIT: ADD ONLY
+        $___audit->logAuth('auth.login', null, null, 'error', ['reason' => 'invalid_credentials']); // AUDIT: ADD ONLY
         header('Location: /login', true, 302);
         return '';
     }
@@ -91,7 +91,7 @@ final class AuthController extends Controller
             if (method_exists(Session::class, 'flash')) {
                 Session::flash('error', 'Сесія форми завершилась. Оновіть сторінку та спробуйте ще раз.');
             }
-            $___audit->logAuth('auth.register', null, null, 'error', 'csrf_failed'); // AUDIT: ADD ONLY
+            $___audit->logAuth('auth.register', null, null, 'error', ['reason' => 'csrf_failed']);
             header('Location: /register', true, 302);
             return '';
         }
