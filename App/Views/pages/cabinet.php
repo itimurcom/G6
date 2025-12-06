@@ -118,7 +118,7 @@ if ($flashError): ?>
     <section class="cabinet-tab" id="audit-block" data-tab="journal">
       <div class='sub-title'>Журнал дій</div>
       <header class="audit-toolbar">
-          <label class="admin-only"><input type="radio" name="audit_scope" value="all">Дії користувача</label>
+          <label class="admin-only"><input type="radio" name="audit_scope" value="all">Дії всіх користувачів</label>
           <label><input type="radio" name="audit_scope" value="me" checked> Мої дії</label>
           <input id="audit-q" type="search" class="input" placeholder="Пошук (текст/користувач/поле)">
           <select id="audit-action">

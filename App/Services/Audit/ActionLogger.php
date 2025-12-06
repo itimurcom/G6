@@ -15,11 +15,30 @@ final class ActionLogger
     public function __construct(?string $file = null)
     {
         // __DIR__ = App/Services/Audit
-        $appRoot = \dirname(__DIR__, 2);      // -> App
-        $logsDir = $appRoot . '/storage/logs'; // App/storage/logs
-        if (!is_dir($logsDir)) { @mkdir($logsDir, 0775, true); }
+        $appRoot     = \dirname(__DIR__, 2);       // -> App
+        $projectRoot = \dirname($appRoot);         // -> project root (calendar.localhost)
+
+        // Legacy location (old behaviour): App/storage/logs
+        $legacyDir = $appRoot . '/storage/logs';
+
+        // Preferred location: project-root/storage/logs (shared with other storage)
+        $rootDir = $projectRoot . '/storage/logs';
+
+        // Prefer rootDir if possible, otherwise fall back to legacyDir
+        $logsDir = $rootDir;
+        if (!is_dir($logsDir)) {
+            @mkdir($logsDir, 0775, true);
+        }
+        if (!is_dir($logsDir) || !is_writable($logsDir)) {
+            $logsDir = $legacyDir;
+            if (!is_dir($logsDir)) {
+                @mkdir($logsDir, 0775, true);
+            }
+        }
+
         $this->file = $file ?: ($logsDir . '/audit.ndjson');
     }
+
 
     /** Generic context from current request/session */
     private function context(): array

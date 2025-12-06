@@ -20,9 +20,21 @@ final class ApiAuditController extends Controller
     private function logFile(): string
     {
         // __DIR__ = App/Controllers
-        $appDir = \dirname(__DIR__); // -> App
-        return $appDir . '/storage/logs/audit.ndjson';
+        $appDir      = \dirname(__DIR__);        // -> App
+        $projectRoot = \dirname($appDir);        // -> project root (calendar.localhost)
+
+        $legacyDir = $appDir . '/storage/logs';       // old location: App/storage/logs
+        $rootDir   = $projectRoot . '/storage/logs';  // preferred: storage/logs
+
+        // Обираємо такий самий каталог, як і в ActionLogger:
+        $logsDir = $rootDir;
+        if (!is_dir($logsDir) || !is_writable($logsDir)) {
+            $logsDir = $legacyDir;
+        }
+
+        return $logsDir . '/audit.ndjson';
     }
+
 
     public function list(Request $r): string
     {
