@@ -444,38 +444,23 @@
     "2025-12-03": [],
     "2025-12-04": [],
     "2025-12-05": [],
-    "2025-12-06": [
-        {
-            "end_date": "2025-12-07",
-            "id": "e_41f59ca59bf7a435",
-            "time": "12:00",
-            "title": "ттктткте",
-            "owner": "",
-            "type": "other",
-            "urgent": false,
-            "done": false,
-            "incoming_no": "",
-            "outgoing_no": "",
-            "description": "",
-            "start_date": "2025-12-06",
-            "user_id": 1,
-            "created_at": "2025-12-06T09:54:55+00:00"
-        },
+    "2025-12-06": [],
+    "2025-12-07": [
         {
             "end_date": null,
-            "id": "e_11a2d2bba2031bd5",
-            "time": "13:00",
-            "title": "sdgsdgsdg",
+            "id": "e_b84d61d5f40bf2d6",
+            "time": "00:30",
+            "title": "Тестовий",
             "owner": "",
             "type": "evt",
-            "urgent": false,
+            "urgent": true,
             "done": false,
             "incoming_no": "",
             "outgoing_no": "",
-            "description": "",
-            "start_date": "2025-12-08",
+            "description": "тест",
             "user_id": 1,
-            "created_at": "2025-12-06T10:31:33+00:00"
+            "start_date": "2025-12-05",
+            "created_at": "2025-12-05T13:22:44+00:00"
         },
         {
             "end_date": null,
@@ -494,30 +479,47 @@
             "created_at": "2025-12-06T09:50:59+00:00"
         }
     ],
-    "2025-12-07": [
-        {
-            "end_date": null,
-            "id": "e_b84d61d5f40bf2d6",
-            "time": "00:30",
-            "title": "Тестовий",
-            "owner": "",
-            "type": "evt",
-            "urgent": true,
-            "done": false,
-            "incoming_no": "",
-            "outgoing_no": "",
-            "description": "тест",
-            "user_id": 1,
-            "start_date": "2025-12-05",
-            "created_at": "2025-12-05T13:22:44+00:00"
-        }
-    ],
     "2025-12-08": [],
     "2025-12-09": [],
     "2025-12-10": [],
     "2025-12-11": [],
-    "2025-12-12": [],
+    "2025-12-12": [
+        {
+            "end_date": null,
+            "id": "e_11a2d2bba2031bd5",
+            "time": "13:00",
+            "title": "sdgsdgsdg",
+            "owner": "",
+            "type": "evt",
+            "urgent": false,
+            "done": false,
+            "incoming_no": "",
+            "outgoing_no": "",
+            "description": "",
+            "start_date": "2025-12-08",
+            "user_id": 1,
+            "created_at": "2025-12-06T10:31:33+00:00"
+        }
+    ],
     "2025-12-13": [
+        {
+            "end_date": null,
+            "id": "e_41f59ca59bf7a435",
+            "time": "22:15",
+            "title": "ттктткте",
+            "owner": "",
+            "type": "other",
+            "urgent": true,
+            "done": false,
+            "incoming_no": "",
+            "outgoing_no": "",
+            "description": "",
+            "user_id": 1,
+            "start_date": "2025-12-06",
+            "created_at": "2025-12-06T09:54:55+00:00"
+        }
+    ],
+    "2025-12-14": [
         {
             "end_date": null,
             "id": "e_1290f67aec4f7606",
@@ -533,13 +535,11 @@
             "start_date": "2025-12-13",
             "user_id": 1,
             "created_at": "2025-12-06T10:56:30+00:00"
-        }
-    ],
-    "2025-12-14": [
+        },
         {
             "end_date": null,
             "id": "e_9df9d64e4447af7c",
-            "time": "12:00",
+            "time": "00:30",
             "title": "test today",
             "owner": "",
             "type": "evt",
@@ -548,8 +548,8 @@
             "incoming_no": "",
             "outgoing_no": "",
             "description": "",
-            "start_date": "2025-12-06",
             "user_id": 1,
+            "start_date": "2025-12-06",
             "created_at": "2025-12-06T09:32:57+00:00"
         }
     ],

@@ -74,7 +74,71 @@ final class LoggingEventRepository
 
     public function search(array $filters, int $limit, int $offset): array
     {
-        return $this->inner->search($filters, $limit, $offset);
+        // COMPAT: FileEventRepository::search(string $q) returns flat array of events with injected '_date'
+        // [DEFERRED] Legacy forwarder (kept for reference; do not remove):
+        // return $this->inner->search($filters, $limit, $offset);
+
+        $q = (string)($filters['text'] ?? '');
+
+        $rows = $this->inner->search($q);
+
+        // normalize filters
+        $type  = isset($filters['type'])  && $filters['type']  !== '' && $filters['type']  !== null ? (string)$filters['type']  : null;
+        $owner = isset($filters['owner']) && $filters['owner'] !== '' && $filters['owner'] !== null ? (string)$filters['owner'] : null;
+
+        $toBoolOrNull = static function($v): ?bool {
+            if ($v === null || $v === '') return null;
+            if (is_bool($v)) return $v;
+            $s = strtolower(trim((string)$v));
+            if ($s === '1' || $s === 'true' || $s === 'yes' || $s === 'on') return true;
+            if ($s === '0' || $s === 'false' || $s === 'no'  || $s === 'off') return false;
+            return null;
+        };
+
+        $urgent = $toBoolOrNull($filters['urgent'] ?? null);
+        $done   = $toBoolOrNull($filters['done']   ?? null);
+
+        $date  = isset($filters['date'])  && $filters['date']  !== null ? (string)$filters['date']  : '';
+        $start = isset($filters['start']) && $filters['start'] !== null ? (string)$filters['start'] : '';
+        $end   = isset($filters['end'])   && $filters['end']   !== null ? (string)$filters['end']   : '';
+
+        $date  = substr($date,  0, 10);
+        $start = substr($start, 0, 10);
+        $end   = substr($end,   0, 10);
+
+        $out = [];
+        foreach ($rows as $ev) {
+            if (!is_array($ev)) continue;
+
+            // exact filters
+            if ($type !== null && (string)($ev['type'] ?? '') !== $type) continue;
+            if ($owner !== null && (string)($ev['owner'] ?? '') !== $owner) continue;
+
+            if ($urgent !== null && (bool)($ev['urgent'] ?? false) !== $urgent) continue;
+            if ($done !== null && (bool)($ev['done'] ?? false) !== $done) continue;
+
+            // date filters (inclusive)
+            $d = (string)($ev['_date'] ?? '');
+            $d = substr($d, 0, 10);
+
+            if ($date !== '') {
+                if ($d !== $date) continue;
+            } else {
+                if ($start !== '' && $d !== '' && $d < $start) continue;
+                if ($end   !== '' && $d !== '' && $d > $end)   continue;
+            }
+
+            $out[] = $ev;
+        }
+
+        $offset = max(0, (int)$offset);
+        $limit  = max(0, (int)$limit);
+
+        if ($limit === 0) {
+            return [];
+        }
+
+        return array_values(array_slice($out, $offset, $limit));
     }
 
     // ---------------------------------------------------------------------

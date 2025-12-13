@@ -68,6 +68,7 @@ $router->post('/api/events/update',         [\App\Controllers\ApiEventsControlle
 $router->post('/api/events/delete',         [\App\Controllers\ApiEventsController::class,       'delete']);
 $router->post('/api/events/done',           [\App\Controllers\ApiEventsController::class,       'done']);
 $router->post('/api/events/urgent',         [\App\Controllers\ApiEventsController::class,       'urgent']);
+$router->post('/api/events/close',          [\App\Controllers\ApiEventsController::class,       'close']);
 // ---- Users API ----
 $router->get('/api/users/get'
 ,          [\App\Controllers\ApiUsersController::class, 'get']);

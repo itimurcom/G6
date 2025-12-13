@@ -169,6 +169,47 @@ final class ApiEventsController
             $this->json(['ok'=>false,'error'=>'internal','message'=>$e->getMessage()], 500);
         }
     }
+    function close(): void
+    {
+        if (!$this->requireCsrf()) { return; }
+
+        $payload = $this->parseJson();
+        if ($payload === null) { $this->json(['ok'=>false,'error'=>'invalid json'], 400); return; }
+
+        $id = (string)($payload['id'] ?? '');
+        if ($id === '') { $this->json(['ok'=>false,'error'=>'id required'], 400); return; }
+
+        try {
+            $ev = $this->repo->getById($id);
+            if (!$ev) { $this->json(['ok'=>false,'error'=>'not_found'], 404); return; }
+
+            $date = (string)($ev['_date'] ?? ($payload['date'] ?? ''));
+            $date = substr($date, 0, 10);
+            if ($date === '') { $date = gmdate('Y-m-d'); }
+
+            $event = $ev;
+            if (isset($event['_date'])) { unset($event['_date']); }
+
+            // apply provided fields (UI sends close_user_id + close_time, null means reopen)
+            if (array_key_exists('close_user_id', $payload)) { $event['close_user_id'] = $payload['close_user_id']; }
+            if (array_key_exists('close_time', $payload))    { $event['close_time']    = $payload['close_time']; }
+
+            if (!array_key_exists('close_user_id', $event)) { $event['close_user_id'] = null; }
+            if (!array_key_exists('close_time', $event))    { $event['close_time']    = null; }
+
+            $ok = $this->repo->updateById($id, ['date' => $date, 'event' => $event]);
+
+            $this->json([
+                'ok'           => (bool)$ok,
+                'id'           => $id,
+                'close_user_id'=> $event['close_user_id'] ?? null,
+                'close_time'   => $event['close_time'] ?? null,
+            ]);
+        } catch (\Throwable $e) {
+            $this->json(['ok'=>false,'error'=>'internal','message'=>$e->getMessage()], 500);
+        }
+    }
+
 
     public function search(): void
     {
