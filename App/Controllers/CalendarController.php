@@ -19,7 +19,8 @@ class CalendarController extends Controller
                 '/assets/js/calendar/calendar.data.js',
                 
                 '/assets/js/calendar/calendar.ui.js',
-                '/assets/js/calendar/calendar.ui.backup.js',
+                // [DEFERRED] legacy UI backup disabled after V2 cutover; keep for rollback:
+                // '/assets/js/calendar/calendar.ui.backup.js',
                 '/assets/js/calendar/calendar.ui.modals.js',
                 ],
             'modules_js'   => [
