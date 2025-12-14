@@ -199,6 +199,70 @@
     return out;
   }
 
+  // ---------- overdue collection (past keys outside window) ----------
+  function __uaDayShortFromKey(dk) {
+    dk = String(dk || "").slice(0, 10);
+    if (/^\d{4}-\d{2}-\d{2}$/.test(dk)) return dk.slice(8, 10) + "." + dk.slice(5, 7);
+    return dk;
+  }
+
+  function __uaDayFullFromKey(dk) {
+    dk = String(dk || "").slice(0, 10);
+    if (/^\d{4}-\d{2}-\d{2}$/.test(dk)) return dk.slice(8, 10) + "." + dk.slice(5, 7) + "." + dk.slice(0, 4);
+    return dk;
+  }
+
+  function collectOverdue(store, cutoffExclusiveDayKey) {
+    // Collect overdue events with start day strictly before cutoffExclusiveDayKey (e.g., before "Вчора")
+    // Dedupe by event.id, keep most recent instance.
+    var out = [];
+    var seen = Object.create(null);
+    var keys = Object.keys(store || {}).sort(); // YYYY-MM-DD sortable
+    for (var i = 0; i < keys.length; i++) {
+      var dk = String(keys[i]).slice(0, 10);
+      if (!dk) continue;
+      if (cutoffExclusiveDayKey && dk >= String(cutoffExclusiveDayKey).slice(0, 10)) break;
+
+      var list = (Data.getEventsFor ? (Data.getEventsFor(dk) || []) : (store[dk] || []));
+      for (var j = 0; j < list.length; j++) {
+        var ev = list[j] || {};
+        if (!ev) continue;
+
+        // Determine "start day" for display/dedupe
+        var startDay = String((ev.start_date || ev.date || ev._date || dk) || "").slice(0, 10) || dk;
+
+        // Strict overdue check (shared helper from app.js)
+        if (!isEventOverdueStrict(ev)) continue;
+
+        var eid = (ev.id && String(ev.id).trim()) ? String(ev.id) : ensureEventId(startDay, ev);
+        if (!eid) continue;
+
+        // keep only one item per id
+        if (seen[eid]) continue;
+        seen[eid] = 1;
+
+        var t = ev.time || ev.start || "00:00";
+        var dt = toDate(startDay, t);
+
+        out.push({
+          start: dt,
+          display: dt,
+          ev: ev,
+          dk: startDay,
+          startDay: startDay,
+          endDay: (ev.end_date || ev.end || startDay),
+          dateLabel: __uaDayShortFromKey(startDay),
+          dateTitle: __uaDayFullFromKey(startDay)
+        });
+      }
+    }
+
+    // Most recent overdue first
+    out.sort(function (a, b) { return b.start - a.start; });
+    return out;
+  }
+
+
 
   (function ensurePlanningSegCss() {
     var id = "planning-seg-css";
@@ -345,7 +409,10 @@
 
       var time = document.createElement("div");
       time.className = "planning-today__time";
-      time.textContent = formatTime(it.display || it.start);
+      var __t = formatTime(it.display || it.start);
+      if (it.dateLabel) __t = String(it.dateLabel) + " " + __t;
+      time.textContent = __t;
+      if (it.dateTitle) time.title = String(it.dateTitle);
 
       var details = document.createElement("div");
       details.className = "planning-today__details";
@@ -458,6 +525,9 @@
     var dPz = parseDayKey(dkPz);
 
     var frag = document.createDocumentFragment();
+
+    var sOver = applyScope(collectOverdue(store, dkY)); // keys strictly before "Вчора"
+    frag.appendChild(section("Прострочені до", dY, sOver));
     frag.appendChild(section("Вчора", dY, sY));
     frag.appendChild(section("Сьогодні", dT, sT));
     frag.appendChild(section("Завтра", dZ, sZ));
