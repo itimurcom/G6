@@ -125,9 +125,9 @@ if ($flashError): ?>
             <option value="">Будь-яка дія</option>
             <option value="auth.login">Вхід</option>
             <option value="auth.logout">Вихід</option>
-            <option value="event.create">Створення події</option>
-            <option value="event.update">Зміна події</option>
-            <option value="event.delete">Видалення події</option>
+            <option value="calendar.event.create">Створення події</option>
+            <option value="calendar.event.update">Зміна події</option>
+            <option value="calendar.event.delete">Видалення події</option>
           </select>
           <select id="audit-limit"><option>20</option><option selected>50</option><option>100</option></select>
           <button id="audit-refresh"  class='btn' type="button">Оновити</button>
