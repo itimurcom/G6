@@ -128,6 +128,20 @@ final class ApiEventsController
         if ($payload === null) { $this->json(['ok'=>false,'error'=>'invalid json'], 400); return; }
         $id = (string)($payload['id'] ?? '');
         if ($id === '') { $this->json(['ok'=>false,'error'=>'id required'], 400); return; }
+
+
+        // ACL: allow delete only for author or admin
+        $ev = null;
+        try { $ev = $this->repo->getById($id); } catch (\Throwable $__e) { $ev = null; }
+        if (!$ev) { $this->json(['ok'=>false,'error'=>'not_found'], 404); return; }
+
+        $me = \App\Core\Auth::user();
+        $me_id = (int)($me['id'] ?? 0);
+        $role = strtolower((string)($me['role'] ?? ''));
+        $is_admin = ($role === 'admin') || !empty($me['is_admin']);
+
+        $owner_id = (int)($ev['user_id'] ?? 0);
+        if (!$is_admin && $owner_id !== $me_id) { $this->json(['ok'=>false,'error'=>'forbidden'], 403); return; }
         try {
             $ok = $this->repo->deleteById($id);
             $this->json(['ok'=>(bool)$ok]);

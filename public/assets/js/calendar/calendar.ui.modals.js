@@ -98,8 +98,36 @@
   var editModal = overlay ? overlay.querySelector('.modal') : null;
   var btnClose = $id('btnClose');
   var btnCancel = $id('btnCancel');
+  var btnDelete = $id('btnDelete');
+
 
   var __lastFocusEl = null;
+
+  // Delete helpers (UI control lives in edit modal)
+  function __removeEventEverywhereById(eventId) {
+    try {
+      if (!eventId) return false;
+      if (!Data || typeof Data._getCache !== 'function' || typeof Data.writeStore !== 'function') return false;
+
+      var store = Data._getCache() || {};
+      var next = {};
+      for (var k in store) {
+        if (!Object.prototype.hasOwnProperty.call(store, k)) continue;
+        var v = store[k];
+        if (Array.isArray(v)) {
+          next[k] = v.filter(function (e) { return !(e && e.id === eventId); });
+        } else {
+          next[k] = v;
+        }
+      }
+
+      Data.writeStore(next);
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
 
   if (infoClose) infoClose.addEventListener('click', function () { closeInfo(); });
   if (infoOk) infoOk.addEventListener('click', function () { closeInfo(); });
@@ -110,6 +138,30 @@
 
   if (btnClose) btnClose.addEventListener('click', function () { closeOverlay(); });
   if (btnCancel) btnCancel.addEventListener('click', function () { closeOverlay(); });
+
+
+  if (btnDelete) btnDelete.addEventListener('click', function () {
+    if (!overlay) return;
+
+    var mode = String(overlay.dataset.mode || '');
+    var id = String(overlay.dataset.id || '');
+
+    // Only for existing event
+    if (mode !== 'edit' || !id) return;
+
+    var t = (inputTitle && inputTitle.value) ? String(inputTitle.value).trim() : '';
+    var msg = 'Видалити подію' + (t ? (' "' + t + '"') : '') + '?';
+    if (!confirm(msg)) return;
+
+    __removeEventEverywhereById(id);
+
+    // Refresh all blocks (calendar + planning)
+    if (typeof withStableScroll === 'function') { withStableScroll(renderAllFn); } else { try { renderAllFn && renderAllFn(); } catch (_) { } }
+    try { if (typeof forceRefreshUI === 'function') forceRefreshUI({ source: 'delete', id: id }); } catch (_) { }
+
+    closeOverlay();
+  });
+
 
   // Export UI API
   global.CalendarApp = global.CalendarApp || {};
@@ -258,6 +310,9 @@
     overlay.dataset.mode = 'new';
     overlay.dataset.origDate = dateISO;
     overlay.dataset.id = '';
+
+    // Delete button is only for edit mode
+    if (btnDelete) { btnDelete.setAttribute('hidden', ''); btnDelete.setAttribute('aria-hidden', 'true'); btnDelete.setAttribute('tabindex', '-1'); }
     overlay.dataset.startDate = dateISO; // keep start_date on client
 
     if (inputDate) inputDate.value = dateISO;
@@ -312,6 +367,9 @@
     overlay.dataset.mode = 'edit';
     overlay.dataset.origDate = dateISO;
     overlay.dataset.id = id;
+
+    // Allow delete while editing (permissions are enforced by UI + API)
+    if (btnDelete) { btnDelete.removeAttribute('hidden'); btnDelete.removeAttribute('aria-hidden'); btnDelete.removeAttribute('tabindex'); }
     overlay.dataset.startDate = ev.start_date || dateISO;
 
     if (inputDate) inputDate.value = dateISO;

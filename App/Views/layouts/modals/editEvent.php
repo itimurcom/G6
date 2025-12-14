@@ -77,6 +77,7 @@
         </label>
       </div>
       <div style="display:flex; gap:10px;">
+        <button type="button" class="btn" id="btnDelete" style="background:#ef4444;border-color:#ef4444;color:#fff" hidden aria-hidden="true" tabindex="-1">Видалити</button>
         <button type="button" class="btn" id="btnCancel">Скасувати</button>
         <button type="submit" class="btn" style="background:var(--accent);border-color:var(--accent);color:#fff">Зберегти</button>
       </div>

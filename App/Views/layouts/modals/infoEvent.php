@@ -1,5 +1,7 @@
 <div id="infoOverlay" class="overlay" aria-hidden="true" role="dialog" aria-modal="true">
   <div class="modal" aria-labelledby="infoTitle">
+    <!-- [DEFERRED] Delete control moved to edit modal (#btnDelete). Keep legacy #deleteEvBtn hidden to avoid duplicate controls. -->
+    <style>#deleteEvBtn{display:none !important;}</style>
     <header>
       <div id="infoTitle">Деталі події</div>
       <div>
