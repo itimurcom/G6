@@ -1,7 +1,4 @@
 RewriteEngine On
-# force MVC routing for /api/users/me (even if directory exists)
-RewriteCond %{REQUEST_URI} ^/api/users/me/?$
-RewriteRule ^ index.php [QSA,L]
 # serve existing files directly
 RewriteCond %{REQUEST_FILENAME} -f [OR]
 RewriteCond %{REQUEST_FILENAME} -d

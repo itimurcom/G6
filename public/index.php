@@ -31,7 +31,6 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
 }
 // === /ROLE REGISTRATION LOGIC ===
 
-
 require_once __DIR__ . '/../vendor/autoload.php';
 
 use App\Core\Request;
@@ -49,11 +48,9 @@ $router->get('/favicon.ico', function(){
     http_response_code(204);
 });
 
-
 $router->get('/',                           [\App\Controllers\HomeController::class,            'planning']);
 $router->get('/calendar',                   [\App\Controllers\CalendarController::class,        'index']);
 $router->get('/cabinet',                    [\App\Controllers\CabinetController::class,         'cabinet']);
-
 
 
 // ---- API V2 (table-like) ----
@@ -78,35 +75,18 @@ $router->get('/api/audit/list',           [\App\Controllers\ApiAuditController::
 
 
 
-
+// Legacy V1 endpoints removed after V2 cutover (hard delete).
 // ---- Backup API (export/import) ----
 $router->get('/api/backup/export',          [\App\Controllers\ApiBackupController::class,       'export']);
 $router->get('/api/backup/diag',            [\App\Controllers\ApiBackupController::class,       'diag']);
 $router->post('/api/backup/import',         [\App\Controllers\ApiBackupController::class,       'import']);
 
-// Legacy aliases (kept for compatibility)
-// [DEPRECATED] V1 endpoints: return 410 Gone (use V2). For rollback, uncomment [DEFERRED] lines.
-// $router->get('/api/events', [\App\Controllers\ApiBackupController::class, 'export']);
-$router->get('/api/events',                 [\App\Controllers\ApiBackupController::class,       'deprecatedV1']); // DEPRECATED V1
-$router->get('/api/events/diag',            [\App\Controllers\ApiBackupController::class,       'deprecatedV1']); // DEPRECATED V1
-$router->get('/api/repair',                 [\App\Controllers\ApiBackupController::class,       'deprecatedV1']); // DEPRECATED V1 (flat)
-$router->get('/api/backup/repair-dups',     [\App\Controllers\ApiBackupController::class,       'deprecatedV1']); // DEPRECATED V1
-
-$router->post('/api/events/store',          [\App\Controllers\ApiBackupController::class,       'deprecatedV1']); // DEPRECATED V1
-
-// [DEFERRED] Previous legacy handlers (kept for quick rollback):
-// $router->get('/api/events',                 [\App\Controllers\ApiBackupController::class,       'events']);
-// $router->get('/api/events/diag',            [\App\Controllers\ApiBackupController::class,       'diag']);
-// $router->get('/api/repair',                 [\App\Controllers\ApiBackupController::class,       'repair']);        // плоский
-// $router->get('/api/backup/repair-dups',     [\App\Controllers\ApiBackupController::class,       'repair']);
-// $router->post('/api/events/store',          [\App\Controllers\ApiBackupController::class,       'import']);
 
 
 $router->post('/cabinet/profile/update',    [\App\Controllers\CabinetController::class, 'updateProfile']);
 $router->post('/cabinet/password/change',   [\App\Controllers\CabinetController::class, 'changePassword']);
 
 $router->get('/logout',                    [\App\Controllers\AuthController::class, 'logout']);
-
 
 // === Users/Auth (MVP) ===
 $router->get('/login',    [\App\Controllers\AuthController::class, 'loginForm']);
@@ -147,7 +127,6 @@ if (!\App\Core\Auth::check() && in_array($path, $_PROTECTED, true)) {
     exit;
 }
 $router->resolve();
-
 
 
 function console_log($value, $label = 'PHP') {

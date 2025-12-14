@@ -39,19 +39,9 @@ class ApiBackupController
      * Soft-deprecated legacy V1 endpoints (cutover to V2).
      * Returns HTTP 410 Gone with guidance. Does not require auth/CSRF.
      */
-    public function deprecatedV1(): void
-    {
-        $this->json([
-            'ok'      => false,
-            'error'   => 'DEPRECATED',
-            'message' => 'Use API V2 endpoints.',
-            'hint'    => [
-                'read'   => ['/api/events/by-date', '/api/events/by-range', '/api/events/get', '/api/events/search'],
-                'write'  => ['/api/events/create', '/api/events/update', '/api/events/delete', '/api/events/done', '/api/events/urgent', '/api/events/close'],
-                'backup' => ['/api/backup/export', '/api/backup/import', '/api/backup/diag'],
-            ],
-        ], 410);
-    }
+    
+    // [REMOVED] deprecatedV1() hard-deleted after V2 cutover.
+
 
     public function export(): void
     {

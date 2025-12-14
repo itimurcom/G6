@@ -443,25 +443,25 @@
     "2025-12-02": [],
     "2025-12-03": [],
     "2025-12-04": [],
-    "2025-12-05": [
+    "2025-12-05": [],
+    "2025-12-06": [
         {
             "end_date": null,
-            "id": "e_a8c86d6132f09016",
             "time": "09:00",
-            "title": "фвфівфівфів",
+            "title": "hrthrth",
             "owner": "",
-            "type": "nas",
+            "type": "mi",
             "urgent": false,
             "done": false,
             "incoming_no": "",
             "outgoing_no": "",
             "description": "",
-            "start_date": "2025-12-05",
-            "created_at": "2025-12-14T06:40:56+00:00",
+            "start_date": "2025-12-06",
+            "created_at": "2025-12-14T06:47:09+00:00",
+            "id": "e_57b8b93d6852fa7a",
             "user_id": 1
         }
     ],
-    "2025-12-06": [],
     "2025-12-07": [
         {
             "end_date": null,
@@ -500,9 +500,7 @@
             "created_at": "2025-12-06T10:31:33+00:00",
             "id": "e_11a2d2bba2031bd5",
             "user_id": 1
-        }
-    ],
-    "2025-12-13": [
+        },
         {
             "end_date": null,
             "time": "22:15",
@@ -518,8 +516,25 @@
             "created_at": "2025-12-06T09:54:55+00:00",
             "id": "e_41f59ca59bf7a435",
             "user_id": 1
+        },
+        {
+            "end_date": null,
+            "time": "09:00",
+            "title": "фвфівфівфів",
+            "owner": "",
+            "type": "nas",
+            "urgent": false,
+            "done": false,
+            "incoming_no": "",
+            "outgoing_no": "",
+            "description": "",
+            "start_date": "2025-12-05",
+            "created_at": "2025-12-14T06:40:56+00:00",
+            "id": "e_a8c86d6132f09016",
+            "user_id": 1
         }
     ],
+    "2025-12-13": [],
     "2025-12-14": [
         {
             "end_date": null,
