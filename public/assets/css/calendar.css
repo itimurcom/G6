@@ -632,6 +632,38 @@ select,
   overflow: hidden;
 }
 
+
+/* Edit event modal layout tweaks (controls fit better in footer) */
+#eventModal.modal {
+  width: min(680px, 96vw);
+}
+
+#eventModal footer {
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+#eventModal footer .footer-switches {
+  flex-wrap: wrap;
+}
+
+#eventModal footer > div:last-child {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+@media (max-width: 560px) {
+  #eventModal footer {
+    justify-content: flex-start;
+  }
+  #eventModal footer > div:last-child {
+    width: 100%;
+    justify-content: flex-end;
+  }
+}
+
+
+
 .modal header {
   padding: 12px 18px;
   font-weight: 800;
