@@ -18,6 +18,50 @@
   global.CalendarApp.ui.renderAllFn = refreshPlanning;
 
   var Data = (global.CalendarApp && global.CalendarApp.data) || {};
+
+  // ---------- Robust event day resolution ----------
+  // openInfo/openModalEdit require the *store day key* where the event lives.
+  // Some Planning items may carry a logical start_date that differs from the store key,
+  // so we resolve (id -> dayKey) before opening.
+  var __ID_DAY_CACHE = Object.create(null);
+
+  function resolveEventDayById(id, preferredDay) {
+    id = (id == null) ? "" : String(id);
+    if (!id) return preferredDay ? String(preferredDay).slice(0, 10) : null;
+
+    var cached = __ID_DAY_CACHE[id];
+    if (cached) return cached;
+
+    var day = preferredDay ? String(preferredDay).slice(0, 10) : "";
+    // 1) fast path: preferred day already contains the id
+    try {
+      if (day && typeof Data.getEventsFor === "function") {
+        var a0 = Data.getEventsFor(day) || [];
+        for (var i0 = 0; i0 < a0.length; i0++) {
+          var e0 = a0[i0];
+          if (e0 && String(e0.id) === id) { __ID_DAY_CACHE[id] = day; return day; }
+        }
+      }
+    } catch (_) { }
+
+    // 2) slow path: scan cache/store
+    try {
+      var cache = (typeof Data._getCache === "function" ? (Data._getCache() || {}) : (global.CalendarApp && global.CalendarApp.data && global.CalendarApp.data._cache) || {}) || {};
+      var keys = Object.keys(cache);
+      for (var k = 0; k < keys.length; k++) {
+        var dk = String(keys[k]).slice(0, 10);
+        if (!dk) continue;
+        var arr = (typeof Data.getEventsFor === "function") ? (Data.getEventsFor(dk) || []) : (cache[dk] || cache[keys[k]] || []);
+        for (var j = 0; j < arr.length; j++) {
+          var ev = arr[j];
+          if (ev && String(ev.id) === id) { __ID_DAY_CACHE[id] = dk; return dk; }
+        }
+      }
+    } catch (_) { }
+
+    return day || null;
+  }
+
   var Ev = (global.CalendarApp && global.CalendarApp.events) || {};
 
 
@@ -485,13 +529,84 @@
         e.preventDefault();
         e.stopPropagation();
         let eid2 = e.currentTarget.getAttribute("id");
-        tryOpenInfo(infoDate, eid2);
+        var d2 = resolveEventDayById(eid2, infoDate) || infoDate;
+        tryOpenInfo(d2, eid2);
       });
     }
 
     wrap.appendChild(ul);
     return wrap;
   }
+
+  // Overdue section: group items by start day (date headers aligned with section dates)
+  function sectionOverdueGrouped(label, cutoffDateValue, items) {
+    var wrap = document.createElement("div");
+    wrap.className = "planning-section";
+
+    var h = document.createElement("div");
+    h.className = "planning-section__title";
+
+    var labelEl = document.createElement("span");
+    labelEl.textContent = label + " ";
+
+    var dateEl = document.createElement("span");
+    dateEl.className = "planning-section__date";
+    dateEl.textContent = toUADisplayDate(cutoffDateValue);
+
+    h.appendChild(labelEl);
+    h.appendChild(dateEl);
+    wrap.appendChild(h);
+
+    if (!items || !items.length) {
+      var empty = document.createElement("div");
+      empty.className = "planning-empty";
+      empty.textContent = "Список пуст";
+      wrap.appendChild(empty);
+      return wrap;
+    }
+
+    // Group by start day key (YYYY-MM-DD)
+    var buckets = Object.create(null);
+    for (var i = 0; i < items.length; i++) {
+      var it = items[i] || {};
+      var dk = String((it.startDay || it.dk || (it.ev && (it.ev.start_date || it.ev.date || it.ev._date)) || "")).slice(0, 10);
+      if (!dk) continue;
+      if (!buckets[dk]) buckets[dk] = [];
+      buckets[dk].push(it);
+    }
+
+    var days = Object.keys(buckets).sort().reverse(); // most recent overdue first
+    for (var di = 0; di < days.length; di++) {
+      var dayKey = days[di];
+      var list = buckets[dayKey] || [];
+      // Sort inside the day by time ascending
+      list.sort(function (a, b) { return (a.start || 0) - (b.start || 0); });
+
+      // Reuse section() renderer for consistent item markup.
+      // Label uses the longest day name to keep date aligned; label itself is hidden via CSS.
+      var tmp = section("Післязавтра", parseDayKey(dayKey), list);
+      var th = tmp.querySelector(".planning-section__title");
+      if (th) th.classList.add("planning-overdue__dayTitle");
+      // Hide the label text (it is only used as a spacer for alignment)
+      // Do NOT rely on CSS for this: keep it self-contained in JS.
+      try {
+        var __labelSpan = th ? th.querySelector("span") : null;
+        if (__labelSpan) {
+          __labelSpan.textContent = "Післязавтра ";
+          __labelSpan.style.visibility = "hidden";
+          __labelSpan.style.userSelect = "none";
+        }
+      } catch (e) { }
+      var ul = tmp.querySelector(".planning-today__list");
+
+      if (th) wrap.appendChild(th);
+      if (ul) wrap.appendChild(ul);
+    }
+
+    return wrap;
+  }
+
+
 
   // ---------- page render ----------
   function render(store) {
@@ -527,7 +642,7 @@
     var frag = document.createDocumentFragment();
 
     var sOver = applyScope(collectOverdue(store, dkY)); // keys strictly before "Вчора"
-    frag.appendChild(section("Прострочені до", dY, sOver));
+    frag.appendChild(sectionOverdueGrouped("Прострочені до", dY, sOver));
     frag.appendChild(section("Вчора", dY, sY));
     frag.appendChild(section("Сьогодні", dT, sT));
     frag.appendChild(section("Завтра", dZ, sZ));
@@ -564,13 +679,15 @@
     function openInfo(date, id) {
       if (!date || !id) return;
       var fn = (window.CalendarApp && window.CalendarApp.ui && window.CalendarApp.ui.openModalInfo) ? window.CalendarApp.ui.openModalInfo : null;
-      if (fn) fn(date, id); else tryOpenInfo(date, id);
+      var d2 = resolveEventDayById(id, date) || date;
+      if (fn) fn(d2, id); else tryOpenInfo(d2, id);
     }
 
     function openEdit(date, id) {
       if (!date || !id) return;
       var fn = (window.CalendarApp && window.CalendarApp.ui && window.CalendarApp.ui.openModalEdit) ? window.CalendarApp.ui.openModalEdit : null;
-      if (fn) fn(date, id); else tryOpenInfo(date, id);
+      var d2 = resolveEventDayById(id, date) || date;
+      if (fn) fn(d2, id); else tryOpenInfo(d2, id);
     }
 
     mount.addEventListener("click", function (e) {
