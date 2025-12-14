@@ -73,6 +73,7 @@ $router->post('/api/events/close',          [\App\Controllers\ApiEventsControlle
 $router->get('/api/users/get'
 ,          [\App\Controllers\ApiUsersController::class, 'get']);
 $router->get('/api/users/name',         [\App\Controllers\ApiUserNameController::class, 'name']);
+$router->get('/api/users/me',           [\App\Controllers\ApiUsersController::class, 'me']);
 $router->get('/api/audit/list',           [\App\Controllers\ApiAuditController::class, 'list']);
 
 
@@ -84,13 +85,22 @@ $router->get('/api/backup/diag',            [\App\Controllers\ApiBackupControlle
 $router->post('/api/backup/import',         [\App\Controllers\ApiBackupController::class,       'import']);
 
 // Legacy aliases (kept for compatibility)
+// [DEPRECATED] V1 endpoints: return 410 Gone (use V2). For rollback, uncomment [DEFERRED] lines.
 // $router->get('/api/events', [\App\Controllers\ApiBackupController::class, 'export']);
-$router->get('/api/events',                 [\App\Controllers\ApiBackupController::class,       'events']);
-$router->get('/api/events/diag',            [\App\Controllers\ApiBackupController::class,       'diag']);
-$router->get('/api/repair',                 [\App\Controllers\ApiBackupController::class,       'repair']);        // плоский
-$router->get('/api/backup/repair-dups',     [\App\Controllers\ApiBackupController::class,       'repair']);
+$router->get('/api/events',                 [\App\Controllers\ApiBackupController::class,       'deprecatedV1']); // DEPRECATED V1
+$router->get('/api/events/diag',            [\App\Controllers\ApiBackupController::class,       'deprecatedV1']); // DEPRECATED V1
+$router->get('/api/repair',                 [\App\Controllers\ApiBackupController::class,       'deprecatedV1']); // DEPRECATED V1 (flat)
+$router->get('/api/backup/repair-dups',     [\App\Controllers\ApiBackupController::class,       'deprecatedV1']); // DEPRECATED V1
 
-$router->post('/api/events/store',          [\App\Controllers\ApiBackupController::class,       'import']);
+$router->post('/api/events/store',          [\App\Controllers\ApiBackupController::class,       'deprecatedV1']); // DEPRECATED V1
+
+// [DEFERRED] Previous legacy handlers (kept for quick rollback):
+// $router->get('/api/events',                 [\App\Controllers\ApiBackupController::class,       'events']);
+// $router->get('/api/events/diag',            [\App\Controllers\ApiBackupController::class,       'diag']);
+// $router->get('/api/repair',                 [\App\Controllers\ApiBackupController::class,       'repair']);        // плоский
+// $router->get('/api/backup/repair-dups',     [\App\Controllers\ApiBackupController::class,       'repair']);
+// $router->post('/api/events/store',          [\App\Controllers\ApiBackupController::class,       'import']);
+
 
 $router->post('/cabinet/profile/update',    [\App\Controllers\CabinetController::class, 'updateProfile']);
 $router->post('/cabinet/password/change',   [\App\Controllers\CabinetController::class, 'changePassword']);
