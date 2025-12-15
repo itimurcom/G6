@@ -907,6 +907,9 @@ if (btnClear) btnClear.addEventListener('click', function () {
             '#audit-block .audit-ev-type-link{cursor:pointer}',
             '#audit-block .audit-ev-open{display:block;width:100%;cursor:pointer;color:var(--fg, #fff);text-decoration:none}',
             '#audit-block .audit-ev-open .audit-ev-text{color:inherit}',
+            '#infoOverlay #editEvBtn{background:#22c55e;border-color:#22c55e;color:#fff}',
+            '#infoOverlay #editEvBtn:hover{filter:brightness(1.05)}',
+            '#infoOverlay #editEvBtn:active{filter:brightness(0.95)}',
             
             '#audit-block .audit-link:hover{text-decoration:underline}',
             '#audit-block .audit-row.t-login .audit-ev-main{color:#60a5fa}',
@@ -1356,7 +1359,60 @@ if (btnClear) btnClear.addEventListener('click', function () {
         } catch (_) { /* no-op */ }
     }
 
-    function openEventDetailsFullFromJournal(ev, it) {
+    
+function __journalFixEditBtnFirstOpen(dateISO, id, ev) {
+    try {
+        var didRetry = false;
+
+        function isEditHidden() {
+            var btn = document.getElementById('editEvBtn');
+            if (!btn) return true;
+            try {
+                if (btn.hidden) return true;
+                if (btn.hasAttribute && btn.hasAttribute('hidden')) return true;
+                if (btn.getAttribute && String(btn.getAttribute('aria-hidden') || '') === 'true') return true;
+                // If the button is in DOM but not visible due to CSS
+                var cs = window.getComputedStyle ? window.getComputedStyle(btn) : null;
+                if (cs && (cs.display === 'none' || cs.visibility === 'hidden' || cs.opacity === '0')) return true;
+            } catch (_) { return true; }
+            return false;
+        }
+
+        function retryOnce() {
+            if (didRetry) return;
+            didRetry = true;
+            try { if (ev) __seedEventIntoCalendarCacheForJournal(ev, dateISO, id); } catch (_) { }
+            try {
+                if (window.CalendarApp && window.CalendarApp.ui && typeof window.CalendarApp.ui.openInfo === 'function') {
+                    window.CalendarApp.ui.openInfo(dateISO, id);
+                }
+            } catch (_) { /* no-op */ }
+        }
+
+        // Small delay: on first open, UI scripts may still finish init/bindings.
+        window.setTimeout(function () {
+            try {
+                var ov = document.getElementById('infoOverlay');
+                var shown = !!(ov && ov.classList && ov.classList.contains('show'));
+                if (!shown) return;
+                if (isEditHidden()) retryOnce();
+            } catch (_) { /* no-op */ }
+        }, 180);
+
+        // One more delayed check (still only one retry total).
+        window.setTimeout(function () {
+            try {
+                var ov = document.getElementById('infoOverlay');
+                var shown = !!(ov && ov.classList && ov.classList.contains('show'));
+                if (!shown) return;
+                if (isEditHidden()) retryOnce();
+            } catch (_) { /* no-op */ }
+        }, 420);
+
+    } catch (_) { /* no-op */ }
+}
+
+function openEventDetailsFullFromJournal(ev, it) {
         if (!ev) return;
 
         var dateISO = (ev && (ev.start_date || ev.date)) ? String(ev.start_date || ev.date) : ((it && it.date) ? String(it.date) : '');
@@ -1369,6 +1425,7 @@ if (btnClear) btnClear.addEventListener('click', function () {
             try {
                 if (window.CalendarApp && window.CalendarApp.ui && typeof window.CalendarApp.ui.openInfo === 'function') {
                     window.CalendarApp.ui.openInfo(dateISO, id);
+                    try { __journalFixEditBtnFirstOpen(dateISO, id, ev); } catch (_) { }
                     return;
                 }
             } catch (_) { /* fallback below */ }
