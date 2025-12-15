@@ -400,10 +400,107 @@ function rebuildToolbarRow() {
         return 't-other';
     }
 
+    function asObj(v) {
+        if (!v) return null;
+        if (typeof v === 'object') return v;
+        if (typeof v === 'string') {
+            var s = v.trim();
+            if (!s) return null;
+            try {
+                var o = JSON.parse(s);
+                if (o && typeof o === 'object') return o;
+            } catch (e) { /* no-op */ }
+        }
+        return null;
+    }
+
+    function getEventTitle(ev) {
+        if (!ev || typeof ev !== 'object') return '';
+        if (ev.title !== undefined && ev.title !== null && String(ev.title).trim()) return String(ev.title).trim();
+        if (ev.name !== undefined && ev.name !== null && String(ev.name).trim()) return String(ev.name).trim();
+        if (ev.caption !== undefined && ev.caption !== null && String(ev.caption).trim()) return String(ev.caption).trim();
+        return '';
+    }
+
+    function getEventType(ev) {
+        if (!ev || typeof ev !== 'object') return '';
+        var t = (ev.type !== undefined && ev.type !== null) ? String(ev.type) : '';
+        if (!t && ev.kind !== undefined && ev.kind !== null) t = String(ev.kind);
+        if (!t && ev.category !== undefined && ev.category !== null) t = String(ev.category);
+        return (t || '').trim();
+    }
+
+    function typeColor(typeText) {
+        var s = (typeText || '').toString();
+        if (!s) return '';
+        var t = s.trim().toLowerCase();
+        // Match calendar palette if available
+        if (t === 'mi') return 'var(--type-mi)';
+        if (t === 'nas') return 'var(--type-nas)';
+        if (t === 'evt') return 'var(--type-evt)';
+        if (t === 'other') return 'var(--type-other)';
+        // Fallback: deterministic HSL color from string (stable across sessions).
+        var h = 0;
+        for (var i = 0; i < s.length; i++) {
+            h = (h * 31 + s.charCodeAt(i)) >>> 0;
+        }
+        var hue = (h % 360);
+        return 'hsl(' + hue + ', 70%, 60%)';
+    }
+
+
+    function typeLabel(typeText) {
+        var s = (typeText || '').toString();
+        if (!s) return '';
+        s = s.trim();
+        if (!s) return '';
+        // Prefer calendar domain label if available
+        try {
+            if (window && window.CalendarApp && window.CalendarApp.events && typeof window.CalendarApp.events.labelForType === 'function') {
+                return String(window.CalendarApp.events.labelForType(s) || s);
+            }
+        } catch (_) { /* no-op */ }
+        var t = s.toLowerCase();
+        if (t === 'mi') return 'ТЛГ: МИ';
+        if (t === 'nas') return 'ТЛГ: НАС';
+        if (t === 'evt') return 'Захід';
+        if (t === 'other') return 'Інше';
+        return s;
+    }
+
     function pickEventSnapshot(it) {
-        var after = it.event_after;
-        var before = it.event_before;
-        return (after && typeof after === 'object') ? after : ((before && typeof before === 'object') ? before : null);
+        // Backend may return objects or JSON strings in event_before/event_after/payload.
+        var after = asObj(it.event_after);
+        var before = asObj(it.event_before);
+        if (after) return after;
+        if (before) return before;
+        var payload = asObj(it.payload);
+        if (payload) {
+            // Common payload shapes
+            if (payload.event) {
+                var pe = asObj(payload.event) || (payload.event && typeof payload.event === 'object' ? payload.event : null);
+                if (pe) return pe;
+            }
+            if (payload.after) {
+                var pa = asObj(payload.after) || (payload.after && typeof payload.after === 'object' ? payload.after : null);
+                if (pa) return pa;
+            }
+            if (payload.data) {
+                var pd = asObj(payload.data) || (payload.data && typeof payload.data === 'object' ? payload.data : null);
+                if (pd) return pd;
+            }
+        }
+        // If payload itself looks like an event, return it (create action stores event directly in payload).
+        if (payload && typeof payload === 'object') {
+            var looksLikeEvent =
+                (payload.title !== undefined) || (payload.time !== undefined) || (payload.start_date !== undefined) ||
+                (payload.end_date !== undefined) || (payload.type !== undefined) || (payload.owner !== undefined) ||
+                (payload.urgent !== undefined) || (payload.done !== undefined) ||
+                (payload.incoming_no !== undefined) || (payload.outgoing_no !== undefined) || (payload.description !== undefined);
+            if (looksLikeEvent) return payload;
+        }
+
+        return null;
     }
 
     function formatEventWhen(ev) {
@@ -447,7 +544,8 @@ function rebuildToolbarRow() {
         var action = (it.action || '').toString();
         var label = uaActionLabel(action);
         var ev = pickEventSnapshot(it);
-        var evTitle = (ev && ev.title) ? String(ev.title) : '';
+        var evTitle = getEventTitle(ev);
+        var evType = getEventType(ev);
         var evWhen = formatEventWhen(ev) || (it.date ? String(it.date) : '');
 
         // Action-specific human labels
@@ -486,7 +584,7 @@ function rebuildToolbarRow() {
         if (!sub && evWhen) sub = 'Коли: ' + evWhen;
         if (!sub && it.message) sub = String(it.message);
 
-        return { title: title, sub: sub };
+        return { title: title, sub: sub, action: action, ev: ev, evTitle: evTitle, evType: evType };
     }
 
     function renderRow(it) {
@@ -504,8 +602,80 @@ function rebuildToolbarRow() {
 
         var tdEv = document.createElement('td');
         tdEv.className = 'audit-col-ev';
-        tdEv.innerHTML =
-            '<div class="audit-ev-main">' + esc(summary.title) + '</div>';
+
+        // For "Створення події" make whole value clickable (type + title) and open "Деталі події" dialog.
+        if (summary && summary.action === 'calendar.event.create' && summary.ev && summary.evTitle) {
+            var main = document.createElement('div');
+            main.className = 'audit-ev-main';
+
+            var evSnap = summary.ev;
+            var itSnap = it;
+            var typeSnap = summary.evType;
+            var titleSnap = summary.evTitle;
+
+            var openLink = document.createElement('a');
+            openLink.href = '#';
+            openLink.className = 'audit-link audit-ev-open';
+            openLink.title = 'Деталі події';
+            openLink.addEventListener('click', function (e) {
+                try { e.preventDefault(); } catch (_) { /* no-op */ }
+                openInfoEventDetails(evSnap, itSnap);
+            });
+
+            if (typeSnap) {
+                var spType = document.createElement('span');
+                spType.className = 'audit-ev-type';
+                var cType = typeColor(typeSnap);
+                if (cType) spType.style.color = cType;
+                spType.textContent = '(' + typeLabel(typeSnap) + ')';
+                openLink.appendChild(spType);
+                openLink.appendChild(document.createTextNode(' '));
+            }
+
+            var text = document.createElement('span');
+            text.className = 'audit-ev-text';
+            text.textContent = (uaActionLabel('calendar.event.create') + ': «' + titleSnap + '»');
+            openLink.appendChild(text);
+
+            main.appendChild(openLink);
+            tdEv.appendChild(main);
+
+                        if (false) {
+                // [DEFERRED] Legacy implementation kept intentionally (do not delete).
+                            // For "Створення події" show clickable title + colored (type) instead of non-informative ID.
+                                    if (summary && summary.action === 'calendar.event.create' && summary.ev && summary.evTitle) {
+                                        var main = document.createElement('div');
+                                        main.className = 'audit-ev-main';
+                            
+                                        var a = document.createElement('a');
+                                        a.href = '#';
+                                        a.className = 'audit-link audit-ev-link';
+                                        a.title = 'Відкрити подію';
+                                        a.textContent = (uaActionLabel('calendar.event.create') + ': «' + summary.evTitle + '»');
+                            
+                                        a.addEventListener('click', function (e) {
+                                            try { e.preventDefault(); } catch (ex) { /* no-op */ }
+                                            tryOpenEventPopup(summary.ev, it);
+                                        });
+                            
+                                        main.appendChild(a);
+                            
+                                        if (summary.evType) {
+                                            var sp = document.createElement('span');
+                                            sp.className = 'audit-ev-type';
+                                            var c = typeColor(summary.evType);
+                                            if (c) sp.style.color = c;
+                                            sp.textContent = ' (' + summary.evType + ')';
+                                            main.appendChild(sp);
+                                        }
+                            
+                                        tdEv.appendChild(main);
+            }
+
+        }        } else {
+            tdEv.innerHTML =
+                '<div class="audit-ev-main">' + esc(summary.title) + '</div>';
+        }
 
         var tdCtx = document.createElement('td');
         tdCtx.className = 'audit-col-ctx';
@@ -732,6 +902,12 @@ if (btnClear) btnClear.addEventListener('click', function () {
             '#audit-block .audit-result--fail{background:rgba(239,68,68,.14)}',
             '#audit-block .audit-result--error{background:rgba(239,68,68,.14)}',
             '#audit-block .audit-link{color:var(--accent);text-decoration:none}',
+            '#audit-block .audit-ev-link{cursor:pointer}',
+            '#audit-block .audit-ev-type{font-weight:800;opacity:.95}',
+            '#audit-block .audit-ev-type-link{cursor:pointer}',
+            '#audit-block .audit-ev-open{display:block;width:100%;cursor:pointer;color:var(--fg, #fff);text-decoration:none}',
+            '#audit-block .audit-ev-open .audit-ev-text{color:inherit}',
+            
             '#audit-block .audit-link:hover{text-decoration:underline}',
             '#audit-block .audit-row.t-login .audit-ev-main{color:#60a5fa}',
             '#audit-block .audit-row.t-logout .audit-ev-main{color:#93c5fd}',
@@ -770,6 +946,586 @@ if (btnClear) btnClear.addEventListener('click', function () {
             ':root[data-theme="light"] .audit-raw pre{border:1px solid rgba(0,0,0,.06)}'
         ].join('\n');
         document.head.appendChild(st);
+    }
+
+
+    function ensureEventModal() {
+        if (document.getElementById('event-modal')) return;
+        var root = document.createElement('div');
+        root.id = 'event-modal';
+        root.className = 'audit-modal';
+        root.innerHTML =
+            '<div class="audit-modal__backdrop" data-close="1"></div>' +
+            '<div class="audit-modal__panel" role="dialog" aria-modal="true" aria-label="Подія">' +
+            '  <div class="audit-modal__head">' +
+            '    <div class="audit-modal__title">Подія</div>' +
+            '    <button type="button" class="audit-modal__close" data-close="1">✕</button>' +
+            '  </div>' +
+            '  <div class="audit-modal__body" id="event-modal-body"></div>' +
+            '</div>';
+        document.body.appendChild(root);
+        root.addEventListener('click', function (e) {
+            var t = e.target;
+            if (t && t.getAttribute && t.getAttribute('data-close') === '1') closeEventModal();
+        });
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape') closeEventModal();
+        });
+    }
+
+    function openEventModal(ev, it) {
+        ensureEventModal();
+        var root = document.getElementById('event-modal');
+        var body = document.getElementById('event-modal-body');
+        if (!root || !body) return;
+
+        var eobj = (ev && typeof ev === 'object') ? ev : pickEventSnapshot(it);
+        if (!eobj || typeof eobj !== 'object') eobj = {};
+
+        var title = getEventTitle(eobj) || (it && it.entity_id ? String(it.entity_id) : 'Подія');
+        var type = getEventType(eobj);
+        var when = formatEventWhen(eobj) || (it && it.date ? String(it.date) : '');
+
+        body.innerHTML = '';
+        var top = document.createElement('div');
+        top.className = 'audit-modal__grid';
+
+        var typeHtml = '—';
+        if (type) {
+            var c = typeColor(type);
+            typeHtml = '<span class="audit-ev-type" style="' + (c ? ('color:' + escAttr(c) + ';') : '') + 'font-weight:800;">' + esc(type) + '</span>';
+        }
+
+        top.innerHTML =
+            '<div class="audit-k">Назва</div><div class="audit-v">' + esc(title) + '</div>' +
+            '<div class="audit-k">Тип</div><div class="audit-v">' + typeHtml + '</div>' +
+            (when ? '<div class="audit-k">Коли</div><div class="audit-v">' + esc(when) + '</div>' : '') +
+            ((it && it.entity_id) ? '<div class="audit-k">ID</div><div class="audit-v">' + esc(String(it.entity_id)) + '</div>' : '');
+
+        // Optional well-known fields (show only when present)
+        var fields = [
+            ['time', 'Час'],
+            ['start_date', 'Дата початку'],
+            ['end_date', 'Дата кінця'],
+            ['owner', 'Власник'],
+            ['urgent', 'Терміново'],
+            ['done', 'Виконано'],
+            ['incoming_no', 'Вхідний №'],
+            ['outgoing_no', 'Вихідний №'],
+            ['department', 'Підрозділ'],
+            ['place', 'Місце'],
+            ['description', 'Опис'],
+            ['notes', 'Нотатки']
+        ];
+        fields.forEach(function (f) {
+            var k = f[0];
+            var label = f[1];
+            if (eobj[k] === undefined || eobj[k] === null) return;
+            var v = eobj[k];
+            var sv = (typeof v === 'object') ? JSON.stringify(v) : String(v);
+            if (!sv.trim()) return;
+            top.innerHTML += '<div class="audit-k">' + esc(label) + '</div><div class="audit-v">' + esc(sv) + '</div>';
+        });
+
+        body.appendChild(top);
+
+        var raw = document.createElement('div');
+        raw.className = 'audit-raw';
+        raw.innerHTML = '<details open><summary>Усі поля (JSON)</summary><pre>' + esc(JSON.stringify(eobj, null, 2)) + '</pre></details>';
+        body.appendChild(raw);
+
+        root.classList.add('is-open');
+    }
+
+    function closeEventModal() {
+        var root = document.getElementById('event-modal');
+        if (!root) return;
+        root.classList.remove('is-open');
+        var body = document.getElementById('event-modal-body');
+        if (body) body.innerHTML = '';
+    }
+
+
+    // === Event "Info" dialog (same overlay as Calendar/Planning: #infoOverlay / #infoContent) ===
+    function closeInfoOverlayFromJournal() {
+        var overlay = document.getElementById('infoOverlay');
+        if (!overlay) return;
+        if (overlay.contains(document.activeElement)) { try { document.activeElement.blur(); } catch (_) { } }
+        overlay.classList.remove('show');
+        overlay.setAttribute('aria-hidden', 'true');
+        overlay.setAttribute('inert', '');
+    }
+
+    function ensureInfoOverlayModal() {
+        var overlay = document.getElementById('infoOverlay');
+        if (overlay) return overlay;
+        try {
+            var root = document.createElement('div');
+            root.id = 'infoOverlay';
+            root.className = 'overlay';
+            root.setAttribute('aria-hidden', 'true');
+            root.setAttribute('role', 'dialog');
+            root.setAttribute('aria-modal', 'true');
+            root.setAttribute('inert', '');
+            root.innerHTML =
+                '<div class="modal" aria-labelledby="infoTitle">' +
+                '  <header>' +
+                '    <div id="infoTitle">Деталі події</div>' +
+                '    <div><button type="button" id="infoClose" class="event-btn" aria-label="Закрити">×</button></div>' +
+                '  </header>' +
+                '  <div class="content" id="infoContent"></div>' +
+                '  <footer><span></span><div style="display:flex;gap:10px;">' +
+                '    <button type="button" id="editEvBtn" class="btn btn--green" hidden aria-hidden="true" tabindex="-1">редагувати</button>' +
+                '    <button type="button" id="infoOk" class="btn" style="background:var(--accent);border-color:var(--accent);color:#fff">Закрити</button>' +
+                '  </div></footer>' +
+                '</div>';
+            document.body.appendChild(root);
+            return root;
+        } catch (_) { return null; }
+    }
+
+    function setInfoModalTypeForJournal(t) {
+        var overlay = document.getElementById('infoOverlay');
+        if (!overlay) return;
+        var modal = null;
+        try { modal = overlay.querySelector('.modal'); } catch (_) { modal = null; }
+        if (!modal || !modal.classList) return;
+        try {
+            modal.classList.remove('type-mi', 'type-nas', 'type-evt', 'type-other');
+            var tt = String(t || '').toLowerCase();
+            modal.classList.add(tt === 'mi' ? 'type-mi' : tt === 'nas' ? 'type-nas' : tt === 'evt' ? 'type-evt' : 'type-other');
+        } catch (_) { /* no-op */ }
+    }
+
+
+    function ensureInfoOverlayHandlers() {
+        var overlay = document.getElementById('infoOverlay');
+        if (!overlay) return;
+        if (overlay.dataset && overlay.dataset.journalBound === '1') return;
+        try { if (overlay.dataset) overlay.dataset.journalBound = '1'; } catch (_) { }
+
+        var btnClose = document.getElementById('infoClose');
+        var btnOk = document.getElementById('infoOk');
+
+        if (btnClose) btnClose.addEventListener('click', function (e) { try { e.preventDefault(); } catch (_) { } closeInfoOverlayFromJournal(); });
+        if (btnOk) btnOk.addEventListener('click', function (e) { try { e.preventDefault(); } catch (_) { } closeInfoOverlayFromJournal(); });
+
+        // Click on backdrop closes as well
+        overlay.addEventListener('click', function (e) {
+            if (e && e.target === overlay) closeInfoOverlayFromJournal();
+        });
+
+        // Esc closes
+        document.addEventListener('keydown', function (e) {
+            if (e && e.key === 'Escape') closeInfoOverlayFromJournal();
+        });
+    }
+
+    
+    // === Calendar/Planning "Деталі події" dialogs on Journal page (full features) ===
+    var __journalCalUiPromise = null;
+
+    function __ensureIconsCssForJournalDialogs() {
+        try {
+            if (document.querySelector('link[href*="/assets/css/icons.css"]')) return;
+            var l = document.createElement('link');
+            l.rel = 'stylesheet';
+            l.href = '/assets/css/icons.css';
+            l.dataset && (l.dataset.journalIcons = '1');
+            document.head.appendChild(l);
+        } catch (_) { /* no-op */ }
+    }
+
+    function __ensurePlanningTodayElForJournal() {
+        var mt = document.getElementById('planning-today');
+        if (mt) return mt;
+        try {
+            mt = document.createElement('div');
+            mt.id = 'planning-today';
+            mt.style.display = 'none';
+            mt.dataset.userId = '0';
+            document.body.appendChild(mt);
+            return mt;
+        } catch (_) { return null; }
+    }
+
+    function __ensureMeUserIdForJournal() {
+        return new Promise(function (resolve) {
+            var mt = __ensurePlanningTodayElForJournal();
+            var cur = 0;
+            try { cur = mt && mt.dataset ? (parseInt(mt.dataset.userId || '0', 10) || 0) : 0; } catch (_) { cur = 0; }
+            if (cur > 0) return resolve(cur);
+
+            try {
+                fetch('/api/users/me', { headers: { 'Accept': 'application/json' } })
+                    .then(function (r) { return r.json(); })
+                    .then(function (x) {
+                        var id = 0;
+                        try { id = x && x.ok && x.user ? (parseInt(x.user.id || 0, 10) || 0) : 0; } catch (_) { id = 0; }
+                        if (mt && mt.dataset && id > 0) mt.dataset.userId = String(id);
+                        resolve(id);
+                    })
+                    .catch(function () { resolve(0); });
+            } catch (_) { resolve(0); }
+        });
+    }
+
+    function __ensureInfoOverlayFullForJournal() {
+        var overlay = document.getElementById('infoOverlay');
+        var needs = false;
+        try {
+            if (!overlay) needs = true;
+            else if (!overlay.querySelector('#infoContent')) needs = true;
+            else if (!overlay.querySelector('#editEvBtn')) needs = true;
+            else if (!overlay.querySelector('#infoOk')) needs = true;
+            else if (!overlay.querySelector('#infoClose')) needs = true;
+            else if (!overlay.querySelector('#infoEventModal')) needs = true;
+        } catch (_) { needs = true; }
+
+        if (!needs) return overlay;
+
+        var root = document.createElement('div');
+        root.id = 'infoOverlay';
+        root.className = 'overlay';
+        root.setAttribute('aria-hidden', 'true');
+        root.setAttribute('role', 'dialog');
+        root.setAttribute('aria-modal', 'true');
+        root.setAttribute('inert', '');
+        root.innerHTML =
+            '<div id="infoEventModal" class="modal" aria-labelledby="infoTitle">' +
+            '  <style>#deleteEvBtn{display:none !important;}</style>' +
+            '  <header>' +
+            '    <div id="infoTitle">Деталі події</div>' +
+            '    <div><button type="button" id="infoClose" class="event-btn" aria-label="Закрити">×</button></div>' +
+            '  </header>' +
+            '  <div class="content" id="infoContent"></div>' +
+            '  <footer><span></span><div id="infoButtons" style="display:flex;gap:10px;">' +
+            '    <button type="button" id="editEvBtn" class="btn btn--green" hidden aria-hidden="true" tabindex="-1">редагувати</button>' +
+            '    <button type="button" id="infoOk" class="btn" style="background:var(--accent);border-color:var(--accent);color:#fff">Закрити</button>' +
+            '  </div></footer>' +
+            '</div>';
+
+        try {
+            if (overlay && overlay.parentNode) overlay.parentNode.replaceChild(root, overlay);
+            else document.body.appendChild(root);
+        } catch (_) {
+            try { document.body.appendChild(root); } catch (__e) { /* no-op */ }
+        }
+        return root;
+    }
+
+    function __ensureEditOverlayFullForJournal() {
+        var overlay = document.getElementById('eventOverlay');
+        var needs = false;
+        try {
+            if (!overlay) needs = true;
+            else if (!document.getElementById('eventModal')) needs = true;
+            else if (!document.getElementById('inputDate')) needs = true;
+            else if (!document.getElementById('btnDelete')) needs = true;
+        } catch (_) { needs = true; }
+
+        if (!needs) return overlay;
+
+        var root = document.createElement('div');
+        root.id = 'eventOverlay';
+        root.className = 'overlay';
+        root.setAttribute('aria-hidden', 'true');
+        root.setAttribute('role', 'dialog');
+        root.setAttribute('aria-modal', 'true');
+        root.setAttribute('inert', '');
+        root.innerHTML =
+            '<form id="eventModal" class="modal" aria-labelledby="modalTitle">' +
+            '  <header>' +
+            '    <div class="left"><div id="modalTitle">Нова подія</div></div>' +
+            '    <button type="button" id="btnClose" class="event-btn" aria-label="Закрити">×</button>' +
+            '  </header>' +
+            '  <div class="content">' +
+            '    <div class="row col3">' +
+            '      <div><label for="inputDate">Дата</label><input id="inputDate" name="date" type="date" required></div>' +
+            '      <div><label for="inputSpanDays">Тривалість (днів, опц.)</label><input id="inputSpanDays" name="span_days" type="number" min="1" step="1" placeholder="1 = одноденна"></div>' +
+            '      <div><label for="inputTime">Час</label><input id="inputTime" name="time" type="time" required></div>' +
+            '    </div>' +
+            '    <div><label for="inputTitle">Назва події</label><input id="inputTitle" name="title" type="text" placeholder="Напр., Статус-дзвінок" required></div>' +
+            '    <div><label for="inputDescription">Опис</label><textarea id="inputDescription" name="description" rows="3" placeholder="Детальний опис події..." style="border-radius:8px;"></textarea></div>' +
+            '    <div class="row">' +
+            '      <div><label for="inputOwner">Відповідальний</label><input id="inputOwner" name="owner" type="text" placeholder="Ім\'я або команда"></div>' +
+            '      <div><label for="inputType">Тип</label><select id="inputType" name="type" required>' +
+            '        <option value="mi">ТЛГ: МИ</option>' +
+            '        <option value="nas">ТЛГ: НАС</option>' +
+            '        <option value="evt" selected>Захід</option>' +
+            '        <option value="other">Інше</option>' +
+            '      </select></div>' +
+            '    </div>' +
+            '    <div class="row">' +
+            '      <div><label for="inputIncoming">Вхідний номер</label><input id="inputIncoming" name="incoming_no" type="text" autocomplete="off" placeholder="Напр.: Вх-1234/09"></div>' +
+            '      <div><label for="inputOutgoing">Вихідний номер</label><input id="inputOutgoing" name="outgoing_no" type="text" autocomplete="off" placeholder="Напр.: Вих-5678/09"></div>' +
+            '    </div>' +
+            '  </div>' +
+            '  <footer>' +
+            '    <div class="footer-switches" style="display:flex; gap:10px; align-items:center;">' +
+            '      <label id="urgentSwitch" class="urgent-switch" title="Позначити як терміново"><input type="checkbox" id="inputUrgent"> Терміново</label>' +
+            '      <label id="doneSwitch" class="done-switch" title="Позначити як виконано"><input type="checkbox" id="inputDone"> Виконано</label>' +
+            '    </div>' +
+            '    <div style="display:flex; gap:10px;">' +
+            '      <button type="button" class="btn" id="btnDelete" style="background:#ef4444;border-color:#ef4444;color:#fff" hidden aria-hidden="true" tabindex="-1">Видалити</button>' +
+            '      <button type="button" class="btn" id="btnCancel">Скасувати</button>' +
+            '      <button type="submit" class="btn" style="background:var(--accent);border-color:var(--accent);color:#fff">Зберегти</button>' +
+            '    </div>' +
+            '  </footer>' +
+            '</form>';
+
+        try {
+            if (overlay && overlay.parentNode) overlay.parentNode.replaceChild(root, overlay);
+            else document.body.appendChild(root);
+        } catch (_) {
+            try { document.body.appendChild(root); } catch (__e) { /* no-op */ }
+        }
+        return root;
+    }
+
+    function __loadScriptOnceForJournal(src) {
+        return new Promise(function (resolve) {
+            try {
+                if (document.querySelector('script[data-journal-src=\"' + src + '\"]')) return resolve();
+                var s = document.createElement('script');
+                s.src = src;
+                s.defer = true;
+                s.async = false;
+                s.setAttribute('data-journal-src', src);
+                s.onload = function () { resolve(); };
+                s.onerror = function () { resolve(); };
+                document.head.appendChild(s);
+            } catch (_) { resolve(); }
+        });
+    }
+
+    function __ensureCalendarUiForJournal() {
+        if (__journalCalUiPromise) return __journalCalUiPromise;
+
+        // If calendar UI already present (e.g., shared bundle), just ensure overlays & return.
+        try {
+            if (window.CalendarApp && window.CalendarApp.ui && typeof window.CalendarApp.ui.openInfo === 'function') {
+                __ensureIconsCssForJournalDialogs();
+                __ensurePlanningTodayElForJournal();
+                __ensureInfoOverlayFullForJournal();
+                __ensureEditOverlayFullForJournal();
+                __journalCalUiPromise = Promise.resolve(true);
+                return __journalCalUiPromise;
+            }
+        } catch (_) { /* continue */ }
+
+        __journalCalUiPromise = __ensureMeUserIdForJournal().then(function () {
+            __ensureIconsCssForJournalDialogs();
+            __ensureInfoOverlayFullForJournal();
+            __ensureEditOverlayFullForJournal();
+
+            // Load only what modals need (events + data + modals).
+            return __loadScriptOnceForJournal('/assets/js/calendar/calendar.events.js')
+                .then(function () { return __loadScriptOnceForJournal('/assets/js/calendar/calendar.data.js'); })
+                .then(function () { return __loadScriptOnceForJournal('/assets/js/calendar/calendar.ui.modals.js'); })
+                .then(function () { return true; });
+        });
+
+        return __journalCalUiPromise;
+    }
+
+    function __seedEventIntoCalendarCacheForJournal(ev, dateISO, id) {
+        try {
+            if (!window.CalendarApp || !window.CalendarApp.data) return;
+            var Data = window.CalendarApp.data;
+            if (!Data || typeof Data._getCache !== 'function' || typeof Data._setCache !== 'function' || typeof Data.getEventsFor !== 'function') return;
+
+            var arr = Data.getEventsFor(dateISO) || [];
+            var exists = false;
+            for (var i = 0; i < arr.length; i++) {
+                if (arr[i] && String(arr[i].id || '') === String(id)) { exists = true; break; }
+            }
+            if (exists) return;
+
+            var store = (typeof Data._getCache === 'function') ? (Data._getCache() || {}) : {};
+            if (!store[dateISO] || !Array.isArray(store[dateISO])) store[dateISO] = [];
+
+            var copy = {};
+            try { copy = JSON.parse(JSON.stringify(ev || {})); } catch (_) { copy = ev || {}; }
+            if (!copy.id) copy.id = String(id || '');
+            if (!copy.start_date) copy.start_date = String(dateISO || '');
+            if (!copy.date) copy.date = String(dateISO || '');
+
+            store[dateISO].push(copy);
+            Data._setCache(store);
+        } catch (_) { /* no-op */ }
+    }
+
+    function openEventDetailsFullFromJournal(ev, it) {
+        if (!ev) return;
+
+        var dateISO = (ev && (ev.start_date || ev.date)) ? String(ev.start_date || ev.date) : ((it && it.date) ? String(it.date) : '');
+        var id = (ev && ev.id) ? String(ev.id) : ((it && it.entity_id) ? String(it.entity_id) : '');
+        if (!dateISO || !id) return;
+
+        __ensureCalendarUiForJournal().then(function () {
+            try { __seedEventIntoCalendarCacheForJournal(ev, dateISO, id); } catch (_) { }
+
+            try {
+                if (window.CalendarApp && window.CalendarApp.ui && typeof window.CalendarApp.ui.openInfo === 'function') {
+                    window.CalendarApp.ui.openInfo(dateISO, id);
+                    return;
+                }
+            } catch (_) { /* fallback below */ }
+
+            // Fallback (should not happen): open legacy info modal.
+            try { openEventModal(ev, it); } catch (_) { }
+        });
+    }
+function openInfoEventDetails(ev, it) {
+        try { openEventDetailsFullFromJournal(ev, it); return; } catch (_) { /* fallback below */ }
+        if (!ev) return;
+
+        var dateISO = (it && it.date) ? String(it.date) : (ev.start_date || ev.date ? String(ev.start_date || ev.date) : '');
+        var id = (it && it.entity_id) ? String(it.entity_id) : (ev.id ? String(ev.id) : '');
+
+        // Prefer native Calendar/Planning implementation if it can open (it will build UI itself).
+        try {
+            if (window && window.CalendarApp && window.CalendarApp.ui && typeof window.CalendarApp.ui.openInfo === 'function' && dateISO && id) {
+                window.CalendarApp.ui.openInfo(dateISO, id);
+                var ov = document.getElementById('infoOverlay');
+                if (ov && ov.classList && ov.classList.contains('show')) return;
+            }
+        } catch (_) { /* fallback below */ }
+
+        var overlay = document.getElementById('infoOverlay');
+        var content = document.getElementById('infoContent');
+        if (!overlay || !content) {
+            // [DEFERRED] Legacy fallback (do not delete): Journal-built modal.
+            if (false) {
+                try { openEventModal(ev, it); } catch (_) { }
+                return;
+            }
+            overlay = ensureInfoOverlayModal() || document.getElementById('infoOverlay');
+            content = document.getElementById('infoContent');
+        }
+        if (!overlay || !content) return;
+
+        ensureInfoOverlayHandlers();
+
+        var locale = 'uk-UA';
+        var weekday = '';
+        try {
+            var a = String(dateISO || '').split('-').map(Number);
+            if (a.length === 3 && a[0] > 0) {
+                weekday = new Intl.DateTimeFormat(locale, { weekday: 'short' }).format(new Date(Date.UTC(a[0], a[1] - 1, a[2])));
+            }
+        } catch (_) { }
+
+        function fmtISO(iso) {
+            try {
+                if (window && window.CalendarApp && window.CalendarApp.events && typeof window.CalendarApp.events.formatISO === 'function') {
+                    return window.CalendarApp.events.formatISO(iso);
+                }
+            } catch (_) { }
+            return String(iso || '');
+        }
+        function labelType(t) {
+            try {
+                if (window && window.CalendarApp && window.CalendarApp.events && typeof window.CalendarApp.events.labelForType === 'function') {
+                    return window.CalendarApp.events.labelForType(t);
+                }
+            } catch (_) { }
+            return String(t || '');
+        }
+        function asBool(v) {
+            return (v === true || String(v) === '1' || String(v).toLowerCase() === 'true');
+        }
+
+        var startISO = String(ev.start_date || dateISO || '');
+        var endISO = String(ev.end_date || '');
+        var endBlock = '';
+        if (endISO) {
+            try {
+                var dsA = startISO.split('-').map(Number);
+                var deA = endISO.split('-').map(Number);
+                if (dsA.length === 3 && deA.length === 3) {
+                    var ds = new Date(Date.UTC(dsA[0], dsA[1] - 1, dsA[2]));
+                    var de = new Date(Date.UTC(deA[0], deA[1] - 1, deA[2]));
+                    var days = Math.round((de - ds) / 86400000) + 1;
+                    if (!isNaN(days) && days > 0) {
+                        endBlock = '<div><strong>Дата завершення:</strong> ' + esc(fmtISO(endISO)) + ' (' + esc(String(days)) + ' дн.)</div>';
+                    } else {
+                        endBlock = '<div><strong>Дата завершення:</strong> ' + esc(fmtISO(endISO)) + '</div>';
+                    }
+                } else {
+                    endBlock = '<div><strong>Дата завершення:</strong> ' + esc(fmtISO(endISO)) + '</div>';
+                }
+            } catch (_) {
+                endBlock = '<div><strong>Дата завершення:</strong> ' + esc(fmtISO(endISO)) + '</div>';
+            }
+        }
+
+        var uid = 0;
+        try { uid = parseInt(ev.user_id || 0, 10) || 0; } catch (_) { uid = 0; }
+
+        var createdText = '—';
+        try {
+            if (ev.created_at) createdText = new Date(ev.created_at).toLocaleString(locale, { hour12: false });
+        } catch (_) { }
+
+        var html = '' +
+            '<div class="row">' +
+            '<div><strong>Дата:</strong> ' + esc(fmtISO(dateISO || startISO)) + (weekday ? (' (' + esc(weekday) + ')') : '') + '</div>' +
+            endBlock +
+            '<div><strong>Час:</strong> ' + esc(ev.time || '') + '</div>' +
+            '</div>' +
+            '<div class="row">' +
+            '<div><strong>Тип:</strong> ' + esc(labelType(ev.type)) + '</div>' +
+            '<div><strong>Виконана:</strong> ' + (asBool(ev.done) ? 'так' : 'ні') + '</div>' +
+            '</div>' +
+            '<div><strong>Назва:</strong> ' + esc(ev.title || '') + '</div>' +
+            '<div><strong>Відповідальний:</strong> ' + esc(ev.owner || '—') + '</div>' +
+            '<div><strong>Власник (створив):</strong> ' + (uid > 0 ? ('<span class="user--name" data-user-id="' + escAttr(String(uid)) + '"></span>') : '—') + '</div>' +
+            '<div><strong>Створено:</strong> ' + esc(createdText) + '</div>' +
+            '<div><strong>Терміновість:</strong> ' + (asBool(ev.urgent) ? 'так' : 'ні') + '</div>' +
+            (ev.incoming_no ? '<div><strong>Вхідний №:</strong> ' + esc(String(ev.incoming_no || '—')) + '</div>' : '') +
+            (ev.outgoing_no ? '<div><strong>Вихідний №:</strong> ' + esc(String(ev.outgoing_no || '—')) + '</div>' : '') +
+            (ev.description ? ('<div><strong>Опис:</strong><br><div class="container auto">' + esc(String(ev.description || '')) + '</div></div>') : '');
+
+        content.innerHTML = html;
+        setInfoModalTypeForJournal(ev.type);
+
+        overlay.classList.add('show');
+        overlay.setAttribute('aria-hidden', 'false');
+        overlay.removeAttribute('inert');
+    }
+    function tryOpenEventPopup(ev, it) {
+        // Try to use the calendar's existing popup (if present), otherwise fallback to the built-in modal.
+        try {
+            // Preferred: open the same "Info" modal as in Calendar (if available and event is in the store).
+            if (window && window.CalendarApp && window.CalendarApp.ui && typeof window.CalendarApp.ui.openInfo === 'function') {
+                var d = (it && it.date) ? String(it.date) : (ev && (ev.start_date || ev.date) ? String(ev.start_date || ev.date) : '');
+                var id = (it && it.entity_id) ? String(it.entity_id) : (ev && ev.id ? String(ev.id) : '');
+                if (d && id && window.CalendarApp.data && typeof window.CalendarApp.data.getEventsFor === 'function') {
+                    var arr = window.CalendarApp.data.getEventsFor(d) || [];
+                    var found = false;
+                    for (var i = 0; i < arr.length; i++) {
+                        if (arr[i] && String(arr[i].id) === id) { found = true; break; }
+                    }
+                    if (found) { window.CalendarApp.ui.openInfo(d, id); return; }
+                }
+            }
+        } catch (e0) { /* no-op */ }
+        try {
+            if (window && window.CalendarUI && typeof window.CalendarUI.openEventModal === 'function') {
+                window.CalendarUI.openEventModal(ev);
+                return;
+            }
+        } catch (e) { /* no-op */ }
+        try {
+            if (window && typeof window.openEventModal === 'function') {
+                window.openEventModal(ev);
+                return;
+            }
+        } catch (e2) { /* no-op */ }
+
+        openEventModal(ev, it);
     }
 
     function ensureAuditModal() {
