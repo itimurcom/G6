@@ -35,6 +35,40 @@ final class ApiAuditController extends Controller
         return $logsDir . '/audit.ndjson';
     }
 
+    /**
+     * Convert any audit field value to a safe searchable string.
+     * Important: must not emit warnings/notices that could break JSON responses.
+     */
+    private function auditToSearchText($v): string
+    {
+        if ($v === null) return '';
+
+        if (is_string($v)) return $v;
+        if (is_int($v) || is_float($v)) return (string)$v;
+        if (is_bool($v)) return $v ? '1' : '0';
+
+        if (is_scalar($v)) return (string)$v;
+
+        // Arrays/objects: encode with safe flags; silence warnings to keep JSON output valid.
+        $jsonFlags = JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES;
+        if (defined('JSON_PARTIAL_OUTPUT_ON_ERROR')) $jsonFlags |= JSON_PARTIAL_OUTPUT_ON_ERROR;
+        if (defined('JSON_INVALID_UTF8_SUBSTITUTE')) $jsonFlags |= JSON_INVALID_UTF8_SUBSTITUTE;
+
+        $s = @json_encode($v, $jsonFlags);
+        if ($s === false) return '';
+        return (string)$s;
+    }
+
+    /**
+     * Case-insensitive contains helper with mbstring fallback.
+     */
+    private function auditContains(string $hay, string $needle): bool
+    {
+        if ($needle === '') return true;
+        if (function_exists('mb_stripos')) return mb_stripos($hay, $needle) !== false;
+        return stripos($hay, $needle) !== false;
+    }
+
 
     public function list(Request $r): string
     {
@@ -81,16 +115,40 @@ final class ApiAuditController extends Controller
             // Query filter (search few fields)
             if ($q !== '') {
                 $hay = [
-                    (string)($j['action'] ?? ''),
-                    (string)($j['result'] ?? ''),
-                    (string)($j['message'] ?? ''),
-                    (string)($j['user_name'] ?? ''),
-                    (string)($j['ip'] ?? ''),
-                    (string)($j['ua'] ?? ''),
+                    $this->auditToSearchText($j['action'] ?? ''),
+                    $this->auditToSearchText($j['result'] ?? ''),
+                    $this->auditToSearchText($j['message'] ?? ''),
+                    $this->auditToSearchText($j['user_name'] ?? ''),
+                    $this->auditToSearchText($j['ip'] ?? ''),
+                    $this->auditToSearchText($j['ua'] ?? ''),
                 ];
+                // Extended search: include entity/payload fields (so q matches titles, IDs, etc.)
+                $hay[] = $this->auditToSearchText($j['entity_type'] ?? '');
+                $hay[] = $this->auditToSearchText($j['entity_id'] ?? '');
+                $hay[] = $this->auditToSearchText($j['date'] ?? '');
+                $hay[] = $this->auditToSearchText($j['reason'] ?? '');
+                $hay[] = $this->auditToSearchText($j['update_result'] ?? '');
+                $hay[] = $this->auditToSearchText($j['delete_result'] ?? '');
+                $hay[] = $this->auditToSearchText($j['urgent'] ?? '');
+                $hay[] = $this->auditToSearchText($j['done'] ?? '');
+
+                $jsonFlags = JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES;
+                if (defined('JSON_PARTIAL_OUTPUT_ON_ERROR')) $jsonFlags |= JSON_PARTIAL_OUTPUT_ON_ERROR;
+
+                if (isset($j['payload'])) {
+                    // Use safe conversion to avoid warnings/notices breaking JSON output
+                    $hay[] = $this->auditToSearchText($j['payload']);
+                }
+                if (isset($j['event_before'])) {
+                    $hay[] = $this->auditToSearchText($j['event_before']);
+                }
+                if (isset($j['event_after'])) {
+                    $hay[] = $this->auditToSearchText($j['event_after']);
+                }
+
                 $found = false;
                 foreach ($hay as $h) {
-                    if ($h !== '' && mb_stripos($h, $q) !== false) { $found = true; break; }
+                    if ($h !== '' && $this->auditContains($h, $q)) { $found = true; break; }
                 }
                 if (!$found) continue;
             }
