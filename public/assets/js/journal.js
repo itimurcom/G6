@@ -1,7 +1,91 @@
 (function () {
     var elList = document.getElementById('audit-list');
     if (!elList) return;
-    var isAdmin = String(elList.dataset.isAdmin) === '1';
+var isAdmin = String(elList.dataset.isAdmin) === '1';
+
+// Toolbar v3: replace "Дії всіх користувачів / Мої дії" radios with a single admin-only checkbox "Мої дії".
+// For non-admin users, scope controls are hidden and the API is forced to "me" server-side.
+var chkMy = null;
+var btnClear = null;
+
+function updateClearButton() {
+    if (!btnClear || !q) return;
+    var has = !!(q.value && q.value.trim());
+    try { btnClear.style.display = has ? '' : 'none'; } catch (e) { /* no-op */ }
+}
+
+function rebuildToolbarRow() {
+    var toolbar = null;
+    try {
+        toolbar = (btnRefresh && btnRefresh.closest) ? btnRefresh.closest('.audit-toolbar') : document.querySelector('#audit-block .audit-toolbar');
+    } catch (e) { toolbar = null; }
+    if (!toolbar) return;
+
+    // Hide old scope radios (always)
+    try {
+        Array.prototype.slice.call(toolbar.querySelectorAll('input[name="audit_scope"]')).forEach(function (inp) {
+            try { inp.disabled = true; } catch (e) { /* no-op */ }
+            var lbl = null;
+            try { lbl = inp.closest ? inp.closest('label') : null; } catch (e) { lbl = null; }
+            if (lbl) { try { lbl.style.display = 'none'; } catch (e) { /* no-op */ } }
+            else { try { inp.style.display = 'none'; } catch (e) { /* no-op */ } }
+        });
+    } catch (e) { /* no-op */ }
+
+    // Create admin-only checkbox
+    if (isAdmin && !chkMy) {
+        chkMy = document.createElement('input');
+        chkMy.type = 'checkbox';
+        chkMy.id = 'audit-my';
+        chkMy.className = 'audit-my';
+        chkMy.checked = false;
+
+        var lblMy = document.createElement('label');
+        lblMy.className = 'audit-my-label';
+        lblMy.appendChild(chkMy);
+        lblMy.appendChild(document.createTextNode(' Мої дії'));
+        toolbar.appendChild(lblMy);
+    }
+
+    // Refresh button as icon
+    if (btnRefresh) {
+        try {
+            btnRefresh.classList.add('audit-icon-btn');
+            btnRefresh.textContent = '⟳';
+            btnRefresh.title = 'Оновити';
+            btnRefresh.setAttribute('aria-label', 'Оновити');
+        } catch (e) { /* no-op */ }
+    }
+
+    // Clear button (shown only when the search query is not empty)
+    if (!btnClear) {
+        btnClear = document.createElement('button');
+        btnClear.type = 'button';
+        btnClear.id = 'audit-clear';
+        btnClear.className = 'btn audit-icon-btn audit-clear-btn';
+        btnClear.textContent = '✕';
+        btnClear.title = 'Очистити';
+        btnClear.setAttribute('aria-label', 'Очистити');
+        toolbar.appendChild(btnClear);
+    }
+
+    // Re-order controls to a single horizontal row:
+    // action | limit | (admin) my checkbox | search | refresh | clear
+    try {
+        var nodes = [];
+        if (selAction) nodes.push(selAction);
+        if (selLimit) nodes.push(selLimit);
+        if (isAdmin && chkMy && chkMy.parentNode) nodes.push(chkMy.parentNode);
+        if (q) nodes.push(q);
+        if (btnRefresh) nodes.push(btnRefresh);
+        if (btnClear) nodes.push(btnClear);
+
+        nodes.forEach(function (n) { if (n) toolbar.appendChild(n); });
+    } catch (e) { /* no-op */ }
+
+    updateClearButton();
+}
+
     var scopeRadios = document.querySelectorAll('input[name="audit_scope"]');
     var q = document.getElementById('audit-q');
     var selAction = document.getElementById('audit-action');
@@ -13,8 +97,8 @@
     var offset = 0;
     function currentScope() {
         if (!isAdmin) return 'me';
-        var r = Array.prototype.slice.call(scopeRadios).find(function (r) { return r.checked; });
-        return r ? r.value : 'me';
+        if (chkMy && chkMy.checked) return 'me';
+        return 'all';
     }
     function apiUrl(extra) {
         var base = '/api/audit/list';
@@ -124,6 +208,105 @@
 
     var isAdmin = String(elList.dataset.isAdmin) === '1';
 
+// Toolbar v3 (within v2 block): admin-only checkbox "Мої дії" + single-row layout + icon buttons.
+var chkMy = null;
+var btnClear = null;
+
+function updateClearButton() {
+    if (!btnClear || !q) return;
+    var has = !!(q.value && q.value.trim());
+    try { btnClear.style.display = has ? '' : 'none'; } catch (e) { /* no-op */ }
+}
+
+function rebuildToolbarRow() {
+    var toolbar = null;
+    try {
+        toolbar = (btnRefresh && btnRefresh.closest) ? btnRefresh.closest('.audit-toolbar') : document.querySelector('#audit-block .audit-toolbar');
+    } catch (e) { toolbar = null; }
+    if (!toolbar) return;
+
+    // Hide old scope radios (always). Keep markup intact, just disable and hide labels.
+    try {
+        Array.prototype.slice.call(toolbar.querySelectorAll('input[name="audit_scope"]')).forEach(function (inp) {
+            try { inp.disabled = true; } catch (e) { /* no-op */ }
+            var lbl = null;
+            try { lbl = inp.closest ? inp.closest('label') : null; } catch (e) { lbl = null; }
+            if (lbl) { try { lbl.style.display = 'none'; } catch (e) { /* no-op */ } }
+            else { try { inp.style.display = 'none'; } catch (e) { /* no-op */ } }
+        });
+    } catch (e) { /* no-op */ }
+
+    // Create admin-only checkbox
+    if (isAdmin && !chkMy) {
+        chkMy = document.createElement('input');
+        chkMy.type = 'checkbox';
+        chkMy.id = 'audit-my';
+        chkMy.className = 'audit-my';
+        chkMy.checked = false;
+
+        var lblMy = document.createElement('label');
+        lblMy.className = 'audit-my-label';
+        lblMy.appendChild(chkMy);
+        lblMy.appendChild(document.createTextNode(' Мої дії'));
+        toolbar.appendChild(lblMy);
+
+        // Filter when enabled (admin only)
+        chkMy.addEventListener('change', function () { try { loadPage(1); } catch (e) { /* no-op */ } });
+    }
+
+    // Refresh button as icon
+    if (btnRefresh) {
+        try {
+            btnRefresh.classList.add('audit-icon-btn');
+            btnRefresh.textContent = '⟳';
+            btnRefresh.title = 'Оновити';
+            btnRefresh.setAttribute('aria-label', 'Оновити');
+        } catch (e) { /* no-op */ }
+    }
+
+    // Clear button (shown only when the search query is not empty)
+    if (!btnClear) {
+        btnClear = document.createElement('button');
+        btnClear.type = 'button';
+        btnClear.id = 'audit-clear';
+        btnClear.className = 'btn audit-icon-btn audit-clear-btn';
+        btnClear.textContent = '✕';
+        btnClear.title = 'Очистити';
+        btnClear.setAttribute('aria-label', 'Очистити');
+        toolbar.appendChild(btnClear);
+
+        btnClear.addEventListener('click', function () {
+            if (!q) return;
+            q.value = '';
+            updateClearButton();
+            try { loadPage(1); } catch (e) { /* no-op */ }
+            try { q.focus(); } catch (e) { /* no-op */ }
+        });
+    }
+
+    // Watch search input to toggle clear button visibility
+    if (q && !q.__auditClearBound) {
+        q.__auditClearBound = true;
+        q.addEventListener('input', updateClearButton);
+    }
+
+    // Re-order controls to a single horizontal row:
+    // action | limit | (admin) my checkbox | search | refresh | clear
+    try {
+        var nodes = [];
+        if (selAction) nodes.push(selAction);
+        if (selLimit) nodes.push(selLimit);
+        if (isAdmin && chkMy && chkMy.parentNode) nodes.push(chkMy.parentNode);
+        if (q) nodes.push(q);
+        if (btnRefresh) nodes.push(btnRefresh);
+        if (btnClear) nodes.push(btnClear);
+
+        nodes.forEach(function (n) { if (n) toolbar.appendChild(n); });
+    } catch (e) { /* no-op */ }
+
+    updateClearButton();
+}
+
     // Hide admin-only UI if the user is not admin (the markup always exists)
     if (!isAdmin) {
         Array.prototype.slice.call(document.querySelectorAll('.admin-only')).forEach(function (n) {
@@ -145,6 +328,8 @@
         }
     } catch (e) { /* no-op */ }
 
+    rebuildToolbarRow();
+
     injectAuditUiCss();
     ensureAuditModal();
 
@@ -159,8 +344,8 @@
 
     function currentScope() {
         if (!isAdmin) return 'me';
-        var r = Array.prototype.slice.call(scopeRadios).find(function (r) { return r.checked; });
-        return r ? r.value : 'me';
+        if (chkMy && chkMy.checked) return 'me';
+        return 'all';
     }
 
     function apiUrl(offset) {
@@ -320,8 +505,12 @@
         var tdEv = document.createElement('td');
         tdEv.className = 'audit-col-ev';
         tdEv.innerHTML =
-            '<div class="audit-ev-main">' + esc(summary.title) + '</div>' +
-            (summary.sub ? '<div class="audit-ev-sub">' + esc(summary.sub) + '</div>' : '');
+            '<div class="audit-ev-main">' + esc(summary.title) + '</div>';
+
+        var tdCtx = document.createElement('td');
+        tdCtx.className = 'audit-col-ctx';
+        tdCtx.innerHTML =
+            (summary.sub ? '<div class="audit-ctx audit-ev-sub">' + esc(summary.sub) + '</div>' : '');
 
         var tdAu = document.createElement('td');
         tdAu.className = 'audit-col-author';
@@ -345,6 +534,7 @@
 
         tr.appendChild(tdTs);
         tr.appendChild(tdEv);
+        tr.appendChild(tdCtx);
         tr.appendChild(tdAu);
         tr.appendChild(tdRes);
         tr.appendChild(tdMore);
@@ -431,8 +621,27 @@
     if (btnNext) btnNext.addEventListener('click', function () { if (state.page < state.totalPages) loadPage(state.page + 1); });
     if (btnPrev) btnPrev.addEventListener('click', function () { if (state.page > 1) loadPage(state.page - 1); });
 
-    [q, selAction, selLimit].forEach(function (el) { el && el.addEventListener('change', refresh); });
-    Array.prototype.slice.call(scopeRadios).forEach(function (r) { r && r.addEventListener('change', refresh); });
+[q, selAction, selLimit].forEach(function (el) { el && el.addEventListener('change', refresh); });
+Array.prototype.slice.call(scopeRadios).forEach(function (r) { r && r.addEventListener('change', refresh); });
+
+if (q) {
+    q.addEventListener('input', updateClearButton);
+    q.addEventListener('keydown', function (e) {
+        if (e && e.key === 'Enter') {
+            try { e.preventDefault(); } catch (e2) { /* no-op */ }
+            refresh();
+        }
+    });
+}
+if (chkMy) chkMy.addEventListener('change', refresh);
+if (btnClear) btnClear.addEventListener('click', function () {
+    if (q) {
+        q.value = '';
+        updateClearButton();
+        try { q.focus(); } catch (e) { /* no-op */ }
+    }
+    refresh();
+});
 
     refresh();
 
@@ -454,6 +663,7 @@
         thead.innerHTML = '<tr>' +
             '<th class="audit-col-ts">Час</th>' +
             '<th class="audit-col-ev">Подія</th>' +
+            '<th class="audit-col-ctx">Дані</th>' +
             '<th class="audit-col-author">Автор</th>' +
             '<th class="audit-col-result">Статус</th>' +
             '<th class="audit-col-more">Деталі</th>' +
@@ -497,19 +707,24 @@
         st.id = 'audit-ui-v2-style';
         st.textContent = [
             '#audit-block{width:100%}',
-            '#audit-block .audit-toolbar{flex-wrap:wrap;gap:10px}',
-            '#audit-block #audit-q{flex:1;min-width:220px}',
+            '#audit-block .audit-toolbar{flex-wrap:nowrap;gap:10px;align-items:center;overflow-x:auto}','#audit-block #audit-action{flex:0 0 10%;min-width:12em}',
+'#audit-block #audit-limit{flex:0 0 5%;min-width:4em}',
+'#audit-block .audit-my-label{flex:0 0 auto;white-space:nowrap;display:flex;gap:6px;align-items:center;opacity:.85}',
+'#audit-block .audit-my-label input[type=checkbox]{accent-color:#4b9}',
+'#audit-block #audit-q{flex:1 1 auto;min-width:12em}',
+'#audit-block .audit-icon-btn{display:inline-flex;align-items:center;justify-content:center;line-height:1}',
             '#audit-block .audit-table-wrap{width:100%;overflow:auto;border:1px solid var(--border);border-radius:12px;background:var(--event-bg)}',
             '#audit-block .audit-table{width:100%;border-collapse:separate;border-spacing:0}',
             '#audit-block .audit-table th,#audit-block .audit-table td{padding:10px 12px;vertical-align:top;border-bottom:1px solid rgba(255,255,255,.06)}',
             ':root[data-theme="light"] #audit-block .audit-table th,:root[data-theme="light"] #audit-block .audit-table td{border-bottom:1px solid rgba(0,0,0,.06)}',
             '#audit-block .audit-table th{position:sticky;top:0;background:var(--event-bg);text-align:left;font-weight:700;z-index:1}',
             '#audit-block .audit-col-ts{white-space:nowrap;min-width:150px}',
+            '#audit-block .audit-col-ctx{white-space:nowrap;min-width:220px}',
             '#audit-block .audit-col-author{white-space:nowrap;min-width:120px}',
             '#audit-block .audit-col-result{white-space:nowrap;min-width:90px}',
             '#audit-block .audit-col-more{white-space:nowrap;min-width:90px}',
-            '#audit-block .audit-ev-main{font-weight:700}',
-            '#audit-block .audit-ev-sub{opacity:.78;font-size:12px;margin-top:2px}',
+            '#audit-block .audit-ev-main{font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
+            '#audit-block .audit-ev-sub{opacity:.78;font-size:12px;margin-top:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
             '#audit-block .audit-author{color:#22c55e;font-weight:800}',
             '#audit-block .audit-result{display:inline-flex;align-items:center;gap:6px;padding:3px 8px;border-radius:999px;font-size:12px;border:1px solid rgba(255,255,255,.10)}',
             ':root[data-theme="light"] #audit-block .audit-result{border:1px solid rgba(0,0,0,.10)}',
