@@ -2,7 +2,7 @@
 namespace App\Core;
 
 use App\Models\UserRepositoryInterface;
-use App\Models\UserFileRepository;
+use App\Models\UserMysqlRepository; // <--- ЗМІНЕНО: Підключаємо MySQL репозиторій
 
 final class Auth
 {
@@ -10,7 +10,8 @@ final class Auth
 
     private static function repo(): UserRepositoryInterface {
         if (!self::$repo) {
-            self::$repo = new UserFileRepository();
+            // <--- ЗМІНЕНО: Використовуємо клас для роботи з MySQL
+            self::$repo = new UserMysqlRepository();
         }
         return self::$repo;
     }
@@ -31,7 +32,7 @@ final class Auth
     public static function login(string $login, string $password): bool {
         $user = self::repo()->findByLogin($login);
         if (!$user) return false;
-            // if user exists but has empty/absent password hash -> force setup flow
+            // Перевірка на порожній пароль (для старих акаунтів)
             if ($user && (!isset($user['password_hash']) || trim((string)$user['password_hash']) === '')) {
                 $_SESSION['password_setup_user_id'] = (int)($user['id'] ?? 0);
                 $_SESSION['password_setup_email']   = (string)($user['email'] ?? '');
@@ -42,9 +43,12 @@ final class Auth
                 header('Location: /password/setup', true, 302);
                 return false;
             }
+        
         if (!password_verify($password, $user['password_hash'])) return false;
+        
         Session::set('user_id', (int)$user['id']);
-        // Store full user profile in session for fast access
+        
+        // Зберігаємо профіль у сесії для швидкодії
         try {
             $role = isset($user['role']) ? (string)$user['role'] : '';
             $isAdm = (mb_strtolower($role) === 'admin') || !empty($user['is_admin']);
@@ -99,17 +103,15 @@ final class Auth
 
     public static function adminsExist(): bool
     {
-        $file = dirname(__DIR__, 2) . '/storage/data/users.json';
-        if (!is_file($file)) return false;
-        $json = file_get_contents($file);
-        if ($json === false) return false;
-        $arr = json_decode($json, true);
-        if (!is_array($arr)) return false;
-        foreach ($arr as $u) {
-            $role = is_array($u) ? ($u['role'] ?? null) : (is_object($u) ? ($u->role ?? null) : null);
+        // Перевірка наявності адмінів через БД
+        $repo = self::repo();
+        // Оскільки UserMysqlRepository має метод all(), використовуємо його
+        // (Для великих баз краще написати окремий SQL запит count(*), але для старту цього вистачить)
+        $all = $repo->all();
+        foreach ($all as $u) {
+            $role = is_array($u) ? ($u['role'] ?? null) : null;
             if (mb_strtolower((string)$role) === 'admin' || !empty($u['is_admin'])) return true;
         }
         return false;
     }
-
 }

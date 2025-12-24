@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 namespace App\Controllers;
 
-use App\Models\UserFileRepository;
+use App\Models\UserMysqlRepository; // <--- ЗМІНЕНО: Підключаємо MySQL репозиторій
 
 final class ApiUsersController
 {
@@ -11,7 +11,8 @@ final class ApiUsersController
 
     public function __construct()
     {
-        $this->users = new UserFileRepository();
+        // <--- ЗМІНЕНО: Створюємо екземпляр MySQL репозиторія
+        $this->users = new UserMysqlRepository();
     }
 
     private function json($data, int $code = 200): void
@@ -63,8 +64,6 @@ final class ApiUsersController
             $this->json(['ok'=>false,'error'=>'internal','message'=>$e->getMessage()], 500);
         }
     }
-
-
 
     public function get(): void
     {

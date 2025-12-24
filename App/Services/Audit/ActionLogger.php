@@ -3,44 +3,18 @@ declare(strict_types=1);
 
 namespace App\Services\Audit;
 
-/**
- * Append-only NDJSON logger for user actions.
- * File: App/storage/logs/audit.ndjson
- */
-final class ActionLogger
+use App\Core\Database;
+use PDO;
+
+class ActionLogger
 {
-    /** @var string */
-    private string $file;
+    private PDO $db;
 
-    public function __construct(?string $file = null)
+    public function __construct()
     {
-        // __DIR__ = App/Services/Audit
-        $appRoot     = \dirname(__DIR__, 2);       // -> App
-        $projectRoot = \dirname($appRoot);         // -> project root (calendar.localhost)
-
-        // Legacy location (old behaviour): App/storage/logs
-        $legacyDir = $appRoot . '/storage/logs';
-
-        // Preferred location: project-root/storage/logs (shared with other storage)
-        $rootDir = $projectRoot . '/storage/logs';
-
-        // Prefer rootDir if possible, otherwise fall back to legacyDir
-        $logsDir = $rootDir;
-        if (!is_dir($logsDir)) {
-            @mkdir($logsDir, 0775, true);
-        }
-        if (!is_dir($logsDir) || !is_writable($logsDir)) {
-            $logsDir = $legacyDir;
-            if (!is_dir($logsDir)) {
-                @mkdir($logsDir, 0775, true);
-            }
-        }
-
-        $this->file = $file ?: ($logsDir . '/audit.ndjson');
+        $this->db = Database::connect();
     }
 
-
-    /** Generic context from current request/session */
     private function context(): array
     {
         $u = $_SESSION['user'] ?? null;
@@ -50,46 +24,56 @@ final class ActionLogger
         return [
             'user_id'   => $uid,
             'user_name' => $uname,
-            'ip'        => $_SERVER['REMOTE_ADDR']   ?? null,
+            'ip'        => $_SERVER['REMOTE_ADDR']    ?? null,
             'ua'        => $_SERVER['HTTP_USER_AGENT'] ?? null,
         ];
     }
 
-    /** Low-level writer: append one NDJSON line */
     private function write(array $row): bool
     {
-        if (!isset($row['ts'])) {
-            $row['ts'] = date('Y-m-d H:i:s');
-        }
-        $json = json_encode($row, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-        if ($json === false) return false;
+        $sql = "INSERT INTO audit_logs (user_id, user_name, action, result, entity_type, entity_id, payload, ip, ua, created_at) 
+                VALUES (:uid, :uname, :action, :result, :etype, :eid, :payload, :ip, :ua, :created)";
+        
+        // Витягуємо основні поля, все інше — в JSON payload
+        $payloadData = $row;
+        // Видаляємо дубльовані поля з payload, щоб не засмічувати JSON
+        unset($payloadData['user_id'], $payloadData['user_name'], $payloadData['action'], $payloadData['result'], $payloadData['ip'], $payloadData['ua'], $payloadData['ts']);
+        
+        $entityType = $payloadData['entity_type'] ?? null;
+        $entityId   = $payloadData['entity_id'] ?? null;
+        unset($payloadData['entity_type'], $payloadData['entity_id']);
 
-        $fh = @fopen($this->file, 'ab');
-        if (!$fh) return false;
-        $ok = @fwrite($fh, $json . "\n") !== false;
-        @fclose($fh);
-        return $ok;
+        $stmt = $this->db->prepare($sql);
+        return $stmt->execute([
+            'uid'     => $row['user_id'] ?? null,
+            'uname'   => $row['user_name'] ?? null,
+            'action'  => $row['action'] ?? 'unknown',
+            'result'  => $row['result'] ?? 'success',
+            'etype'   => $entityType,
+            'eid'     => $entityId,
+            'payload' => json_encode($payloadData, JSON_UNESCAPED_UNICODE),
+            'ip'      => $row['ip'] ?? null,
+            'ua'      => $row['ua'] ?? null,
+            'created' => date('Y-m-d H:i:s')
+        ]);
     }
 
-    /** Log authentication events */
     public function logAuth(string $action, $userId = null, $userName = null, string $result = 'success', array $meta = []): void
     {
         $ctx = $this->context();
         if ($userId !== null)   { $ctx['user_id'] = $userId; }
         if ($userName !== null) { $ctx['user_name'] = $userName; }
+        
         $row = array_merge($ctx, $meta, [
-            'type'   => 'auth',
             'action' => $action,
             'result' => $result,
         ]);
         $this->write($row);
     }
 
-    /** Log generic application actions */
     public function log(string $action, string $result = 'success', array $meta = []): void
     {
         $row = array_merge($this->context(), $meta, [
-            'type'   => 'app',
             'action' => $action,
             'result' => $result,
         ]);

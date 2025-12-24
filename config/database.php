@@ -3,8 +3,8 @@ return [
     'driver' => 'mysql',
     'host' => 'localhost',
     'port' => 3306,
-    'database' => 'app',
+    'database' => 'g6',
     'username' => 'user',
-    'password' => 'secret',
+    'password' => 'WsxCde765',
     'charset' => 'utf8mb4',
 ];

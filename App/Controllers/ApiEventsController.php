@@ -3,17 +3,18 @@ declare(strict_types=1);
 
 namespace App\Controllers;
 
-use App\Models\FileEventRepository;
-use App\Models\LoggingEventRepository; // AUDIT: ADD ONLY
+use App\Models\EventMysqlRepository; // <--- ЗМІНЕНО: Використовуємо MySQL репозиторій
+use App\Models\LoggingEventRepository;
 
 final class ApiEventsController
 {
-    /** @var \App\Models\FileEventRepository */
+    /** @var \App\Models\EventRepositoryInterface */
     private $repo;
 
     public function __construct()
     {
-        $this->repo = new LoggingEventRepository(new FileEventRepository()); // AUDIT: ADD ONLY
+        // <--- ЗМІНЕНО: Передаємо MySQL версію всередину логера
+        $this->repo = new LoggingEventRepository(new EventMysqlRepository());
     }
 
     private function json($data, int $code = 200): void
@@ -95,7 +96,11 @@ final class ApiEventsController
         try {
             // never trust client-supplied user_id
             if (isset($payload['event']) && is_array($payload['event'])) { unset($payload['event']['user_id']); }
-            $id = $this->repo->create($payload['date'] ?? '', $payload);
+            
+            // MySQL repo повертає масив, старий повертав ID. Уніфікуємо:
+            $res = $this->repo->create($payload['date'] ?? '', $payload);
+            $id = is_array($res) ? ($res['id'] ?? '') : $res;
+
             $this->json(['ok'=>true,'id'=>$id], 201);
         } catch (\Throwable $e) {
             $this->json(['ok'=>false,'error'=>$e->getMessage()], 400);
@@ -214,8 +219,8 @@ final class ApiEventsController
             $ok = $this->repo->updateById($id, ['date' => $date, 'event' => $event]);
 
             $this->json([
-                'ok'           => (bool)$ok,
-                'id'           => $id,
+                'ok'            => (bool)$ok,
+                'id'            => $id,
                 'close_user_id'=> $event['close_user_id'] ?? null,
                 'close_time'   => $event['close_time'] ?? null,
             ]);
