@@ -1,37 +1,34 @@
 <?php
 // FILE: /bin/reindex_audit.php
+
 require_once __DIR__ . '/../vendor/autoload.php';
 require_once __DIR__ . '/../App/Core/Database.php';
+// Явне підключення, щоб точно знайти файл
+require_once __DIR__ . '/../App/Services/Audit/AuditLabels.php';
 
 use App\Core\Database;
+use App\Services\Audit\AuditLabels;
 
-// --- ТОЧНА КОПІЯ ЛОГІКИ З ACTIONLOGGER ---
 function generateSearchText(array $row): string
 {
     $parts = [];
 
-    // 1. Хто і Де
+    // 1. Хто
     if (!empty($row['user_name'])) $parts[] = $row['user_name'];
     if (!empty($row['ip']))        $parts[] = $row['ip'];
     if (!empty($row['entity_id'])) $parts[] = $row['entity_id'];
 
-    // 2. Дії
+    // 2. Дія (З AuditLabels)
     $act = $row['action'] ?? '';
-    $actionsMap = [
-        'auth.login'            => 'Вхід в систему login',
-        'auth.logout'           => 'Вихід із системи logout',
-        'calendar.event.create' => 'Створення події нова create',
-        'calendar.event.update' => 'Редагування події зміна update',
-        'calendar.event.delete' => 'Видалення події delete',
-        'calendar.event.done'   => 'Зміна статусу виконання',
-        'calendar.event.urgent' => 'Зміна терміновості',
-        'user.create'           => 'Створення користувача',
-        'user.update'           => 'Редагування користувача',
-        'user.password'         => 'Зміна пароля',
-    ];
+    $config = AuditLabels::getConfig();
 
-    if (isset($actionsMap[$act])) {
-        $parts[] = $actionsMap[$act];
+    if (isset($config[$act])) {
+        // Додаємо "людську назву" (напр. "Редагування події")
+        $parts[] = $config[$act]['text']; 
+        // Додаємо теги (напр. "зміна update")
+        if (!empty($config[$act]['tags'])) {
+            $parts[] = $config[$act]['tags'];
+        }
     } else {
         $parts[] = str_replace('.', ' ', $act);
     }
@@ -40,59 +37,43 @@ function generateSearchText(array $row): string
     $payload = json_decode($row['payload'] ?? '{}', true);
     if (!is_array($payload)) $payload = [];
 
-    // Поля календаря
-    if (!empty($payload['title']))       $parts[] = "Заголовок: " . $payload['title'];
-    if (!empty($payload['description'])) $parts[] = "Опис: " . $payload['description'];
-    if (!empty($payload['owner']))       $parts[] = "Власник: " . $payload['owner'];
-    if (!empty($payload['incoming_no'])) $parts[] = "Вх. №" . $payload['incoming_no'];
-    if (!empty($payload['outgoing_no'])) $parts[] = "Вих. №" . $payload['outgoing_no'];
-    if (!empty($payload['start_date']))  $parts[] = "Дата: " . $payload['start_date'];
-    
-    // Статуси
-    if (isset($payload['done'])) {
-        if ($payload['done'] == 1 || $payload['done'] === true || $payload['done'] === 'true') {
-            $parts[] = "Статус: Виконано Зроблено";
-        } elseif ($payload['done'] === 0 || $payload['done'] === false || $payload['done'] === 'false') {
-            $parts[] = "Статус: Не виконано В роботі";
-        }
-    }
-    if (isset($payload['urgent'])) {
-        if ($payload['urgent'] == 1 || $payload['urgent'] === true || $payload['urgent'] === 'true') {
-            $parts[] = "Пріоритет: Терміново Важливо";
-        }
-    }
+    // Очистка технічних полів з payload
+    unset($payload['user_id'], $payload['user_name'], $payload['action'], $payload['result'], $payload['ip'], $payload['ua'], $payload['ts'], $payload['entity_type'], $payload['entity_id']);
 
-    // Все інше
-    array_walk_recursive($payload, function($value, $key) use (&$parts) {
-        if (in_array($key, ['title', 'description', 'incoming_no', 'outgoing_no', 'done', 'urgent', 'start_date'])) return;
-        if (is_string($value) && !empty($value)) $parts[] = $value;
-        elseif (is_numeric($value)) $parts[] = (string)$value;
+    // Специфічні прапорці
+    if (isset($payload['done']))   $parts[] = $payload['done'] ? 'Виконано' : 'Не виконано';
+    if (isset($payload['urgent'])) $parts[] = $payload['urgent'] ? 'Терміново' : '';
+
+    // Рекурсивно витягуємо весь текст
+    array_walk_recursive($payload, function($value) use (&$parts) {
+        if (is_string($value) && !empty($value)) {
+            $parts[] = $value;
+        } elseif (is_numeric($value)) {
+            $parts[] = (string)$value;
+        }
     });
 
     return implode(' ', array_unique($parts));
 }
-// ------------------------------------------
 
 try {
     echo "Підключення до БД...\n";
     $pdo = Database::connect();
-
-    echo "Вибірка всіх записів...\n";
-    $stmt = $pdo->query("SELECT * FROM audit_logs");
-    $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
-    echo "Всього записів: " . count($rows) . "\n";
-
+    
+    echo "Оновлення індексу...\n";
+    $stmt = $pdo->query("SELECT id, user_name, ip, entity_id, action, payload FROM audit_logs");
+    
     $upd = $pdo->prepare("UPDATE audit_logs SET search_text = :txt WHERE id = :id");
+    
     $count = 0;
-
-    foreach ($rows as $row) {
+    while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
         $text = generateSearchText($row);
         $upd->execute(['txt' => $text, 'id' => $row['id']]);
         $count++;
-        if ($count % 50 === 0) echo ".";
+        if ($count % 100 === 0) echo "Оновлено $count...\r";
     }
 
-    echo "\nГОТОВО! Оновлено $count записів.\n";
+    echo "\nГОТОВО! Оновлено записів: $count.\n";
 
 } catch (Exception $e) {
     echo "ПОМИЛКА: " . $e->getMessage() . "\n";

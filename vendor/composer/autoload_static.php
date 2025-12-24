@@ -89,6 +89,7 @@ class ComposerStaticInitf502405953d43c522bce30c01bf37ad3
         'App\\Models\\UserRepositoryInterface' => __DIR__ . '/../..' . '/App/Models/UserRepositoryInterface.php',
         'App\\Security\\Csrf' => __DIR__ . '/../..' . '/App/Security/Csrf.php',
         'App\\Services\\Audit\\ActionLogger' => __DIR__ . '/../..' . '/App/Services/Audit/ActionLogger.php',
+        'App\\Services\\Audit\\AuditLabels' => __DIR__ . '/../..' . '/App/Services/Audit/AuditLabels.php',
         'Composer\\InstalledVersions' => __DIR__ . '/..' . '/composer/InstalledVersions.php',
         'DeepCopy\\DeepCopy' => __DIR__ . '/..' . '/myclabs/deep-copy/src/DeepCopy/DeepCopy.php',
         'DeepCopy\\Exception\\CloneException' => __DIR__ . '/..' . '/myclabs/deep-copy/src/DeepCopy/Exception/CloneException.php',

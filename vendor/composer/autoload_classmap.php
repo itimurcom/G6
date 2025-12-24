@@ -35,6 +35,7 @@ return array(
     'App\\Models\\UserRepositoryInterface' => $baseDir . '/App/Models/UserRepositoryInterface.php',
     'App\\Security\\Csrf' => $baseDir . '/App/Security/Csrf.php',
     'App\\Services\\Audit\\ActionLogger' => $baseDir . '/App/Services/Audit/ActionLogger.php',
+    'App\\Services\\Audit\\AuditLabels' => $baseDir . '/App/Services/Audit/AuditLabels.php',
     'Composer\\InstalledVersions' => $vendorDir . '/composer/InstalledVersions.php',
     'DeepCopy\\DeepCopy' => $vendorDir . '/myclabs/deep-copy/src/DeepCopy/DeepCopy.php',
     'DeepCopy\\Exception\\CloneException' => $vendorDir . '/myclabs/deep-copy/src/DeepCopy/Exception/CloneException.php',
