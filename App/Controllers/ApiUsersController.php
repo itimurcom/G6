@@ -3,17 +3,19 @@ declare(strict_types=1);
 
 namespace App\Controllers;
 
-use App\Models\UserMysqlRepository; // <--- ЗМІНЕНО: Підключаємо MySQL репозиторій
+use App\Models\UserMysqlRepository;
+use App\Core\Auth;
 
 final class ApiUsersController
 {
-    private $users;
+    private UserMysqlRepository $users;
 
     public function __construct()
     {
-        // <--- ЗМІНЕНО: Створюємо екземпляр MySQL репозиторія
         $this->users = new UserMysqlRepository();
     }
+
+    // --- Допоміжні методи ---
 
     private function json($data, int $code = 200): void
     {
@@ -25,55 +27,226 @@ final class ApiUsersController
         echo json_encode($data, JSON_UNESCAPED_UNICODE);
     }
 
+    private function parseJson(): ?array
+    {
+        $raw = file_get_contents('php://input');
+        if ($raw === false || $raw === '') return [];
+        $payload = json_decode($raw, true);
+        return is_array($payload) ? $payload : null;
+    }
+
+    private function checkAdmin(): bool
+    {
+        $me = Auth::user();
+        if (!$me) return false;
+        
+        $role = strtolower((string)($me['role'] ?? ''));
+        return ($role === 'admin' || !empty($me['is_admin']));
+    }
+
+    // --- Публічні методи API ---
+
+    /**
+     * GET /api/users/me
+     * Повертає профіль поточного користувача
+     */
     public function me(): void
     {
         try {
-            // Fast path: use cached session profile if available
-            $sessUser = null;
-            try { $sessUser = \App\Core\Session::get('user', null); } catch (\Throwable $__){ }
-
-            if (is_array($sessUser) && (int)($sessUser['id'] ?? 0) > 0) {
-                $id   = (int)$sessUser['id'];
-                $name = (string)($sessUser['name'] ?? ($sessUser['login'] ?? ('User #'.$id)));
-                $this->json(['ok'=>true, 'user'=>[
-                    'id'    => $id,
-                    'name'  => $name,
-                    'login' => $sessUser['login'] ?? null,
-                    'email' => $sessUser['email'] ?? null,
-                    'role'  => $sessUser['role'] ?? null,
-                ]]);
-                return;
+            $uid = Auth::id();
+            if (!$uid) { 
+                $this->json(['ok'=>false, 'error'=>'unauthorized'], 401); 
+                return; 
             }
 
-            $uid = (int)(\App\Core\Session::get('user_id', 0));
-            if ($uid <= 0) { $this->json(['ok'=>false,'error'=>'unauthorized'], 401); return; }
-
             $u = $this->users->findById($uid);
-            if (!$u) { $this->json(['ok'=>false,'error'=>'not_found'], 404); return; }
+            if (!$u) { 
+                $this->json(['ok'=>false, 'error'=>'not_found'], 404); 
+                return; 
+            }
 
-            $name = (string)($u['name'] ?? ($u['login'] ?? ('User #'.$uid)));
-
+            // Формуємо безпечну відповідь (без пароля)
             $this->json(['ok'=>true, 'user'=>[
-                'id'    => (int)($u['id'] ?? $uid),
-                'name'  => $name,
-                'login' => $u['login'] ?? null,
+                'id'    => (int)$u['id'],
+                'name'  => $u['name'] ?? $u['login'],
+                'login' => $u['login'],
                 'email' => $u['email'] ?? null,
-                'role'  => $u['role'] ?? null,
+                'role'  => $u['role'] ?? 'user',
+                'is_admin' => !empty($u['is_admin'])
             ]]);
+        } catch (\Throwable $e) {
+            $this->json(['ok'=>false, 'error'=>'internal', 'message'=>$e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * GET /api/users/list
+     * Список всіх користувачів (тільки для адміна)
+     */
+    public function list(): void
+    {
+        if (!$this->checkAdmin()) {
+            $this->json(['ok'=>false, 'error'=>'forbidden'], 403);
+            return;
+        }
+
+        try {
+            $all = $this->users->all();
+            // Видаляємо хеші паролів перед відправкою
+            $safeList = array_map(function($u) {
+                unset($u['password_hash']);
+                return $u;
+            }, $all);
+
+            $this->json(['ok'=>true, 'users'=>$safeList]);
+        } catch (\Throwable $e) {
+            $this->json(['ok'=>false, 'error'=>'internal', 'message'=>$e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * GET /api/users/get?id=1
+     * Отримання одного користувача
+     */
+    public function get(): void
+    {
+        if (!$this->checkAdmin()) {
+            $this->json(['ok'=>false, 'error'=>'forbidden'], 403);
+            return;
+        }
+
+        $id = (int)($_GET['id'] ?? 0);
+        if ($id <= 0) { $this->json(['ok'=>false,'error'=>'id required'], 400); return; }
+
+        try {
+            $u = $this->users->findById($id);
+            if (!$u) { $this->json(['ok'=>false,'error'=>'not_found'], 404); return; }
+            
+            unset($u['password_hash']);
+            $this->json(['ok'=>true, 'user'=>$u]);
         } catch (\Throwable $e) {
             $this->json(['ok'=>false,'error'=>'internal','message'=>$e->getMessage()], 500);
         }
     }
 
-    public function get(): void
+    /**
+     * POST /api/users/create
+     * Створення користувача (Admin only)
+     */
+    public function create(): void
     {
-        $id = (int)($_GET['id'] ?? 0);
-        if ($id <= 0) { $this->json(['ok'=>false,'error'=>'id required'], 400); return; }
+        if (!$this->checkAdmin()) {
+            $this->json(['ok'=>false, 'error'=>'forbidden'], 403);
+            return;
+        }
+
+        $payload = $this->parseJson();
+        if ($payload === null) { $this->json(['ok'=>false,'error'=>'invalid json'], 400); return; }
+
         try {
+            if (empty($payload['login']) || empty($payload['password'])) {
+                $this->json(['ok'=>false,'error'=>'login and password required'], 400); 
+                return;
+            }
+
+            // Перевірка на унікальність логіна
+            if ($this->users->findByLogin($payload['login'])) {
+                $this->json(['ok'=>false,'error'=>'login_taken'], 400);
+                return;
+            }
+
+            // Хешування пароля
+            $payload['password_hash'] = password_hash($payload['password'], PASSWORD_DEFAULT);
+            unset($payload['password']); // Видаляємо відкритий пароль
+
+            // Дефолтні значення
+            if (empty($payload['name'])) $payload['name'] = $payload['login'];
+            if (empty($payload['role'])) $payload['role'] = 'user';
+
+            $id = $this->users->create($payload);
+            
+            $this->json(['ok'=>true, 'id'=>$id], 201);
+        } catch (\Throwable $e) {
+            $this->json(['ok'=>false,'error'=>'internal','message'=>$e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * POST /api/users/update
+     * Оновлення користувача та зміна пароля
+     */
+    public function update(): void
+    {
+        if (!$this->checkAdmin()) {
+            $this->json(['ok'=>false, 'error'=>'forbidden'], 403);
+            return;
+        }
+
+        $payload = $this->parseJson();
+        if ($payload === null) { $this->json(['ok'=>false,'error'=>'invalid json'], 400); return; }
+
+        $id = (int)($payload['id'] ?? 0);
+        if ($id <= 0) { $this->json(['ok'=>false,'error'=>'id required'], 400); return; }
+        unset($payload['id']);
+
+        try {
+            // Якщо передано пароль — хешуємо його
+            if (!empty($payload['password'])) {
+                $payload['password_hash'] = password_hash($payload['password'], PASSWORD_DEFAULT);
+                unset($payload['password']);
+            }
+            
+            // Видаляємо поле підтвердження, якщо воно прийшло з форми
+            if (isset($payload['password_confirm'])) unset($payload['password_confirm']);
+
+            $ok = $this->users->updateById($id, $payload);
+            $this->json(['ok'=>(bool)$ok]);
+        } catch (\Throwable $e) {
+            $this->json(['ok'=>false,'error'=>'internal','message'=>$e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * POST /api/users/delete
+     * Видалення користувача
+     */
+    public function delete(): void
+    {
+        if (!$this->checkAdmin()) {
+            $this->json(['ok'=>false, 'error'=>'forbidden'], 403);
+            return;
+        }
+
+        $payload = $this->parseJson();
+        $id = (int)($payload['id'] ?? 0);
+        
+        if ($id <= 0) { $this->json(['ok'=>false,'error'=>'id required'], 400); return; }
+        
+        // Захист від самовидалення
+        if ($id === Auth::id()) {
+            $this->json(['ok'=>false,'error'=>'cannot_delete_self'], 400);
+            return;
+        }
+
+        try {
+            // Перевіряємо, чи є такий юзер
             $u = $this->users->findById($id);
-            if (!$u) { $this->json(['ok'=>false,'error'=>'not_found'], 404); return; }
-            $name = (string)($u['name'] ?? ($u['login'] ?? ('User #'.$id)));
-            $this->json(['ok'=>true, 'user'=>['id'=>$id,'name'=>$name,'login'=>($u['login']??null),'email'=>($u['email']??null)]]);
+            if (!$u) {
+                $this->json(['ok'=>false,'error'=>'not_found'], 404);
+                return;
+            }
+            
+            // Якщо методу deleteById немає в інтерфейсі репозиторія, його треба додати
+            // Або виконати SQL напряму (але краще через репозиторій)
+            // Припускаємо, що метод існує, бо ми його додавали раніше
+             if (method_exists($this->users, 'deleteById')) {
+                $ok = $this->users->deleteById($id);
+                $this->json(['ok'=>(bool)$ok]);
+            } else {
+                // Fallback якщо забули додати метод в репозиторій
+                 $this->json(['ok'=>false,'error'=>'not_implemented_in_repo'], 501);
+            }
+            
         } catch (\Throwable $e) {
             $this->json(['ok'=>false,'error'=>'internal','message'=>$e->getMessage()], 500);
         }

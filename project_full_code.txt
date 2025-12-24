@@ -11,9 +11,17 @@ namespace App\Controllers;
 
 use App\Core\Controller;
 use App\Core\Request;
+use App\Core\Database;
+use PDO;
 
 final class ApiAuditController extends Controller
 {
+    private PDO $db;
+
+    public function __construct() {
+        $this->db = Database::connect();
+    }
+
     private function isAdmin(): bool
     {
         $u = $_SESSION['user'] ?? null;
@@ -23,168 +31,111 @@ final class ApiAuditController extends Controller
         return !empty($u['is_admin']);
     }
 
-    private function logFile(): string
-    {
-        // __DIR__ = App/Controllers
-        $appDir      = \dirname(__DIR__);        // -> App
-        $projectRoot = \dirname($appDir);        // -> project root (calendar.localhost)
-
-        $legacyDir = $appDir . '/storage/logs';       // old location: App/storage/logs
-        $rootDir   = $projectRoot . '/storage/logs';  // preferred: storage/logs
-
-        // Обираємо такий самий каталог, як і в ActionLogger:
-        $logsDir = $rootDir;
-        if (!is_dir($logsDir) || !is_writable($logsDir)) {
-            $logsDir = $legacyDir;
-        }
-
-        return $logsDir . '/audit.ndjson';
-    }
-
-    /**
-     * Convert any audit field value to a safe searchable string.
-     * Important: must not emit warnings/notices that could break JSON responses.
-     */
-    private function auditToSearchText($v): string
-    {
-        if ($v === null) return '';
-
-        if (is_string($v)) return $v;
-        if (is_int($v) || is_float($v)) return (string)$v;
-        if (is_bool($v)) return $v ? '1' : '0';
-
-        if (is_scalar($v)) return (string)$v;
-
-        // Arrays/objects: encode with safe flags; silence warnings to keep JSON output valid.
-        $jsonFlags = JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES;
-        if (defined('JSON_PARTIAL_OUTPUT_ON_ERROR')) $jsonFlags |= JSON_PARTIAL_OUTPUT_ON_ERROR;
-        if (defined('JSON_INVALID_UTF8_SUBSTITUTE')) $jsonFlags |= JSON_INVALID_UTF8_SUBSTITUTE;
-
-        $s = @json_encode($v, $jsonFlags);
-        if ($s === false) return '';
-        return (string)$s;
-    }
-
-    /**
-     * Case-insensitive contains helper with mbstring fallback.
-     */
-    private function auditContains(string $hay, string $needle): bool
-    {
-        if ($needle === '') return true;
-        if (function_exists('mb_stripos')) return mb_stripos($hay, $needle) !== false;
-        return stripos($hay, $needle) !== false;
-    }
-
-
     public function list(Request $r): string
     {
-        @header('Content-Type: application/json; charset=utf-8');
-        @header('Cache-Control: no-store');
-
-        $limit  = max(1, min(500, (int)($r->input('limit')  ?? 50)));
-        $offset = max(0,        (int)($r->input('offset') ?? 0));
-        $scope  = (string)($r->input('scope') ?? 'me'); // me|all
-        $q      = trim((string)($r->input('q') ?? ''));
-        $action = trim((string)($r->input('action') ?? ''));
-
-        $isAdmin = $this->isAdmin();
-        if ($scope !== 'me' && !$isAdmin) $scope = 'me';
-
-        $uid = (int)($_SESSION['user']['id'] ?? 0);
-
-        $file = $this->logFile();
-        if (!is_file($file)) {
-            return json_encode(['ok' => true, 'items' => [], 'next' => null, 'prev' => null], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        if (!headers_sent()) {
+            header('Content-Type: application/json; charset=utf-8');
+            header('Cache-Control: no-store');
         }
 
-        $lines = @file($file, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
-        if (!is_array($lines)) {
-            http_response_code(500);
-            return json_encode(['ok' => false, 'error' => 'read_failed']);
-        }
+        try {
+            $limit  = max(1, min(500, (int)($r->input('limit')  ?? 50)));
+            $offset = max(0,        (int)($r->input('offset') ?? 0));
+            $scope  = (string)($r->input('scope') ?? 'me'); 
+            $q      = trim((string)($r->input('q') ?? ''));
+            $action = trim((string)($r->input('action') ?? ''));
 
-        // Parse & filter
-        $rows = [];
-        foreach ($lines as $ln) {
-            $j = json_decode($ln, true);
-            if (!is_array($j)) continue;
+            $isAdmin = $this->isAdmin();
+            if ($scope !== 'me' && !$isAdmin) $scope = 'me';
 
-            // Scope filter
+            $uid = (int)($_SESSION['user']['id'] ?? 0);
+
+            $where = ["1=1"];
+            $params = [];
+
             if ($scope === 'me') {
-                $jUid = isset($j['user_id']) ? (int)$j['user_id'] : 0;
-                if ($uid <= 0 || $jUid !== $uid) continue;
+                $where[] = "user_id = :uid";
+                $params['uid'] = $uid;
             }
 
-            // Action filter
-            if ($action !== '' && (string)($j['action'] ?? '') !== $action) continue;
+            if ($action !== '') {
+                $where[] = "action = :action";
+                $params['action'] = $action;
+            }
 
-            // Query filter (search few fields)
+            // === ВИПРАВЛЕНИЙ ПОШУК ===
             if ($q !== '') {
-                $hay = [
-                    $this->auditToSearchText($j['action'] ?? ''),
-                    $this->auditToSearchText($j['result'] ?? ''),
-                    $this->auditToSearchText($j['message'] ?? ''),
-                    $this->auditToSearchText($j['user_name'] ?? ''),
-                    $this->auditToSearchText($j['ip'] ?? ''),
-                    $this->auditToSearchText($j['ua'] ?? ''),
-                ];
-                // Extended search: include entity/payload fields (so q matches titles, IDs, etc.)
-                $hay[] = $this->auditToSearchText($j['entity_type'] ?? '');
-                $hay[] = $this->auditToSearchText($j['entity_id'] ?? '');
-                $hay[] = $this->auditToSearchText($j['date'] ?? '');
-                $hay[] = $this->auditToSearchText($j['reason'] ?? '');
-                $hay[] = $this->auditToSearchText($j['update_result'] ?? '');
-                $hay[] = $this->auditToSearchText($j['delete_result'] ?? '');
-                $hay[] = $this->auditToSearchText($j['urgent'] ?? '');
-                $hay[] = $this->auditToSearchText($j['done'] ?? '');
-
-                $jsonFlags = JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES;
-                if (defined('JSON_PARTIAL_OUTPUT_ON_ERROR')) $jsonFlags |= JSON_PARTIAL_OUTPUT_ON_ERROR;
-
-                if (isset($j['payload'])) {
-                    // Use safe conversion to avoid warnings/notices breaking JSON output
-                    $hay[] = $this->auditToSearchText($j['payload']);
+                $words = preg_split('/[\s,]+/', $q, -1, PREG_SPLIT_NO_EMPTY);
+                
+                foreach ($words as $index => $word) {
+                    $term = "%$word%";
+                    
+                    // Генеруємо УНІКАЛЬНІ імена параметрів для кожного поля.
+                    // PDO без емуляції вимагає цього.
+                    $k1 = "st_{$index}";  // search_text
+                    $k2 = "un_{$index}";  // user_name
+                    $k3 = "eid_{$index}"; // entity_id
+                    $k4 = "ip_{$index}";  // ip
+                    
+                    $where[] = "(search_text LIKE :$k1 OR user_name LIKE :$k2 OR entity_id LIKE :$k3 OR ip LIKE :$k4)";
+                    
+                    $params[$k1] = $term;
+                    $params[$k2] = $term;
+                    $params[$k3] = $term;
+                    $params[$k4] = $term;
                 }
-                if (isset($j['event_before'])) {
-                    $hay[] = $this->auditToSearchText($j['event_before']);
-                }
-                if (isset($j['event_after'])) {
-                    $hay[] = $this->auditToSearchText($j['event_after']);
-                }
-
-                $found = false;
-                foreach ($hay as $h) {
-                    if ($h !== '' && $this->auditContains($h, $q)) { $found = true; break; }
-                }
-                if (!$found) continue;
             }
+            // =========================
 
-            $rows[] = $j;
+            $whereSql = implode(' AND ', $where);
+
+            $stmtCount = $this->db->prepare("SELECT COUNT(*) FROM audit_logs WHERE $whereSql");
+            $stmtCount->execute($params);
+            $total = (int)$stmtCount->fetchColumn();
+
+            $sql = "SELECT * FROM audit_logs WHERE $whereSql ORDER BY id DESC LIMIT $limit OFFSET $offset";
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute($params);
+            $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            $items = array_map(function($row) {
+                $payload = json_decode($row['payload'] ?? '{}', true);
+                if (!is_array($payload)) $payload = [];
+                
+                return array_merge($payload, [
+                    'ts'          => $row['created_at'],
+                    'user_id'     => $row['user_id'],
+                    'user_name'   => $row['user_name'],
+                    'action'      => $row['action'],
+                    'result'      => $row['result'],
+                    'entity_type' => $row['entity_type'],
+                    'entity_id'   => $row['entity_id'],
+                    'ip'          => $row['ip'],
+                    'ua'          => $row['ua']
+                ]);
+            }, $rows);
+
+            $prev = $offset > 0 ? ['offset' => max(0, $offset - $limit)] : null;
+            $next = ($offset + $limit) < $total ? ['offset' => ($offset + $limit)] : null;
+
+            return json_encode([
+                'ok'    => true,
+                'items' => $items,
+                'prev'  => $prev,
+                'next'  => $next,
+                'total' => $total,
+            ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+
+        } catch (\Throwable $e) {
+            http_response_code(500);
+            return json_encode([
+                'ok' => false, 
+                'error' => 'db_error', 
+                'message' => $e->getMessage()
+            ], JSON_UNESCAPED_UNICODE);
         }
-
-        // Sort: newest first by ts (fallback keep as is then reverse)
-        usort($rows, function($a, $b){
-            $ta = strtotime((string)($a['ts'] ?? '')) ?: 0;
-            $tb = strtotime((string)($b['ts'] ?? '')) ?: 0;
-            return $tb <=> $ta;
-        });
-
-        $total = count($rows);
-        $slice = array_slice($rows, $offset, $limit);
-
-        $prev = $offset > 0 ? ['offset' => max(0, $offset - $limit)] : null;
-        $next = ($offset + $limit) < $total ? ['offset' => ($offset + $limit)] : null;
-
-        return json_encode([
-            'ok'    => true,
-            'items' => $slice,
-            'prev'  => $prev,
-            'next'  => $next,
-            'total' => $total,
-        ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
     }
 }
-
 
 ==================================================
 FILE: /App/Controllers/ApiBackupController.php
@@ -346,17 +297,18 @@ declare(strict_types=1);
 
 namespace App\Controllers;
 
-use App\Models\FileEventRepository;
-use App\Models\LoggingEventRepository; // AUDIT: ADD ONLY
+use App\Models\EventMysqlRepository; // <--- ЗМІНЕНО: Використовуємо MySQL репозиторій
+use App\Models\LoggingEventRepository;
 
 final class ApiEventsController
 {
-    /** @var \App\Models\FileEventRepository */
+    /** @var \App\Models\EventRepositoryInterface */
     private $repo;
 
     public function __construct()
     {
-        $this->repo = new LoggingEventRepository(new FileEventRepository()); // AUDIT: ADD ONLY
+        // <--- ЗМІНЕНО: Передаємо MySQL версію всередину логера
+        $this->repo = new LoggingEventRepository(new EventMysqlRepository());
     }
 
     private function json($data, int $code = 200): void
@@ -438,7 +390,11 @@ final class ApiEventsController
         try {
             // never trust client-supplied user_id
             if (isset($payload['event']) && is_array($payload['event'])) { unset($payload['event']['user_id']); }
-            $id = $this->repo->create($payload['date'] ?? '', $payload);
+            
+            // MySQL repo повертає масив, старий повертав ID. Уніфікуємо:
+            $res = $this->repo->create($payload['date'] ?? '', $payload);
+            $id = is_array($res) ? ($res['id'] ?? '') : $res;
+
             $this->json(['ok'=>true,'id'=>$id], 201);
         } catch (\Throwable $e) {
             $this->json(['ok'=>false,'error'=>$e->getMessage()], 400);
@@ -557,8 +513,8 @@ final class ApiEventsController
             $ok = $this->repo->updateById($id, ['date' => $date, 'event' => $event]);
 
             $this->json([
-                'ok'           => (bool)$ok,
-                'id'           => $id,
+                'ok'            => (bool)$ok,
+                'id'            => $id,
                 'close_user_id'=> $event['close_user_id'] ?? null,
                 'close_time'   => $event['close_time'] ?? null,
             ]);
@@ -590,7 +546,6 @@ final class ApiEventsController
         }
     }
 }
-
 
 ==================================================
 FILE: /App/Controllers/ApiUserNameController.php
@@ -654,16 +609,19 @@ declare(strict_types=1);
 
 namespace App\Controllers;
 
-use App\Models\UserFileRepository;
+use App\Models\UserMysqlRepository;
+use App\Core\Auth;
 
 final class ApiUsersController
 {
-    private $users;
+    private UserMysqlRepository $users;
 
     public function __construct()
     {
-        $this->users = new UserFileRepository();
+        $this->users = new UserMysqlRepository();
     }
+
+    // --- Допоміжні методи ---
 
     private function json($data, int $code = 200): void
     {
@@ -675,63 +633,231 @@ final class ApiUsersController
         echo json_encode($data, JSON_UNESCAPED_UNICODE);
     }
 
+    private function parseJson(): ?array
+    {
+        $raw = file_get_contents('php://input');
+        if ($raw === false || $raw === '') return [];
+        $payload = json_decode($raw, true);
+        return is_array($payload) ? $payload : null;
+    }
+
+    private function checkAdmin(): bool
+    {
+        $me = Auth::user();
+        if (!$me) return false;
+        
+        $role = strtolower((string)($me['role'] ?? ''));
+        return ($role === 'admin' || !empty($me['is_admin']));
+    }
+
+    // --- Публічні методи API ---
+
+    /**
+     * GET /api/users/me
+     * Повертає профіль поточного користувача
+     */
     public function me(): void
     {
         try {
-            // Fast path: use cached session profile if available
-            $sessUser = null;
-            try { $sessUser = \App\Core\Session::get('user', null); } catch (\Throwable $__){ }
-
-            if (is_array($sessUser) && (int)($sessUser['id'] ?? 0) > 0) {
-                $id   = (int)$sessUser['id'];
-                $name = (string)($sessUser['name'] ?? ($sessUser['login'] ?? ('User #'.$id)));
-                $this->json(['ok'=>true, 'user'=>[
-                    'id'    => $id,
-                    'name'  => $name,
-                    'login' => $sessUser['login'] ?? null,
-                    'email' => $sessUser['email'] ?? null,
-                    'role'  => $sessUser['role'] ?? null,
-                ]]);
-                return;
+            $uid = Auth::id();
+            if (!$uid) { 
+                $this->json(['ok'=>false, 'error'=>'unauthorized'], 401); 
+                return; 
             }
 
-            $uid = (int)(\App\Core\Session::get('user_id', 0));
-            if ($uid <= 0) { $this->json(['ok'=>false,'error'=>'unauthorized'], 401); return; }
-
             $u = $this->users->findById($uid);
-            if (!$u) { $this->json(['ok'=>false,'error'=>'not_found'], 404); return; }
+            if (!$u) { 
+                $this->json(['ok'=>false, 'error'=>'not_found'], 404); 
+                return; 
+            }
 
-            $name = (string)($u['name'] ?? ($u['login'] ?? ('User #'.$uid)));
-
+            // Формуємо безпечну відповідь (без пароля)
             $this->json(['ok'=>true, 'user'=>[
-                'id'    => (int)($u['id'] ?? $uid),
-                'name'  => $name,
-                'login' => $u['login'] ?? null,
+                'id'    => (int)$u['id'],
+                'name'  => $u['name'] ?? $u['login'],
+                'login' => $u['login'],
                 'email' => $u['email'] ?? null,
-                'role'  => $u['role'] ?? null,
+                'role'  => $u['role'] ?? 'user',
+                'is_admin' => !empty($u['is_admin'])
             ]]);
+        } catch (\Throwable $e) {
+            $this->json(['ok'=>false, 'error'=>'internal', 'message'=>$e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * GET /api/users/list
+     * Список всіх користувачів (тільки для адміна)
+     */
+    public function list(): void
+    {
+        if (!$this->checkAdmin()) {
+            $this->json(['ok'=>false, 'error'=>'forbidden'], 403);
+            return;
+        }
+
+        try {
+            $all = $this->users->all();
+            // Видаляємо хеші паролів перед відправкою
+            $safeList = array_map(function($u) {
+                unset($u['password_hash']);
+                return $u;
+            }, $all);
+
+            $this->json(['ok'=>true, 'users'=>$safeList]);
+        } catch (\Throwable $e) {
+            $this->json(['ok'=>false, 'error'=>'internal', 'message'=>$e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * GET /api/users/get?id=1
+     * Отримання одного користувача
+     */
+    public function get(): void
+    {
+        if (!$this->checkAdmin()) {
+            $this->json(['ok'=>false, 'error'=>'forbidden'], 403);
+            return;
+        }
+
+        $id = (int)($_GET['id'] ?? 0);
+        if ($id <= 0) { $this->json(['ok'=>false,'error'=>'id required'], 400); return; }
+
+        try {
+            $u = $this->users->findById($id);
+            if (!$u) { $this->json(['ok'=>false,'error'=>'not_found'], 404); return; }
+            
+            unset($u['password_hash']);
+            $this->json(['ok'=>true, 'user'=>$u]);
         } catch (\Throwable $e) {
             $this->json(['ok'=>false,'error'=>'internal','message'=>$e->getMessage()], 500);
         }
     }
 
-
-
-    public function get(): void
+    /**
+     * POST /api/users/create
+     * Створення користувача (Admin only)
+     */
+    public function create(): void
     {
-        $id = (int)($_GET['id'] ?? 0);
-        if ($id <= 0) { $this->json(['ok'=>false,'error'=>'id required'], 400); return; }
+        if (!$this->checkAdmin()) {
+            $this->json(['ok'=>false, 'error'=>'forbidden'], 403);
+            return;
+        }
+
+        $payload = $this->parseJson();
+        if ($payload === null) { $this->json(['ok'=>false,'error'=>'invalid json'], 400); return; }
+
         try {
+            if (empty($payload['login']) || empty($payload['password'])) {
+                $this->json(['ok'=>false,'error'=>'login and password required'], 400); 
+                return;
+            }
+
+            // Перевірка на унікальність логіна
+            if ($this->users->findByLogin($payload['login'])) {
+                $this->json(['ok'=>false,'error'=>'login_taken'], 400);
+                return;
+            }
+
+            // Хешування пароля
+            $payload['password_hash'] = password_hash($payload['password'], PASSWORD_DEFAULT);
+            unset($payload['password']); // Видаляємо відкритий пароль
+
+            // Дефолтні значення
+            if (empty($payload['name'])) $payload['name'] = $payload['login'];
+            if (empty($payload['role'])) $payload['role'] = 'user';
+
+            $id = $this->users->create($payload);
+            
+            $this->json(['ok'=>true, 'id'=>$id], 201);
+        } catch (\Throwable $e) {
+            $this->json(['ok'=>false,'error'=>'internal','message'=>$e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * POST /api/users/update
+     * Оновлення користувача та зміна пароля
+     */
+    public function update(): void
+    {
+        if (!$this->checkAdmin()) {
+            $this->json(['ok'=>false, 'error'=>'forbidden'], 403);
+            return;
+        }
+
+        $payload = $this->parseJson();
+        if ($payload === null) { $this->json(['ok'=>false,'error'=>'invalid json'], 400); return; }
+
+        $id = (int)($payload['id'] ?? 0);
+        if ($id <= 0) { $this->json(['ok'=>false,'error'=>'id required'], 400); return; }
+        unset($payload['id']);
+
+        try {
+            // Якщо передано пароль — хешуємо його
+            if (!empty($payload['password'])) {
+                $payload['password_hash'] = password_hash($payload['password'], PASSWORD_DEFAULT);
+                unset($payload['password']);
+            }
+            
+            // Видаляємо поле підтвердження, якщо воно прийшло з форми
+            if (isset($payload['password_confirm'])) unset($payload['password_confirm']);
+
+            $ok = $this->users->updateById($id, $payload);
+            $this->json(['ok'=>(bool)$ok]);
+        } catch (\Throwable $e) {
+            $this->json(['ok'=>false,'error'=>'internal','message'=>$e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * POST /api/users/delete
+     * Видалення користувача
+     */
+    public function delete(): void
+    {
+        if (!$this->checkAdmin()) {
+            $this->json(['ok'=>false, 'error'=>'forbidden'], 403);
+            return;
+        }
+
+        $payload = $this->parseJson();
+        $id = (int)($payload['id'] ?? 0);
+        
+        if ($id <= 0) { $this->json(['ok'=>false,'error'=>'id required'], 400); return; }
+        
+        // Захист від самовидалення
+        if ($id === Auth::id()) {
+            $this->json(['ok'=>false,'error'=>'cannot_delete_self'], 400);
+            return;
+        }
+
+        try {
+            // Перевіряємо, чи є такий юзер
             $u = $this->users->findById($id);
-            if (!$u) { $this->json(['ok'=>false,'error'=>'not_found'], 404); return; }
-            $name = (string)($u['name'] ?? ($u['login'] ?? ('User #'.$id)));
-            $this->json(['ok'=>true, 'user'=>['id'=>$id,'name'=>$name,'login'=>($u['login']??null),'email'=>($u['email']??null)]]);
+            if (!$u) {
+                $this->json(['ok'=>false,'error'=>'not_found'], 404);
+                return;
+            }
+            
+            // Якщо методу deleteById немає в інтерфейсі репозиторія, його треба додати
+            // Або виконати SQL напряму (але краще через репозиторій)
+            // Припускаємо, що метод існує, бо ми його додавали раніше
+             if (method_exists($this->users, 'deleteById')) {
+                $ok = $this->users->deleteById($id);
+                $this->json(['ok'=>(bool)$ok]);
+            } else {
+                // Fallback якщо забули додати метод в репозиторій
+                 $this->json(['ok'=>false,'error'=>'not_implemented_in_repo'], 501);
+            }
+            
         } catch (\Throwable $e) {
             $this->json(['ok'=>false,'error'=>'internal','message'=>$e->getMessage()], 500);
         }
     }
 }
-
 
 ==================================================
 FILE: /App/Controllers/AuthController.php
@@ -1366,7 +1492,7 @@ FILE: /App/Core/Auth.php
 namespace App\Core;
 
 use App\Models\UserRepositoryInterface;
-use App\Models\UserFileRepository;
+use App\Models\UserMysqlRepository; // <--- ЗМІНЕНО: Підключаємо MySQL репозиторій
 
 final class Auth
 {
@@ -1374,7 +1500,8 @@ final class Auth
 
     private static function repo(): UserRepositoryInterface {
         if (!self::$repo) {
-            self::$repo = new UserFileRepository();
+            // <--- ЗМІНЕНО: Використовуємо клас для роботи з MySQL
+            self::$repo = new UserMysqlRepository();
         }
         return self::$repo;
     }
@@ -1395,7 +1522,7 @@ final class Auth
     public static function login(string $login, string $password): bool {
         $user = self::repo()->findByLogin($login);
         if (!$user) return false;
-            // if user exists but has empty/absent password hash -> force setup flow
+            // Перевірка на порожній пароль (для старих акаунтів)
             if ($user && (!isset($user['password_hash']) || trim((string)$user['password_hash']) === '')) {
                 $_SESSION['password_setup_user_id'] = (int)($user['id'] ?? 0);
                 $_SESSION['password_setup_email']   = (string)($user['email'] ?? '');
@@ -1406,9 +1533,12 @@ final class Auth
                 header('Location: /password/setup', true, 302);
                 return false;
             }
+        
         if (!password_verify($password, $user['password_hash'])) return false;
+        
         Session::set('user_id', (int)$user['id']);
-        // Store full user profile in session for fast access
+        
+        // Зберігаємо профіль у сесії для швидкодії
         try {
             $role = isset($user['role']) ? (string)$user['role'] : '';
             $isAdm = (mb_strtolower($role) === 'admin') || !empty($user['is_admin']);
@@ -1463,21 +1593,18 @@ final class Auth
 
     public static function adminsExist(): bool
     {
-        $file = dirname(__DIR__, 2) . '/storage/data/users.json';
-        if (!is_file($file)) return false;
-        $json = file_get_contents($file);
-        if ($json === false) return false;
-        $arr = json_decode($json, true);
-        if (!is_array($arr)) return false;
-        foreach ($arr as $u) {
-            $role = is_array($u) ? ($u['role'] ?? null) : (is_object($u) ? ($u->role ?? null) : null);
+        // Перевірка наявності адмінів через БД
+        $repo = self::repo();
+        // Оскільки UserMysqlRepository має метод all(), використовуємо його
+        // (Для великих баз краще написати окремий SQL запит count(*), але для старту цього вистачить)
+        $all = $repo->all();
+        foreach ($all as $u) {
+            $role = is_array($u) ? ($u['role'] ?? null) : null;
             if (mb_strtolower((string)$role) === 'admin' || !empty($u['is_admin'])) return true;
         }
         return false;
     }
-
 }
-
 
 ==================================================
 FILE: /App/Core/CabinetView.php
@@ -1557,6 +1684,43 @@ class Controller {
         ob_start();
         include $layout;
         return ob_get_clean();
+    }
+}
+
+
+==================================================
+FILE: /App/Core/Database.php
+==================================================
+
+<?php
+declare(strict_types=1);
+
+namespace App\Core;
+
+use PDO;
+use PDOException;
+
+class Database {
+    private static ?PDO $instance = null;
+
+    public static function connect(): PDO {
+        if (self::$instance === null) {
+            // Підвантажуємо твій конфіг
+            $config = require __DIR__ . '/../../config/database.php';
+            
+            $dsn = "mysql:host={$config['host']};port={$config['port']};dbname={$config['database']};charset={$config['charset']}";
+            
+            try {
+                self::$instance = new PDO($dsn, $config['username'], $config['password'], [
+                    PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+                    PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+                    PDO::ATTR_EMULATE_PREPARES => false,
+                ]);
+            } catch (PDOException $e) {
+                die("Помилка підключення до БД: " . $e->getMessage());
+            }
+        }
+        return self::$instance;
     }
 }
 
@@ -1834,6 +1998,187 @@ final class Session
 
 
 ==================================================
+FILE: /App/Models/EventMysqlRepository.php
+==================================================
+
+<?php
+declare(strict_types=1);
+
+namespace App\Models;
+
+use App\Core\Database;
+use PDO;
+
+class EventMysqlRepository implements EventRepositoryInterface {
+    private PDO $db;
+
+    public function __construct() {
+        $this->db = Database::connect();
+    }
+
+    public function listByDate(string $date): array {
+        $stmt = $this->db->prepare("SELECT * FROM events WHERE start_date = ?");
+        $stmt->execute([$date]);
+        return $this->mapRows($stmt->fetchAll());
+    }
+
+    public function listByRange(string $from, string $to): array {
+        $stmt = $this->db->prepare("SELECT * FROM events WHERE start_date BETWEEN ? AND ? ORDER BY start_date, time");
+        $stmt->execute([$from, $to]);
+        $rows = $this->mapRows($stmt->fetchAll());
+
+        $result = [];
+        $start = new \DateTime($from);
+        $end = new \DateTime($to);
+        for ($d = clone $start; $d <= $end; $d->modify('+1 day')) {
+            $result[$d->format('Y-m-d')] = [];
+        }
+        foreach ($rows as $row) {
+            $d = $row['start_date'];
+            if (isset($result[$d])) {
+                $result[$d][] = $row;
+            }
+        }
+        return $result;
+    }
+
+    public function getById(string $id): ?array {
+        $stmt = $this->db->prepare("SELECT * FROM events WHERE id = ?");
+        $stmt->execute([$id]);
+        $row = $stmt->fetch();
+        if (!$row) return null;
+        return $this->mapRow($row);
+    }
+    
+    public function get(string $id): ?array { return $this->getById($id); }
+
+    public function create(string $date, array $payload): array {
+        $data = $payload['event'] ?? $payload;
+        
+        if (empty($data['id'])) {
+            $data['id'] = 'e_' . bin2hex(random_bytes(8));
+        }
+
+        $sql = "INSERT INTO events (
+            id, user_id, start_date, end_date, time, title, description, owner, 
+            type, incoming_no, outgoing_no, urgent, done, created_at
+        ) VALUES (
+            :id, :user_id, :start_date, :end_date, :time, :title, :description, :owner,
+            :type, :in_no, :out_no, :urgent, :done, :created
+        )";
+
+        $this->db->prepare($sql)->execute([
+            'id' => $data['id'],
+            'user_id' => $data['user_id'] ?? 0,
+            'start_date' => $date,
+            'end_date' => $data['end_date'] ?? null,
+            'time' => $data['time'] ?? '',
+            'title' => $data['title'],
+            'description' => $data['description'] ?? '',
+            'owner' => $data['owner'] ?? '',
+            'type' => $data['type'] ?? 'evt',
+            'in_no' => $data['incoming_no'] ?? '',
+            'out_no' => $data['outgoing_no'] ?? '',
+            'urgent' => !empty($data['urgent']) ? 1 : 0,
+            'done' => !empty($data['done']) ? 1 : 0,
+            'created' => $data['created_at'] ?? date('Y-m-d H:i:s')
+        ]);
+
+        return ['id' => $data['id'], 'date' => $date];
+    }
+
+    public function updateById(string $id, array $data): array {
+        $eventData = $data['event'] ?? $data;
+        $newDate = $data['date'] ?? ($eventData['start_date'] ?? null);
+
+        $fields = [];
+        $params = ['id' => $id];
+
+        $allow = ['time', 'title', 'description', 'owner', 'type', 'incoming_no', 'outgoing_no', 'end_date', 'close_user_id', 'close_time'];
+        
+        foreach ($allow as $f) {
+            if (array_key_exists($f, $eventData)) {
+                $fields[] = "$f = :$f";
+                $params[$f] = $eventData[$f];
+            }
+        }
+        
+        if (isset($eventData['urgent'])) { $fields[] = "urgent = :urg"; $params['urg'] = $eventData['urgent'] ? 1 : 0; }
+        if (isset($eventData['done'])) { $fields[] = "done = :done"; $params['done'] = $eventData['done'] ? 1 : 0; }
+        
+        if ($newDate) {
+            $fields[] = "start_date = :sdate";
+            $params['sdate'] = $newDate;
+        }
+
+        if (empty($fields)) return ['ok' => true];
+
+        $sql = "UPDATE events SET " . implode(', ', $fields) . " WHERE id = :id";
+        $this->db->prepare($sql)->execute($params);
+
+        return ['id' => $id, 'date' => $newDate];
+    }
+    
+    public function update(string $date, array $event): array {
+        return $this->updateById($event['id'], ['date' => $date, 'event' => $event]);
+    }
+
+    public function deleteById(string $id): bool {
+        $stmt = $this->db->prepare("DELETE FROM events WHERE id = ?");
+        return $stmt->execute([$id]);
+    }
+    
+    public function delete(string $id): array {
+        return $this->deleteById($id) ? ['id' => $id] : ['error' => 'fail'];
+    }
+
+    public function setDone(string $id, bool $done): array {
+        return $this->updateById($id, ['event' => ['done' => $done]]);
+    }
+
+    public function setUrgent(string $id, bool $urgent): array {
+        return $this->updateById($id, ['event' => ['urgent' => $urgent]]);
+    }
+
+    public function search(array $filters, int $limit, int $offset): array {
+        $text = $filters['text'] ?? '';
+        
+        // Базовий SQL
+        $sql = "SELECT * FROM events WHERE 
+                (title LIKE :q OR description LIKE :q OR owner LIKE :q OR incoming_no LIKE :q OR outgoing_no LIKE :q)";
+        
+        $params = ['q' => "%$text%"];
+
+        // Додаткові фільтри (якщо треба розширити логіку)
+        if (!empty($filters['date'])) {
+            $sql .= " AND start_date = :fdate";
+            $params['fdate'] = $filters['date'];
+        }
+
+        // Сортування та ліміти (MySQL вимагає int для LIMIT у PDO, якщо емуляція вимкнена, 
+        // але тут передаємо прямо в рядок для простоти, бо int приведені в контролері)
+        $sql .= " ORDER BY start_date DESC LIMIT $limit OFFSET $offset";
+
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
+        
+        return $this->mapRows($stmt->fetchAll());
+    }
+
+    private function mapRows(array $rows): array {
+        foreach ($rows as &$row) $row = $this->mapRow($row);
+        return $rows;
+    }
+
+    private function mapRow(array $row): array {
+        $row['urgent'] = (bool)$row['urgent'];
+        $row['done'] = (bool)$row['done'];
+        $row['_date'] = $row['start_date'];
+        return $row;
+    }
+}
+
+==================================================
 FILE: /App/Models/EventRepositoryFactory.php
 ==================================================
 
@@ -1844,7 +2189,8 @@ namespace App\Models;
 
 final class EventRepositoryFactory {
     public static function make(): EventRepositoryInterface {
-        return new FileEventRepository();
+        // return new FileEventRepository();
+        return new EventMysqlRepository();
     }
 }
 
@@ -1859,14 +2205,18 @@ declare(strict_types=1);
 namespace App\Models;
 
 interface EventRepositoryInterface {
-    public function create(array $data): array;
+    // Змінено: додано string $date
+    public function create(string $date, array $data): array;
+    
     public function updateById(string $id, array $data): array;
     public function deleteById(string $id): bool;
     public function getById(string $id): ?array;
     public function listByDate(string $date): array;
     public function listByRange(string $from, string $to): array;
+    
+    // Додано метод пошуку, якого не вистачало в інтерфейсі
+    public function search(array $filters, int $limit, int $offset): array;
 }
-
 
 ==================================================
 FILE: /App/Models/EventStore.php
@@ -2901,6 +3251,74 @@ final class UserFileRepository implements UserRepositoryInterface
 
 
 ==================================================
+FILE: /App/Models/UserMysqlRepository.php
+==================================================
+
+<?php
+declare(strict_types=1);
+
+namespace App\Models;
+
+use App\Core\Database;
+use PDO;
+
+class UserMysqlRepository implements UserRepositoryInterface {
+    private PDO $db;
+
+    public function __construct() {
+        $this->db = Database::connect();
+    }
+
+    public function all(): array {
+        return $this->db->query("SELECT * FROM users ORDER BY id ASC")->fetchAll();
+    }
+
+    public function findById(int $id): ?array {
+        $stmt = $this->db->prepare("SELECT * FROM users WHERE id = ?");
+        $stmt->execute([$id]);
+        return $stmt->fetch() ?: null;
+    }
+
+    public function findByLogin(string $login): ?array {
+        $stmt = $this->db->prepare("SELECT * FROM users WHERE login = ? OR email = ?");
+        $stmt->execute([$login, $login]);
+        return $stmt->fetch() ?: null;
+    }
+    
+    public function findByEmail(string $email): ?array {
+        return $this->findByLogin($email);
+    }
+
+    public function create(array $data): int {
+        $sql = "INSERT INTO users (name, login, email, password_hash, role, is_admin) 
+                VALUES (:name, :login, :email, :pass, :role, :admin)";
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute([
+            'name' => $data['name'] ?? '',
+            'login' => $data['login'],
+            'email' => $data['email'] ?? null,
+            'pass' => $data['password_hash'] ?? '',
+            'role' => $data['role'] ?? 'user',
+            'admin' => !empty($data['is_admin']) ? 1 : 0
+        ]);
+        return (int)$this->db->lastInsertId();
+    }
+
+    public function updateById(int $id, array $data): bool {
+        $fields = [];
+        $params = ['id' => $id];
+        foreach ($data as $k => $v) {
+            if ($k === 'id') continue;
+            $fields[] = "$k = :$k";
+            $params[$k] = $v;
+        }
+        if (!$fields) return false;
+        $sql = "UPDATE users SET " . implode(', ', $fields) . " WHERE id = :id";
+        return $this->db->prepare($sql)->execute($params);
+    }
+}
+
+==================================================
 FILE: /App/Models/UserNameResolver.php
 ==================================================
 
@@ -3077,46 +3495,24 @@ declare(strict_types=1);
 
 namespace App\Services\Audit;
 
-/**
- * Append-only NDJSON logger for user actions.
- * File: App/storage/logs/audit.ndjson
- */
-final class ActionLogger
+use App\Core\Database;
+use PDO;
+
+class ActionLogger
 {
-    /** @var string */
-    private string $file;
+    private PDO $db;
 
-    public function __construct(?string $file = null)
+    public function __construct()
     {
-        // __DIR__ = App/Services/Audit
-        $appRoot     = \dirname(__DIR__, 2);       // -> App
-        $projectRoot = \dirname($appRoot);         // -> project root (calendar.localhost)
-
-        // Legacy location (old behaviour): App/storage/logs
-        $legacyDir = $appRoot . '/storage/logs';
-
-        // Preferred location: project-root/storage/logs (shared with other storage)
-        $rootDir = $projectRoot . '/storage/logs';
-
-        // Prefer rootDir if possible, otherwise fall back to legacyDir
-        $logsDir = $rootDir;
-        if (!is_dir($logsDir)) {
-            @mkdir($logsDir, 0775, true);
-        }
-        if (!is_dir($logsDir) || !is_writable($logsDir)) {
-            $logsDir = $legacyDir;
-            if (!is_dir($logsDir)) {
-                @mkdir($logsDir, 0775, true);
-            }
-        }
-
-        $this->file = $file ?: ($logsDir . '/audit.ndjson');
+        $this->db = Database::connect();
     }
 
-
-    /** Generic context from current request/session */
     private function context(): array
     {
+        if (session_status() !== PHP_SESSION_ACTIVE) {
+            @session_start();
+        }
+
         $u = $_SESSION['user'] ?? null;
         $uid = isset($u['id']) ? (int)$u['id'] : null;
         $uname = is_array($u) ? ($u['name'] ?? null) : null;
@@ -3124,53 +3520,167 @@ final class ActionLogger
         return [
             'user_id'   => $uid,
             'user_name' => $uname,
-            'ip'        => $_SERVER['REMOTE_ADDR']   ?? null,
+            'ip'        => $_SERVER['REMOTE_ADDR']    ?? null,
             'ua'        => $_SERVER['HTTP_USER_AGENT'] ?? null,
         ];
     }
 
-    /** Low-level writer: append one NDJSON line */
-    private function write(array $row): bool
+    /**
+     * ГЕНЕРАТОР "ЛЮДСЬКОГО" ОПИСУ
+     * Перетворює технічні дані на текст, який ми бачимо в таблиці.
+     */
+    public function generateSearchText(array $row): string
     {
-        if (!isset($row['ts'])) {
-            $row['ts'] = date('Y-m-d H:i:s');
-        }
-        $json = json_encode($row, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-        if ($json === false) return false;
+        $parts = [];
 
-        $fh = @fopen($this->file, 'ab');
-        if (!$fh) return false;
-        $ok = @fwrite($fh, $json . "\n") !== false;
-        @fclose($fh);
-        return $ok;
+        // 1. Хто і Де (Базові поля)
+        if (!empty($row['user_name'])) $parts[] = $row['user_name'];
+        if (!empty($row['ip']))        $parts[] = $row['ip'];
+        if (!empty($row['entity_id'])) $parts[] = $row['entity_id'];
+
+        // 2. Що сталося (Переклад дій)
+        $act = $row['action'] ?? '';
+        $actionText = $act; // дефолт
+
+        // Словник дій (має співпадати з тим, що показує фронтенд)
+        $actionsMap = [
+            'auth.login'            => 'Вхід в систему login',
+            'auth.logout'           => 'Вихід із системи logout',
+            'calendar.event.create' => 'Створення події нова create',
+            'calendar.event.update' => 'Редагування події зміна update',
+            'calendar.event.delete' => 'Видалення події delete',
+            'calendar.event.done'   => 'Зміна статусу виконання',
+            'calendar.event.urgent' => 'Зміна терміновості',
+            'user.create'           => 'Створення користувача',
+            'user.update'           => 'Редагування користувача',
+            'user.password'         => 'Зміна пароля',
+        ];
+
+        if (isset($actionsMap[$act])) {
+            $parts[] = $actionsMap[$act];
+        } else {
+            // Якщо дії немає в словнику, розбиваємо крапки на слова
+            $parts[] = str_replace('.', ' ', $act);
+        }
+
+        // 3. Деталі (Розбір JSON payload)
+        $payload = $row;
+        // Видаляємо сміття
+        unset($payload['user_id'], $payload['user_name'], $payload['action'], $payload['result'], $payload['ip'], $payload['ua'], $payload['ts'], $payload['entity_type'], $payload['entity_id']);
+        
+        // --- Специфічні поля календаря ---
+        
+        // Заголовок та опис
+        if (!empty($payload['title']))       $parts[] = "Заголовок: " . $payload['title'];
+        if (!empty($payload['description'])) $parts[] = "Опис: " . $payload['description'];
+        if (!empty($payload['owner']))       $parts[] = "Власник: " . $payload['owner'];
+        
+        // Номери
+        if (!empty($payload['incoming_no'])) $parts[] = "Вх. №" . $payload['incoming_no'];
+        if (!empty($payload['outgoing_no'])) $parts[] = "Вих. №" . $payload['outgoing_no'];
+        
+        // Дати
+        if (!empty($payload['start_date']))  $parts[] = "Дата: " . $payload['start_date'];
+        if (!empty($payload['time']))        $parts[] = "Час: " . $payload['time'];
+        
+        // Статуси (Boolean)
+        // Обробка done
+        if (isset($payload['done'])) {
+            if ($payload['done'] == 1 || $payload['done'] === true || $payload['done'] === 'true') {
+                $parts[] = "Статус: Виконано Зроблено";
+            } elseif ($payload['done'] === 0 || $payload['done'] === false || $payload['done'] === 'false') {
+                $parts[] = "Статус: Не виконано В роботі";
+            }
+        }
+        
+        // Обробка urgent
+        if (isset($payload['urgent'])) {
+            if ($payload['urgent'] == 1 || $payload['urgent'] === true || $payload['urgent'] === 'true') {
+                $parts[] = "Пріоритет: Терміново Важливо";
+            }
+        }
+
+        // 4. Рекурсивний збір всього іншого тексту (на випадок нових полів)
+        array_walk_recursive($payload, function($value, $key) use (&$parts) {
+            // Пропускаємо те, що вже обробили вище
+            if (in_array($key, ['title', 'description', 'incoming_no', 'outgoing_no', 'done', 'urgent', 'start_date', 'time'])) return;
+            
+            if (is_string($value) && !empty($value)) {
+                $parts[] = $value;
+            } elseif (is_numeric($value)) {
+                $parts[] = (string)$value;
+            }
+        });
+
+        // Видаляємо дублікати та склеюємо
+        return implode(' ', array_unique($parts));
     }
 
-    /** Log authentication events */
+    private function write(array $row): bool
+    {
+        $payloadData = $row;
+        unset($payloadData['user_id'], $payloadData['user_name'], $payloadData['action'], $payloadData['result'], $payloadData['ip'], $payloadData['ua'], $payloadData['ts']);
+        
+        $entityType = $payloadData['entity_type'] ?? null;
+        $entityId   = $payloadData['entity_id'] ?? null;
+        unset($payloadData['entity_type'], $payloadData['entity_id']);
+
+        // Генеруємо детальний пошуковий текст
+        $searchText = $this->generateSearchText($row);
+
+        $sql = "INSERT INTO audit_logs (
+                    user_id, user_name, action, result, 
+                    entity_type, entity_id, payload, 
+                    ip, ua, search_text, created_at
+                ) VALUES (
+                    :uid, :uname, :action, :result, 
+                    :etype, :eid, :payload, 
+                    :ip, :ua, :stext, :created
+                )";
+
+        try {
+            $stmt = $this->db->prepare($sql);
+            return $stmt->execute([
+                'uid'     => $row['user_id'] ?? null,
+                'uname'   => $row['user_name'] ?? null,
+                'action'  => $row['action'] ?? 'unknown',
+                'result'  => $row['result'] ?? 'success',
+                'etype'   => $entityType,
+                'eid'     => $entityId,
+                'payload' => json_encode($payloadData, JSON_UNESCAPED_UNICODE),
+                'ip'      => $row['ip'] ?? null,
+                'ua'      => $row['ua'] ?? null,
+                'stext'   => $searchText,
+                'created' => date('Y-m-d H:i:s')
+            ]);
+        } catch (\Throwable $e) {
+            error_log("ActionLogger Error: " . $e->getMessage());
+            return false;
+        }
+    }
+
     public function logAuth(string $action, $userId = null, $userName = null, string $result = 'success', array $meta = []): void
     {
         $ctx = $this->context();
         if ($userId !== null)   { $ctx['user_id'] = $userId; }
         if ($userName !== null) { $ctx['user_name'] = $userName; }
+        
         $row = array_merge($ctx, $meta, [
-            'type'   => 'auth',
             'action' => $action,
             'result' => $result,
         ]);
         $this->write($row);
     }
 
-    /** Log generic application actions */
     public function log(string $action, string $result = 'success', array $meta = []): void
     {
         $row = array_merge($this->context(), $meta, [
-            'type'   => 'app',
             'action' => $action,
             'result' => $result,
         ]);
         $this->write($row);
     }
 }
-
 
 ==================================================
 FILE: /App/Views/auth/login.php
@@ -4336,6 +4846,284 @@ exit((new RestoreCli($argv))->run());
 
 
 ==================================================
+FILE: /bin/migrate_logs.php
+==================================================
+
+<?php
+// bin/migrate_logs.php
+require_once __DIR__ . '/../vendor/autoload.php';
+use App\Core\Database;
+
+$file = __DIR__ . '/../storage/logs/audit.ndjson';
+if (!file_exists($file)) die("Файл логів не знайдено.\n");
+
+$pdo = Database::connect();
+$lines = file($file, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+
+echo "Міграція " . count($lines) . " записів...\n";
+
+$sql = "INSERT INTO audit_logs (user_id, user_name, action, result, entity_type, entity_id, payload, ip, ua, created_at) 
+        VALUES (:uid, :uname, :action, :result, :etype, :eid, :payload, :ip, :ua, :created)";
+$stmt = $pdo->prepare($sql);
+
+foreach ($lines as $line) {
+    $row = json_decode($line, true);
+    if (!$row) continue;
+
+    $ts = isset($row['ts']) ? date('Y-m-d H:i:s', strtotime($row['ts'])) : date('Y-m-d H:i:s');
+    
+    // Відокремлюємо метадані
+    $payloadData = $row;
+    unset($payloadData['user_id'], $payloadData['user_name'], $payloadData['action'], $payloadData['result'], $payloadData['ip'], $payloadData['ua'], $payloadData['ts'], $payloadData['entity_type'], $payloadData['entity_id']);
+
+    $stmt->execute([
+        'uid'     => $row['user_id'] ?? null,
+        'uname'   => $row['user_name'] ?? null,
+        'action'  => $row['action'] ?? 'unknown',
+        'result'  => $row['result'] ?? 'success',
+        'etype'   => $row['entity_type'] ?? null,
+        'eid'     => $row['entity_id'] ?? null,
+        'payload' => json_encode($payloadData, JSON_UNESCAPED_UNICODE),
+        'ip'      => $row['ip'] ?? null,
+        'ua'      => $row['ua'] ?? null,
+        'created' => $ts
+    ]);
+}
+
+echo "Готово!\n";
+
+==================================================
+FILE: /bin/migrate_to_mysql.php
+==================================================
+
+<?php
+// FILE: /bin/migrate_to_mysql.php
+
+// 1. Підключаємо автозавантажувач
+require_once __DIR__ . '/../vendor/autoload.php';
+
+// 2. ЯВНО підключаємо файл бази даних
+$dbFile = __DIR__ . '/../App/Core/Database.php';
+if (!file_exists($dbFile)) {
+    die("Помилка: Файл $dbFile не знайдено!\n");
+}
+require_once $dbFile;
+
+use App\Models\UserFileRepository;
+use App\Models\EventStore;
+use App\Core\Database;
+
+header('Content-Type: text/plain');
+
+// === ДОПОМІЖНА ФУНКЦІЯ ДЛЯ ДАТ ===
+function isoToMysql($isoString) {
+    if (empty($isoString)) {
+        return date('Y-m-d H:i:s');
+    }
+    try {
+        // Спробуємо розпарсити будь-який формат дати і перетворити в MySQL формат
+        $dt = new DateTime($isoString);
+        return $dt->format('Y-m-d H:i:s');
+    } catch (Exception $e) {
+        // Якщо дата "бита", повертаємо поточний час
+        return date('Y-m-d H:i:s');
+    }
+}
+// =================================
+
+try {
+    $pdo = Database::connect();
+    echo "Підключення до БД успішне.\n";
+
+    // --- 1. Міграція користувачів ---
+    echo "--- Міграція користувачів ---\n";
+    $userJsonRepo = new UserFileRepository();
+    $users = $userJsonRepo->all();
+    
+    foreach ($users as $u) {
+        $stmt = $pdo->prepare("SELECT id FROM users WHERE login = ?");
+        $stmt->execute([$u['login']]);
+        if ($stmt->fetch()) {
+            echo "Користувач {$u['login']} вже існує, пропускаємо.\n";
+            continue;
+        }
+
+        $sql = "INSERT INTO users (id, name, login, email, password_hash, role, is_admin, created_at) 
+                VALUES (:id, :name, :login, :email, :pass, :role, :admin, :created)";
+        
+        $pdo->prepare($sql)->execute([
+            'id' => $u['id'],
+            'name' => $u['name'] ?? $u['login'],
+            'login' => $u['login'],
+            'email' => $u['email'] ?? null,
+            'pass' => $u['password_hash'] ?? '',
+            'role' => $u['role'] ?? 'user',
+            'admin' => !empty($u['is_admin']) ? 1 : 0,
+            // ВИКОРИСТОВУЄМО КОНВЕРТЕР ТУТ
+            'created' => isoToMysql($u['created_at'] ?? null)
+        ]);
+        echo "Перенесено користувача: {$u['login']}\n";
+    }
+
+    // --- 2. Міграція подій ---
+    echo "\n--- Міграція подій ---\n";
+    $store = new EventStore(); 
+    $data = $store->read();
+    $normalized = $store->normalizeStore($data); 
+
+    $count = 0;
+    foreach ($normalized as $date => $events) {
+        foreach ($events as $ev) {
+            $stmt = $pdo->prepare("SELECT id FROM events WHERE id = ?");
+            $stmt->execute([$ev['id']]);
+            if ($stmt->fetch()) continue;
+
+            $sql = "INSERT INTO events (
+                id, user_id, start_date, end_date, time, title, description, owner, 
+                type, incoming_no, outgoing_no, urgent, done, created_at
+            ) VALUES (
+                :id, :uid, :sdate, :edate, :time, :title, :desc, :owner,
+                :type, :in, :out, :urg, :done, :created
+            )";
+
+            // Підготовка дат
+            $startDate = substr($date, 0, 10); // Обрізаємо на всяк випадок до YYYY-MM-DD
+            $endDate = !empty($ev['end_date']) ? substr($ev['end_date'], 0, 10) : null;
+
+            $pdo->prepare($sql)->execute([
+                'id' => $ev['id'],
+                'uid' => $ev['user_id'] ?? 0,
+                'sdate' => $startDate,
+                'edate' => $endDate,
+                'time' => $ev['time'] ?? '',
+                'title' => $ev['title'],
+                'desc' => $ev['description'] ?? '',
+                'owner' => $ev['owner'] ?? '',
+                'type' => $ev['type'] ?? 'evt',
+                'in' => $ev['incoming_no'] ?? '',
+                'out' => $ev['outgoing_no'] ?? '',
+                'urg' => !empty($ev['urgent']) ? 1 : 0,
+                'done' => !empty($ev['done']) ? 1 : 0,
+                // ВИКОРИСТОВУЄМО КОНВЕРТЕР ТУТ
+                'created' => isoToMysql($ev['created_at'] ?? null)
+            ]);
+            $count++;
+        }
+    }
+    echo "Перенесено подій: $count.\n";
+    echo "\nГОТОВО! Можна перемикати код на MySQL.\n";
+
+} catch (Exception $e) {
+    echo "Помилка: " . $e->getMessage() . "\n";
+} catch (Error $e) {
+    echo "Фатальна помилка: " . $e->getMessage() . "\n";
+}
+
+==================================================
+FILE: /bin/reindex_audit.php
+==================================================
+
+<?php
+// FILE: /bin/reindex_audit.php
+require_once __DIR__ . '/../vendor/autoload.php';
+require_once __DIR__ . '/../App/Core/Database.php';
+
+use App\Core\Database;
+
+// --- ТОЧНА КОПІЯ ЛОГІКИ З ACTIONLOGGER ---
+function generateSearchText(array $row): string
+{
+    $parts = [];
+
+    // 1. Хто і Де
+    if (!empty($row['user_name'])) $parts[] = $row['user_name'];
+    if (!empty($row['ip']))        $parts[] = $row['ip'];
+    if (!empty($row['entity_id'])) $parts[] = $row['entity_id'];
+
+    // 2. Дії
+    $act = $row['action'] ?? '';
+    $actionsMap = [
+        'auth.login'            => 'Вхід в систему login',
+        'auth.logout'           => 'Вихід із системи logout',
+        'calendar.event.create' => 'Створення події нова create',
+        'calendar.event.update' => 'Редагування події зміна update',
+        'calendar.event.delete' => 'Видалення події delete',
+        'calendar.event.done'   => 'Зміна статусу виконання',
+        'calendar.event.urgent' => 'Зміна терміновості',
+        'user.create'           => 'Створення користувача',
+        'user.update'           => 'Редагування користувача',
+        'user.password'         => 'Зміна пароля',
+    ];
+
+    if (isset($actionsMap[$act])) {
+        $parts[] = $actionsMap[$act];
+    } else {
+        $parts[] = str_replace('.', ' ', $act);
+    }
+
+    // 3. Payload
+    $payload = json_decode($row['payload'] ?? '{}', true);
+    if (!is_array($payload)) $payload = [];
+
+    // Поля календаря
+    if (!empty($payload['title']))       $parts[] = "Заголовок: " . $payload['title'];
+    if (!empty($payload['description'])) $parts[] = "Опис: " . $payload['description'];
+    if (!empty($payload['owner']))       $parts[] = "Власник: " . $payload['owner'];
+    if (!empty($payload['incoming_no'])) $parts[] = "Вх. №" . $payload['incoming_no'];
+    if (!empty($payload['outgoing_no'])) $parts[] = "Вих. №" . $payload['outgoing_no'];
+    if (!empty($payload['start_date']))  $parts[] = "Дата: " . $payload['start_date'];
+    
+    // Статуси
+    if (isset($payload['done'])) {
+        if ($payload['done'] == 1 || $payload['done'] === true || $payload['done'] === 'true') {
+            $parts[] = "Статус: Виконано Зроблено";
+        } elseif ($payload['done'] === 0 || $payload['done'] === false || $payload['done'] === 'false') {
+            $parts[] = "Статус: Не виконано В роботі";
+        }
+    }
+    if (isset($payload['urgent'])) {
+        if ($payload['urgent'] == 1 || $payload['urgent'] === true || $payload['urgent'] === 'true') {
+            $parts[] = "Пріоритет: Терміново Важливо";
+        }
+    }
+
+    // Все інше
+    array_walk_recursive($payload, function($value, $key) use (&$parts) {
+        if (in_array($key, ['title', 'description', 'incoming_no', 'outgoing_no', 'done', 'urgent', 'start_date'])) return;
+        if (is_string($value) && !empty($value)) $parts[] = $value;
+        elseif (is_numeric($value)) $parts[] = (string)$value;
+    });
+
+    return implode(' ', array_unique($parts));
+}
+// ------------------------------------------
+
+try {
+    echo "Підключення до БД...\n";
+    $pdo = Database::connect();
+
+    echo "Вибірка всіх записів...\n";
+    $stmt = $pdo->query("SELECT * FROM audit_logs");
+    $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    echo "Всього записів: " . count($rows) . "\n";
+
+    $upd = $pdo->prepare("UPDATE audit_logs SET search_text = :txt WHERE id = :id");
+    $count = 0;
+
+    foreach ($rows as $row) {
+        $text = generateSearchText($row);
+        $upd->execute(['txt' => $text, 'id' => $row['id']]);
+        $count++;
+        if ($count % 50 === 0) echo ".";
+    }
+
+    echo "\nГОТОВО! Оновлено $count записів.\n";
+
+} catch (Exception $e) {
+    echo "ПОМИЛКА: " . $e->getMessage() . "\n";
+}
+
+==================================================
 FILE: /bin/user-promote.php
 ==================================================
 
@@ -4528,9 +5316,9 @@ return [
     'driver' => 'mysql',
     'host' => 'localhost',
     'port' => 3306,
-    'database' => 'app',
+    'database' => 'g6',
     'username' => 'user',
-    'password' => 'secret',
+    'password' => 'WsxCde765',
     'charset' => 'utf8mb4',
 ];
 

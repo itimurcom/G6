@@ -44,7 +44,6 @@ final class ApiAuditController extends Controller
 
             $uid = (int)($_SESSION['user']['id'] ?? 0);
 
-            // Будуємо запит
             $where = ["1=1"];
             $params = [];
 
@@ -58,32 +57,41 @@ final class ApiAuditController extends Controller
                 $params['action'] = $action;
             }
 
+            // === ВИПРАВЛЕНИЙ ПОШУК ===
             if ($q !== '') {
-                // ВИПРАВЛЕННЯ: Використовуємо унікальні імена параметрів для кожного поля,
-                // тому що PDO без емуляції не дозволяє повторювати :q
-                $where[] = "(user_name LIKE :q1 OR entity_id LIKE :q2 OR payload LIKE :q3 OR ip LIKE :q4)";
-                $term = "%$q%";
-                $params['q1'] = $term;
-                $params['q2'] = $term;
-                $params['q3'] = $term;
-                $params['q4'] = $term;
+                $words = preg_split('/[\s,]+/', $q, -1, PREG_SPLIT_NO_EMPTY);
+                
+                foreach ($words as $index => $word) {
+                    $term = "%$word%";
+                    
+                    // Генеруємо УНІКАЛЬНІ імена параметрів для кожного поля.
+                    // PDO без емуляції вимагає цього.
+                    $k1 = "st_{$index}";  // search_text
+                    $k2 = "un_{$index}";  // user_name
+                    $k3 = "eid_{$index}"; // entity_id
+                    $k4 = "ip_{$index}";  // ip
+                    
+                    $where[] = "(search_text LIKE :$k1 OR user_name LIKE :$k2 OR entity_id LIKE :$k3 OR ip LIKE :$k4)";
+                    
+                    $params[$k1] = $term;
+                    $params[$k2] = $term;
+                    $params[$k3] = $term;
+                    $params[$k4] = $term;
+                }
             }
+            // =========================
 
             $whereSql = implode(' AND ', $where);
 
-            // Отримуємо загальну кількість
             $stmtCount = $this->db->prepare("SELECT COUNT(*) FROM audit_logs WHERE $whereSql");
             $stmtCount->execute($params);
             $total = (int)$stmtCount->fetchColumn();
 
-            // Отримуємо дані
-            // LIMIT та OFFSET вставляємо напряму, оскільки вони приведені до (int) вище і це безпечно
             $sql = "SELECT * FROM audit_logs WHERE $whereSql ORDER BY id DESC LIMIT $limit OFFSET $offset";
             $stmt = $this->db->prepare($sql);
             $stmt->execute($params);
             $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-            // Форматуємо для фронтенду
             $items = array_map(function($row) {
                 $payload = json_decode($row['payload'] ?? '{}', true);
                 if (!is_array($payload)) $payload = [];
