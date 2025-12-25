@@ -3497,6 +3497,7 @@ namespace App\Services\Audit;
 
 use App\Core\Database;
 use PDO;
+use App\Services\Audit\AuditLabels;
 
 class ActionLogger
 {
@@ -3509,110 +3510,51 @@ class ActionLogger
 
     private function context(): array
     {
-        if (session_status() !== PHP_SESSION_ACTIVE) {
-            @session_start();
-        }
-
+        if (session_status() !== PHP_SESSION_ACTIVE) @session_start();
         $u = $_SESSION['user'] ?? null;
-        $uid = isset($u['id']) ? (int)$u['id'] : null;
-        $uname = is_array($u) ? ($u['name'] ?? null) : null;
-
         return [
-            'user_id'   => $uid,
-            'user_name' => $uname,
-            'ip'        => $_SERVER['REMOTE_ADDR']    ?? null,
+            'user_id'   => $u['id'] ?? null,
+            'user_name' => $u['name'] ?? null,
+            'ip'        => $_SERVER['REMOTE_ADDR'] ?? null,
             'ua'        => $_SERVER['HTTP_USER_AGENT'] ?? null,
         ];
     }
 
-    /**
-     * ГЕНЕРАТОР "ЛЮДСЬКОГО" ОПИСУ
-     * Перетворює технічні дані на текст, який ми бачимо в таблиці.
-     */
     public function generateSearchText(array $row): string
     {
         $parts = [];
 
-        // 1. Хто і Де (Базові поля)
+        // 1. Хто
         if (!empty($row['user_name'])) $parts[] = $row['user_name'];
         if (!empty($row['ip']))        $parts[] = $row['ip'];
         if (!empty($row['entity_id'])) $parts[] = $row['entity_id'];
 
-        // 2. Що сталося (Переклад дій)
+        // 2. Дія (Через AuditLabels)
         $act = $row['action'] ?? '';
-        $actionText = $act; // дефолт
+        $config = AuditLabels::getConfig();
 
-        // Словник дій (має співпадати з тим, що показує фронтенд)
-        $actionsMap = [
-            'auth.login'            => 'Вхід в систему login',
-            'auth.logout'           => 'Вихід із системи logout',
-            'calendar.event.create' => 'Створення події нова create',
-            'calendar.event.update' => 'Редагування події зміна update',
-            'calendar.event.delete' => 'Видалення події delete',
-            'calendar.event.done'   => 'Зміна статусу виконання',
-            'calendar.event.urgent' => 'Зміна терміновості',
-            'user.create'           => 'Створення користувача',
-            'user.update'           => 'Редагування користувача',
-            'user.password'         => 'Зміна пароля',
-        ];
-
-        if (isset($actionsMap[$act])) {
-            $parts[] = $actionsMap[$act];
+        if (isset($config[$act])) {
+            $parts[] = $config[$act]['text'];
+            if (!empty($config[$act]['tags'])) {
+                $parts[] = $config[$act]['tags'];
+            }
         } else {
-            // Якщо дії немає в словнику, розбиваємо крапки на слова
             $parts[] = str_replace('.', ' ', $act);
         }
 
-        // 3. Деталі (Розбір JSON payload)
+        // 3. Payload
         $payload = $row;
-        // Видаляємо сміття
         unset($payload['user_id'], $payload['user_name'], $payload['action'], $payload['result'], $payload['ip'], $payload['ua'], $payload['ts'], $payload['entity_type'], $payload['entity_id']);
         
-        // --- Специфічні поля календаря ---
-        
-        // Заголовок та опис
-        if (!empty($payload['title']))       $parts[] = "Заголовок: " . $payload['title'];
-        if (!empty($payload['description'])) $parts[] = "Опис: " . $payload['description'];
-        if (!empty($payload['owner']))       $parts[] = "Власник: " . $payload['owner'];
-        
-        // Номери
-        if (!empty($payload['incoming_no'])) $parts[] = "Вх. №" . $payload['incoming_no'];
-        if (!empty($payload['outgoing_no'])) $parts[] = "Вих. №" . $payload['outgoing_no'];
-        
-        // Дати
-        if (!empty($payload['start_date']))  $parts[] = "Дата: " . $payload['start_date'];
-        if (!empty($payload['time']))        $parts[] = "Час: " . $payload['time'];
-        
-        // Статуси (Boolean)
-        // Обробка done
-        if (isset($payload['done'])) {
-            if ($payload['done'] == 1 || $payload['done'] === true || $payload['done'] === 'true') {
-                $parts[] = "Статус: Виконано Зроблено";
-            } elseif ($payload['done'] === 0 || $payload['done'] === false || $payload['done'] === 'false') {
-                $parts[] = "Статус: Не виконано В роботі";
-            }
-        }
-        
-        // Обробка urgent
-        if (isset($payload['urgent'])) {
-            if ($payload['urgent'] == 1 || $payload['urgent'] === true || $payload['urgent'] === 'true') {
-                $parts[] = "Пріоритет: Терміново Важливо";
-            }
-        }
+        if (isset($payload['done']))   $parts[] = $payload['done'] ? 'Виконано' : 'Не виконано';
+        if (isset($payload['urgent'])) $parts[] = $payload['urgent'] ? 'Терміново' : '';
 
-        // 4. Рекурсивний збір всього іншого тексту (на випадок нових полів)
         array_walk_recursive($payload, function($value, $key) use (&$parts) {
-            // Пропускаємо те, що вже обробили вище
-            if (in_array($key, ['title', 'description', 'incoming_no', 'outgoing_no', 'done', 'urgent', 'start_date', 'time'])) return;
-            
-            if (is_string($value) && !empty($value)) {
-                $parts[] = $value;
-            } elseif (is_numeric($value)) {
-                $parts[] = (string)$value;
-            }
+            if (in_array($key, ['done', 'urgent'])) return;
+            if (is_string($value) && !empty($value)) $parts[] = $value;
+            elseif (is_numeric($value)) $parts[] = (string)$value;
         });
 
-        // Видаляємо дублікати та склеюємо
         return implode(' ', array_unique($parts));
     }
 
@@ -3625,7 +3567,6 @@ class ActionLogger
         $entityId   = $payloadData['entity_id'] ?? null;
         unset($payloadData['entity_type'], $payloadData['entity_id']);
 
-        // Генеруємо детальний пошуковий текст
         $searchText = $this->generateSearchText($row);
 
         $sql = "INSERT INTO audit_logs (
@@ -3664,21 +3605,110 @@ class ActionLogger
         $ctx = $this->context();
         if ($userId !== null)   { $ctx['user_id'] = $userId; }
         if ($userName !== null) { $ctx['user_name'] = $userName; }
-        
-        $row = array_merge($ctx, $meta, [
-            'action' => $action,
-            'result' => $result,
-        ]);
+        $row = array_merge($ctx, $meta, [ 'action' => $action, 'result' => $result ]);
         $this->write($row);
     }
 
     public function log(string $action, string $result = 'success', array $meta = []): void
     {
-        $row = array_merge($this->context(), $meta, [
-            'action' => $action,
-            'result' => $result,
-        ]);
+        $row = array_merge($this->context(), $meta, [ 'action' => $action, 'result' => $result ]);
         $this->write($row);
+    }
+}
+
+==================================================
+FILE: /App/Services/Audit/AuditLabels.php
+==================================================
+
+<?php
+declare(strict_types=1);
+
+namespace App\Services\Audit;
+
+class AuditLabels
+{
+    public static function getConfig(): array
+    {
+        return [
+            // --- Аутентифікація ---
+            'auth.login' => [
+                'text' => 'Вхід в систему',
+                'css'  => 't-login',
+                'tags' => 'login signin логін'
+            ],
+            'auth.logout' => [
+                'text' => 'Вихід із системи',
+                'css'  => 't-logout',
+                'tags' => 'logout signout вихід'
+            ],
+            'auth.register' => [
+                'text' => 'Реєстрація користувача',
+                'css'  => 't-login',
+                'tags' => 'register new user'
+            ],
+
+            // --- Календар ---
+            'calendar.event.create' => [
+                'text' => 'Створення події',
+                'css'  => 't-create',
+                'tags' => 'new create нова'
+            ],
+            // ОСЬ ТУТ: "Редагування" і тег "зміна"
+            'calendar.event.update' => [
+                'text' => 'Редагування події',
+                'css'  => 't-update',
+                'tags' => 'edit update зміна' 
+            ],
+            'calendar.event.delete' => [
+                'text' => 'Видалення події',
+                'css'  => 't-delete',
+                'tags' => 'remove delete видалення'
+            ],
+            'calendar.event.done' => [
+                'text' => 'Зміна статусу виконання',
+                'css'  => 't-update',
+                'tags' => 'done complete зроблено'
+            ],
+            'calendar.event.urgent' => [
+                'text' => 'Зміна терміновості',
+                'css'  => 't-update',
+                'tags' => 'important urgent важливо'
+            ],
+            'calendar.event.close' => [
+                'text' => 'Закриття події',
+                'css'  => 't-update',
+                'tags' => 'close archive'
+            ],
+
+            // --- Адмінка ---
+            'user.create' => [
+                'text' => 'Створення користувача (Адмін)',
+                'css'  => 't-create',
+                'tags' => 'admin user add'
+            ],
+            'user.update' => [
+                'text' => 'Редагування користувача (Адмін)',
+                'css'  => 't-update',
+                'tags' => 'admin user edit'
+            ],
+            'user.password' => [
+                'text' => 'Зміна пароля (Адмін)',
+                'css'  => 't-update',
+                'tags' => 'admin password pass'
+            ],
+
+            // --- Кабінет ---
+            'cabinet.change_password' => [
+                'text' => 'Зміна власного пароля',
+                'css'  => 't-update',
+                'tags' => 'security безпека password'
+            ],
+            'cabinet.profile_update' => [
+                'text' => 'Оновлення профілю',
+                'css'  => 't-update',
+                'tags' => 'settings налаштування profile'
+            ],
+        ];
     }
 }
 
@@ -4485,412 +4515,148 @@ FILE: /App/Views/pages/home.php
 <? include ("/var/www/html/calendar.localhost/App/Views/layouts/modals/infoEvent.php"); ?>
 
 ==================================================
-FILE: /bin/calendar-backup.php
-==================================================
-
-#!/usr/bin/env php
-<?php
-declare(strict_types=1);
-
-use App\Models\EventStore;
-
-require_once __DIR__ . '/../vendor/autoload.php';
-
-/**
- * Backup calendar storage (db.json) with optional compression and retention.
- *
- * Usage:
- *   php bin/calendar-backup.php [--source=PATH] [--dest=DIR] [--compress[=gz|none]]
- *                               [--keep-daily=N] [--keep-weekly=N] [--keep-monthly=N]
- *                               [--dry-run]
- *
- * Defaults:
- *   --source     = EventStore default path (storage/data/db.json)
- *   --dest       = storage/backups
- *   --compress   = gz
- *   --keep-daily = 7
- *   --keep-weekly= 8
- *   --keep-monthly=6
- */
-final class BackupCli
-{
-    private string $source;
-    private string $dest;
-    private string $compress;
-    private int $keepDaily;
-    private int $keepWeekly;
-    private int $keepMonthly;
-    private bool $dryRun;
-    private string $logFile;
-
-    public function __construct(array $argv)
-    {
-        $es = new EventStore();
-        $defaults = [
-            'source' => $es->getPath(),
-            'dest' => __DIR__ . '/../storage/backups',
-            'compress' => 'gz',
-            'keep-daily' => '7',
-            'keep-weekly' => '8',
-            'keep-monthly' => '6',
-            'dry-run' => '0',
-        ];
-        $opts = $this->parseArgs($argv, $defaults);
-
-        $this->source = $opts['source'];
-        $this->dest = $opts['dest'];
-        $this->compress = strtolower($opts['compress'] ?? 'gz');
-        $this->keepDaily = (int)$opts['keep-daily'];
-        $this->keepWeekly = (int)$opts['keep-weekly'];
-        $this->keepMonthly = (int)$opts['keep-monthly'];
-        $this->dryRun = in_array(strtolower((string)$opts['dry-run']), ['1','true','yes'], true);
-        $this->logFile = __DIR__ . '/../storage/logs/backup.log';
-    }
-
-    private function parseArgs(array $argv, array $defaults): array
-    {
-        $opts = $defaults;
-        foreach (array_slice($argv, 1) as $arg) {
-            if (preg_match('/^--([a-zA-Z0-9_-]+)=(.*)$/', $arg, $m)) {
-                $opts[$m[1]] = $m[2];
-            } elseif (preg_match('/^--([a-zA-Z0-9_-]+)$/', $arg, $m)) {
-                $opts[$m[1]] = '1';
-            }
-        }
-        return $opts;
-    }
-
-    public function run(): int
-    {
-        $this->ensureDir(dirname($this->source));
-        $this->ensureDir($this->dest);
-        $this->ensureDir(dirname($this->logFile));
-
-        if (!file_exists($this->source)) {
-            $this->log("ERROR: source not found: {$this->source}");
-            return 2;
-        }
-
-        $stamp = (new DateTime('now', new DateTimeZone('Europe/Kyiv')))->format('Ymd-His');
-        $baseName = "db-{$stamp}.json";
-        $outPath = rtrim($this->dest, '/').'/'.$baseName;
-        $data = file_get_contents($this->source);
-        if ($data === false) {
-            $this->log("ERROR: cannot read source: {$this->source}");
-            return 3;
-        }
-        // validate JSON
-        $decoded = json_decode($data, true);
-        if (!is_array($decoded)) {
-            $this->log("ERROR: source is not valid JSON: {$this->source}");
-            return 4;
-        }
-
-        $written = 0;
-        if ($this->compress === 'gz') {
-            $outPath .= '.gz';
-            $payload = gzencode($data, 9);
-            if ($payload === false) {
-                $this->log("ERROR: gzencode failed");
-                return 5;
-            }
-            if (!$this->dryRun) {
-                $written = file_put_contents($outPath, $payload, LOCK_EX);
-            }
-        } else {
-            if (!$this->dryRun) {
-                $written = file_put_contents($outPath, $data, LOCK_EX);
-            }
-        }
-
-        $this->log(($this->dryRun ? '[DRY] ' : '')."Backup created: {$outPath} bytes=".($written ?: strlen((string)$data)));
-        $actions = $this->applyRetention($this->dest, $this->keepDaily, $this->keepWeekly, $this->keepMonthly);
-        foreach ($actions as $a) {
-            $this->log(($this->dryRun ? '[DRY] ' : '').$a);
-        }
-
-        echo json_encode([
-            'ok' => true,
-            'dry_run' => $this->dryRun,
-            'backup' => $outPath,
-            'written' => $written,
-            'retention' => $actions,
-        ], JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT).PHP_EOL;
-        return 0;
-    }
-
-    private function ensureDir(string $dir): void
-    {
-        if (!is_dir($dir)) { @mkdir($dir, 0777, true); }
-    }
-
-    private function listBackups(string $dir): array
-    {
-        $files = glob(rtrim($dir, '/').'/db-*.json*');
-        $list = [];
-        foreach ($files as $f) {
-            $fn = basename($f);
-            if (!preg_match('/^db-(\d{8})-(\d{6})\.json(\.gz)?$/', $fn, $m)) continue;
-            $date = $m[1]; $time = $m[2];
-            $ts = DateTime::createFromFormat('Ymd-His', $date.'-'.$time, new DateTimeZone('Europe/Kyiv'));
-            if (!$ts) continue;
-            $list[] = ['path' => $f, 'ts' => $ts, 'ts_str' => $ts->format('c')];
-        }
-        usort($list, fn($a,$b) => $b['ts'] <=> $a['ts']); // newest first
-        return $list;
-    }
-
-    private function applyRetention(string $dir, int $keepDaily, int $keepWeekly, int $keepMonthly): array
-    {
-        $actions = [];
-        $list = $this->listBackups($dir);
-        if (empty($list)) return ["No backups found for retention."];
-
-        $keep = [];
-        $now = new DateTime('now', new DateTimeZone('Europe/Kyiv'));
-
-        // Daily: keep last N distinct days
-        $days = [];
-        foreach ($list as $item) {
-            $d = $item['ts']->format('Y-m-d');
-            if (!isset($days[$d])) $days[$d] = $item;
-        }
-        $dailyKept = array_slice(array_values($days), 0, $keepDaily);
-        foreach ($dailyKept as $it) $keep[$it['path']] = true;
-
-        // Weekly: for items older than last daily window, keep last N distinct ISO weeks
-        $cutoffDaily = clone $now; $cutoffDaily->modify('-'.max(0,$keepDaily-1).' days'); // inclusive window
-        $weeks = [];
-        foreach ($list as $item) {
-            if ($item['ts'] >= $cutoffDaily) continue;
-            $wk = $item['ts']->format('o-W');
-            if (!isset($weeks[$wk])) $weeks[$wk] = $item;
-        }
-        $weeklyKept = array_slice(array_values($weeks), 0, $keepWeekly);
-        foreach ($weeklyKept as $it) $keep[$it['path']] = true;
-
-        // Monthly: for items older than weekly window, keep last N distinct months
-        $cutoffWeekly = clone $now; $cutoffWeekly->modify('-'.(7*max(0,$keepWeekly)).' days');
-        $months = [];
-        foreach ($list as $item) {
-            if ($item['ts'] >= $cutoffWeekly) continue;
-            $mo = $item['ts']->format('Y-m');
-            if (!isset($months[$mo])) $months[$mo] = $item;
-        }
-        $monthlyKept = array_slice(array_values($months), 0, $keepMonthly);
-        foreach ($monthlyKept as $it) $keep[$it['path']] = true;
-
-        // Everything else → delete
-        foreach ($list as $item) {
-            $p = $item['path'];
-            if (isset($keep[$p])) continue;
-            if ($this->dryRun) {
-                $actions[] = "Would delete: {$p}";
-            } else {
-                if (@unlink($p)) $actions[] = "Deleted: {$p}";
-            }
-        }
-        if (empty($actions)) $actions[] = "Retention OK: nothing to remove.";
-        return $actions;
-    }
-
-    private function log(string $line): void
-    {
-        $ts = (new DateTime('now', new DateTimeZone('Europe/Kyiv')))->format('Y-m-d H:i:s');
-        $msg = "[$ts] $line
-";
-        @file_put_contents($this->logFile, $msg, FILE_APPEND);
-    }
-}
-
-exit((new BackupCli($argv))->run());
-
-
-==================================================
-FILE: /bin/calendar-repair.php
-==================================================
-
-#!/usr/bin/env php
-<?php
-declare(strict_types=1);
-
-use App\Models\EventStore;
-
-require_once __DIR__ . '/../vendor/autoload.php';
-
-/**
- * Normalize + dedupe the store (same as /api/repair but via CLI).
- *
- * Usage:
- *   php bin/calendar-repair.php [--apply]
- */
-final class RepairCli
-{
-    private bool $apply;
-
-    public function __construct(array $argv)
-    {
-        $this->apply = in_array('--apply', $argv, true);
-    }
-
-    public function run(): int
-    {
-        $es = new EventStore();
-        $summary = $es->repairSummary($this->apply);
-        echo json_encode($summary, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE) . PHP_EOL;
-        return $summary['ok'] ? 0 : 1;
-    }
-}
-
-exit((new RepairCli($argv))->run());
-
-
-==================================================
-FILE: /bin/calendar-restore.php
-==================================================
-
-#!/usr/bin/env php
-<?php
-declare(strict_types=1);
-
-use App\Models\EventStore;
-
-require_once __DIR__ . '/../vendor/autoload.php';
-
-/**
- * Restore calendar storage from a backup file (json or json.gz).
- *
- * Usage:
- *   php bin/calendar-restore.php --file=PATH [--dest=PATH] [--dry-run]
- *
- * Defaults:
- *   --dest = EventStore default path (storage/data/db.json)
- */
-final class RestoreCli
-{
-    private string $file;
-    private string $dest;
-    private bool $dryRun;
-
-    public function __construct(array $argv)
-    {
-        $es = new EventStore();
-        $defaults = [
-            'file' => '',
-            'dest' => $es->getPath(),
-            'dry-run' => '0',
-        ];
-        $opts = $this->parseArgs($argv, $defaults);
-        $this->file = (string)$opts['file'];
-        $this->dest = (string)$opts['dest'];
-        $this->dryRun = in_array(strtolower((string)$opts['dry-run']), ['1','true','yes'], true);
-    }
-
-    private function parseArgs(array $argv, array $defaults): array
-    {
-        $opts = $defaults;
-        foreach (array_slice($argv, 1) as $arg) {
-            if (preg_match('/^--([a-zA-Z0-9_-]+)=(.*)$/', $arg, $m)) {
-                $opts[$m[1]] = $m[2];
-            } elseif (preg_match('/^--([a-zA-Z0-9_-]+)$/', $arg, $m)) {
-                $opts[$m[1]] = '1';
-            }
-        }
-        return $opts;
-    }
-
-    public function run(): int
-    {
-        if ($this->file === '' || !file_exists($this->file)) {
-            fwrite(STDERR, "ERROR: --file is required and must exist\n");
-            return 2;
-        }
-        $payload = file_get_contents($this->file);
-        if ($payload === false) {
-            fwrite(STDERR, "ERROR: cannot read file: {$this->file}\n");
-            return 3;
-        }
-        if (preg_match('/\.gz$/', $this->file)) {
-            $payload = gzdecode($payload);
-            if ($payload === false) {
-                fwrite(STDERR, "ERROR: gzdecode failed\n");
-                return 4;
-            }
-        }
-        $json = json_decode($payload, true);
-        if (!is_array($json)) {
-            fwrite(STDERR, "ERROR: file does not contain valid JSON store\n");
-            return 5;
-        }
-
-        // safety backup
-        $bak = $this->dest.'.bak-'.date('Ymd-His');
-        if ($this->dryRun) {
-            echo json_encode(['ok'=>true,'dry_run'=>true,'would_write'=>$this->dest,'backup'=>$bak], JSON_PRETTY_PRINT|JSON_UNESCAPED_UNICODE).PHP_EOL;
-            return 0;
-        }
-
-        if (file_exists($this->dest)) {
-            @copy($this->dest, $bak);
-        }
-        // Write via EventStore to ensure atomic move
-        $es = new EventStore($this->dest);
-        $es->write($json);
-
-        echo json_encode(['ok'=>true,'path'=>$this->dest,'backup'=>$bak], JSON_PRETTY_PRINT|JSON_UNESCAPED_UNICODE).PHP_EOL;
-        return 0;
-    }
-}
-
-exit((new RestoreCli($argv))->run());
-
-
-==================================================
 FILE: /bin/migrate_logs.php
 ==================================================
 
 <?php
-// bin/migrate_logs.php
+// FILE: /bin/migrate_logs.php
+// Запуск: php bin/migrate_logs.php
+
 require_once __DIR__ . '/../vendor/autoload.php';
+require_once __DIR__ . '/../App/Core/Database.php';
+require_once __DIR__ . '/../App/Services/Audit/AuditLabels.php';
+
 use App\Core\Database;
+use App\Services\Audit\AuditLabels;
+
+// --- Логіка генерації тексту (копія з ActionLogger, щоб не залежати від нього) ---
+function generateSearchText(array $row): string
+{
+    $parts = [];
+    if (!empty($row['user_name'])) $parts[] = $row['user_name'];
+    if (!empty($row['ip']))        $parts[] = $row['ip'];
+    if (!empty($row['entity_id'])) $parts[] = $row['entity_id'];
+
+    $act = $row['action'] ?? '';
+    $config = AuditLabels::getConfig();
+
+    if (isset($config[$act])) {
+        $parts[] = $config[$act]['text'];
+        $parts[] = $config[$act]['tags'] ?? '';
+    } else {
+        $parts[] = str_replace('.', ' ', $act);
+    }
+
+    // Payload
+    $payload = $row;
+    // Очистка від дублікатів
+    unset($payload['user_id'], $payload['user_name'], $payload['action'], $payload['result'], $payload['ip'], $payload['ua'], $payload['ts'], $payload['entity_type'], $payload['entity_id']);
+
+    if (!empty($payload['title']))       $parts[] = "Заголовок: " . $payload['title'];
+    if (!empty($payload['description'])) $parts[] = "Опис: " . $payload['description'];
+    if (!empty($payload['incoming_no'])) $parts[] = "Вх. №" . $payload['incoming_no'];
+    if (!empty($payload['outgoing_no'])) $parts[] = "Вих. №" . $payload['outgoing_no'];
+    
+    // Рекурсивний збір всього іншого
+    array_walk_recursive($payload, function($value, $key) use (&$parts) {
+        if (in_array($key, ['title', 'description', 'incoming_no', 'outgoing_no'])) return;
+        if (is_string($value) && !empty($value)) $parts[] = $value;
+        elseif (is_numeric($value)) $parts[] = (string)$value;
+    });
+
+    return implode(' ', array_unique($parts));
+}
+// -------------------------------------------------------------------------
 
 $file = __DIR__ . '/../storage/logs/audit.ndjson';
-if (!file_exists($file)) die("Файл логів не знайдено.\n");
-
-$pdo = Database::connect();
-$lines = file($file, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
-
-echo "Міграція " . count($lines) . " записів...\n";
-
-$sql = "INSERT INTO audit_logs (user_id, user_name, action, result, entity_type, entity_id, payload, ip, ua, created_at) 
-        VALUES (:uid, :uname, :action, :result, :etype, :eid, :payload, :ip, :ua, :created)";
-$stmt = $pdo->prepare($sql);
-
-foreach ($lines as $line) {
-    $row = json_decode($line, true);
-    if (!$row) continue;
-
-    $ts = isset($row['ts']) ? date('Y-m-d H:i:s', strtotime($row['ts'])) : date('Y-m-d H:i:s');
-    
-    // Відокремлюємо метадані
-    $payloadData = $row;
-    unset($payloadData['user_id'], $payloadData['user_name'], $payloadData['action'], $payloadData['result'], $payloadData['ip'], $payloadData['ua'], $payloadData['ts'], $payloadData['entity_type'], $payloadData['entity_id']);
-
-    $stmt->execute([
-        'uid'     => $row['user_id'] ?? null,
-        'uname'   => $row['user_name'] ?? null,
-        'action'  => $row['action'] ?? 'unknown',
-        'result'  => $row['result'] ?? 'success',
-        'etype'   => $row['entity_type'] ?? null,
-        'eid'     => $row['entity_id'] ?? null,
-        'payload' => json_encode($payloadData, JSON_UNESCAPED_UNICODE),
-        'ip'      => $row['ip'] ?? null,
-        'ua'      => $row['ua'] ?? null,
-        'created' => $ts
-    ]);
+if (!file_exists($file)) {
+    die("Файл логів не знайдено: $file\n");
 }
 
-echo "Готово!\n";
+try {
+    echo "Підключення до БД...\n";
+    $pdo = Database::connect();
+
+    echo "Відкриття файлу логів...\n";
+    $handle = fopen($file, "r");
+    if (!$handle) die("Не вдалося відкрити файл.\n");
+
+    $sql = "INSERT INTO audit_logs (
+                user_id, user_name, action, result, 
+                entity_type, entity_id, payload, 
+                ip, ua, search_text, created_at
+            ) VALUES (
+                :uid, :uname, :action, :result, 
+                :etype, :eid, :payload, 
+                :ip, :ua, :stext, :created
+            )";
+    
+    $stmt = $pdo->prepare($sql);
+    $count = 0;
+    $skipped = 0;
+
+    echo "Початок імпорту...\n";
+
+    while (($line = fgets($handle)) !== false) {
+        $line = trim($line);
+        if (!$line) continue;
+
+        $row = json_decode($line, true);
+        if (!$row) continue;
+
+        // Форматуємо дату
+        $tsRaw = $row['ts'] ?? 'now';
+        try {
+            $dt = new DateTime($tsRaw);
+            $createdAt = $dt->format('Y-m-d H:i:s');
+        } catch (Exception $e) {
+            $createdAt = date('Y-m-d H:i:s');
+        }
+
+        // Генеруємо пошуковий текст
+        $stext = generateSearchText($row);
+
+        // Підготовка payload для запису
+        $payloadData = $row;
+        unset($payloadData['user_id'], $payloadData['user_name'], $payloadData['action'], $payloadData['result'], $payloadData['ip'], $payloadData['ua'], $payloadData['ts'], $payloadData['entity_type'], $payloadData['entity_id']);
+
+        try {
+            // Перевірка дублікатів (необов'язково, але бажано, щоб не дублювати при повторному запуску)
+            // Перевіряємо по точній даті та дії (примітивно, але працює для логів)
+            $check = $pdo->prepare("SELECT id FROM audit_logs WHERE created_at = ? AND action = ? AND user_id = ? LIMIT 1");
+            $check->execute([$createdAt, $row['action'] ?? '', $row['user_id'] ?? 0]);
+            if ($check->fetch()) {
+                $skipped++;
+                continue; 
+            }
+
+            $stmt->execute([
+                'uid'     => $row['user_id'] ?? null,
+                'uname'   => $row['user_name'] ?? null,
+                'action'  => $row['action'] ?? 'unknown',
+                'result'  => $row['result'] ?? 'success',
+                'etype'   => $row['entity_type'] ?? null,
+                'eid'     => $row['entity_id'] ?? null,
+                'payload' => json_encode($payloadData, JSON_UNESCAPED_UNICODE),
+                'ip'      => $row['ip'] ?? null,
+                'ua'      => $row['ua'] ?? null,
+                'stext'   => $stext,
+                'created' => $createdAt
+            ]);
+            $count++;
+            if ($count % 100 === 0) echo "Імпортовано $count...\r";
+
+        } catch (Exception $e) {
+            echo "\nПомилка запису: " . $e->getMessage() . "\n";
+        }
+    }
+
+    fclose($handle);
+    echo "\nГОТОВО! Імпортовано: $count. Пропущено (вже є): $skipped.\n";
+
+} catch (Exception $e) {
+    echo "Критична помилка: " . $e->getMessage() . "\n";
+}
 
 ==================================================
 FILE: /bin/migrate_to_mysql.php
@@ -5025,38 +4791,35 @@ FILE: /bin/reindex_audit.php
 
 <?php
 // FILE: /bin/reindex_audit.php
+
 require_once __DIR__ . '/../vendor/autoload.php';
 require_once __DIR__ . '/../App/Core/Database.php';
+// Явне підключення, щоб точно знайти файл
+require_once __DIR__ . '/../App/Services/Audit/AuditLabels.php';
 
 use App\Core\Database;
+use App\Services\Audit\AuditLabels;
 
-// --- ТОЧНА КОПІЯ ЛОГІКИ З ACTIONLOGGER ---
 function generateSearchText(array $row): string
 {
     $parts = [];
 
-    // 1. Хто і Де
+    // 1. Хто
     if (!empty($row['user_name'])) $parts[] = $row['user_name'];
     if (!empty($row['ip']))        $parts[] = $row['ip'];
     if (!empty($row['entity_id'])) $parts[] = $row['entity_id'];
 
-    // 2. Дії
+    // 2. Дія (З AuditLabels)
     $act = $row['action'] ?? '';
-    $actionsMap = [
-        'auth.login'            => 'Вхід в систему login',
-        'auth.logout'           => 'Вихід із системи logout',
-        'calendar.event.create' => 'Створення події нова create',
-        'calendar.event.update' => 'Редагування події зміна update',
-        'calendar.event.delete' => 'Видалення події delete',
-        'calendar.event.done'   => 'Зміна статусу виконання',
-        'calendar.event.urgent' => 'Зміна терміновості',
-        'user.create'           => 'Створення користувача',
-        'user.update'           => 'Редагування користувача',
-        'user.password'         => 'Зміна пароля',
-    ];
+    $config = AuditLabels::getConfig();
 
-    if (isset($actionsMap[$act])) {
-        $parts[] = $actionsMap[$act];
+    if (isset($config[$act])) {
+        // Додаємо "людську назву" (напр. "Редагування події")
+        $parts[] = $config[$act]['text']; 
+        // Додаємо теги (напр. "зміна update")
+        if (!empty($config[$act]['tags'])) {
+            $parts[] = $config[$act]['tags'];
+        }
     } else {
         $parts[] = str_replace('.', ' ', $act);
     }
@@ -5065,229 +4828,47 @@ function generateSearchText(array $row): string
     $payload = json_decode($row['payload'] ?? '{}', true);
     if (!is_array($payload)) $payload = [];
 
-    // Поля календаря
-    if (!empty($payload['title']))       $parts[] = "Заголовок: " . $payload['title'];
-    if (!empty($payload['description'])) $parts[] = "Опис: " . $payload['description'];
-    if (!empty($payload['owner']))       $parts[] = "Власник: " . $payload['owner'];
-    if (!empty($payload['incoming_no'])) $parts[] = "Вх. №" . $payload['incoming_no'];
-    if (!empty($payload['outgoing_no'])) $parts[] = "Вих. №" . $payload['outgoing_no'];
-    if (!empty($payload['start_date']))  $parts[] = "Дата: " . $payload['start_date'];
-    
-    // Статуси
-    if (isset($payload['done'])) {
-        if ($payload['done'] == 1 || $payload['done'] === true || $payload['done'] === 'true') {
-            $parts[] = "Статус: Виконано Зроблено";
-        } elseif ($payload['done'] === 0 || $payload['done'] === false || $payload['done'] === 'false') {
-            $parts[] = "Статус: Не виконано В роботі";
-        }
-    }
-    if (isset($payload['urgent'])) {
-        if ($payload['urgent'] == 1 || $payload['urgent'] === true || $payload['urgent'] === 'true') {
-            $parts[] = "Пріоритет: Терміново Важливо";
-        }
-    }
+    // Очистка технічних полів з payload
+    unset($payload['user_id'], $payload['user_name'], $payload['action'], $payload['result'], $payload['ip'], $payload['ua'], $payload['ts'], $payload['entity_type'], $payload['entity_id']);
 
-    // Все інше
-    array_walk_recursive($payload, function($value, $key) use (&$parts) {
-        if (in_array($key, ['title', 'description', 'incoming_no', 'outgoing_no', 'done', 'urgent', 'start_date'])) return;
-        if (is_string($value) && !empty($value)) $parts[] = $value;
-        elseif (is_numeric($value)) $parts[] = (string)$value;
+    // Специфічні прапорці
+    if (isset($payload['done']))   $parts[] = $payload['done'] ? 'Виконано' : 'Не виконано';
+    if (isset($payload['urgent'])) $parts[] = $payload['urgent'] ? 'Терміново' : '';
+
+    // Рекурсивно витягуємо весь текст
+    array_walk_recursive($payload, function($value) use (&$parts) {
+        if (is_string($value) && !empty($value)) {
+            $parts[] = $value;
+        } elseif (is_numeric($value)) {
+            $parts[] = (string)$value;
+        }
     });
 
     return implode(' ', array_unique($parts));
 }
-// ------------------------------------------
 
 try {
     echo "Підключення до БД...\n";
     $pdo = Database::connect();
-
-    echo "Вибірка всіх записів...\n";
-    $stmt = $pdo->query("SELECT * FROM audit_logs");
-    $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
-    echo "Всього записів: " . count($rows) . "\n";
-
+    
+    echo "Оновлення індексу...\n";
+    $stmt = $pdo->query("SELECT id, user_name, ip, entity_id, action, payload FROM audit_logs");
+    
     $upd = $pdo->prepare("UPDATE audit_logs SET search_text = :txt WHERE id = :id");
+    
     $count = 0;
-
-    foreach ($rows as $row) {
+    while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
         $text = generateSearchText($row);
         $upd->execute(['txt' => $text, 'id' => $row['id']]);
         $count++;
-        if ($count % 50 === 0) echo ".";
+        if ($count % 100 === 0) echo "Оновлено $count...\r";
     }
 
-    echo "\nГОТОВО! Оновлено $count записів.\n";
+    echo "\nГОТОВО! Оновлено записів: $count.\n";
 
 } catch (Exception $e) {
     echo "ПОМИЛКА: " . $e->getMessage() . "\n";
 }
-
-==================================================
-FILE: /bin/user-promote.php
-==================================================
-
-#!/usr/bin/env php
-<?php
-declare(strict_types=1);
-
-/**
- * bin/user-promote.php (v4)
- * Supports users.json structures:
- *  - array: [ {...}, {...} ]
- *  - wrapped: {"users":[...]}
- *  - map: {"1": {...}, ...}
- *  - rows-wrapped: {"rows":[...], "last_id": N}
- * Adds --list to inspect users.
- */
-
-function usage(int $code = 0): void {
-    $msg = <<<TXT
-Usage:
-  php bin/user-promote.php --list
-  php bin/user-promote.php --email you@example.com --role admin
-  php bin/user-promote.php --id 1 --role=admin
-
-Notes:
-- Role: admin | user (case-insensitive)
-- Works with: array, {"users":[...]}, map, {"rows":[...]} (+ other fields)
-TXT;
-    fwrite($code ? STDERR : STDOUT, $msg . PHP_EOL);
-    exit($code);
-}
-
-function parseArgs(): array {
-    $args = ['email'=>null,'id'=>null,'role'=>null,'list'=>false];
-    $argv = $_SERVER['argv'] ?? [];
-    for ($i=1; $i<count($argv); $i++) {
-        $a = (string)$argv[$i];
-        if ($a === '--list') { $args['list'] = true; continue; }
-        if ($a === '-h' || $a === '--help') { usage(0); }
-        if (strpos($a, '--email=') === 0) { $args['email'] = substr($a, 8); continue; }
-        if ($a === '--email' && isset($argv[$i+1])) { $args['email'] = (string)$argv[++$i]; continue; }
-        if (strpos($a, '--id=') === 0) { $args['id'] = substr($a, 5); continue; }
-        if ($a === '--id' && isset($argv[$i+1])) { $args['id'] = (string)$argv[++$i]; continue; }
-        if (strpos($a, '--role=') === 0) { $args['role'] = substr($a, 7); continue; }
-        if ($a === '--role' && isset($argv[$i+1])) { $args['role'] = (string)$argv[++$i]; continue; }
-    }
-    return $args;
-}
-
-function is_list_array(array $a): bool {
-    if ($a === []) return true;
-    $i = 0;
-    foreach ($a as $k => $_) {
-        if ($k !== $i) return false;
-        $i++;
-    }
-    return true;
-}
-
-/**
- * Return [$root, &$container, $kind]
- * $kind: list | map | wrapped | rows
- */
-function load_users(string $file): array {
-    if (!file_exists($file)) {
-        fwrite(STDERR, "[!] users.json not found at $file" . PHP_EOL);
-        exit(2);
-    }
-    $json = file_get_contents($file);
-    if ($json === false) { fwrite(STDERR, "[!] Failed to read $file" . PHP_EOL); exit(2); }
-    $root = json_decode($json, true);
-    if (!is_array($root)) { fwrite(STDERR, "[!] JSON root is not array/object" . PHP_EOL); exit(2); }
-
-    if (isset($root['users']) && is_array($root['users'])) {
-        return [$root, $root['users'], 'wrapped'];
-    }
-    if (isset($root['rows']) && is_array($root['rows'])) {
-        return [$root, $root['rows'], 'rows'];
-    }
-    if (is_list_array($root)) {
-        return [$root, $root, 'list'];
-    }
-    return [$root, $root, 'map'];
-}
-
-function save_users(string $file, array $root, $container, string $kind): void {
-    if ($kind === 'wrapped') {
-        $root['users'] = $container;
-    } elseif ($kind === 'rows') {
-        $root['rows'] = $container;
-    } else {
-        $root = $container;
-    }
-    $backup = $file . '.' . date('Ymd_His') . '.bak';
-    if (!copy($file, $backup)) {
-        fwrite(STDERR, "[!] Failed to create backup $backup" . PHP_EOL);
-        exit(2);
-    }
-    $out = json_encode($root, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
-    if ($out === false) { fwrite(STDERR, "[!] JSON encode failed: " . json_last_error_msg() . PHP_EOL); exit(2); }
-    if (file_put_contents($file, $out) === false) { fwrite(STDERR, "[!] Write failed: $file" . PHP_EOL); exit(2); }
-    echo "[OK] Saved. Backup: $backup" . PHP_EOL;
-}
-
-function find_user($container, ?string $id, ?string $email): array {
-    if (!is_array($container)) return [null,null];
-    foreach ($container as $k => $u) {
-        if (!is_array($u)) continue;
-        $uid = isset($u['id']) ? (string)$u['id'] : null;
-        $uem = isset($u['email']) ? (string)$u['email'] : null;
-        $ulogin = isset($u['login']) ? (string)$u['login'] : null;
-        if ($id !== null && $uid !== null && strcmp($uid, (string)$id) === 0) return [$k, $u];
-        if ($email !== null && $uem !== null && strcasecmp($uem, (string)$email) === 0) return [$k, $u];
-        if ($email !== null && $ulogin !== null && strcasecmp($ulogin, (string)$email) === 0) return [$k, $u];
-    }
-    return [null, null];
-}
-
-$args = parseArgs();
-$rootDir = realpath(__DIR__ . '/..') ?: getcwd();
-$file = $rootDir . '/storage/data/users.json';
-list($root, $container, $kind) = load_users($file);
-
-if ($args['list']) {
-    echo "Users (" . $kind . "):" . PHP_EOL;
-    $i=0;
-    foreach ($container as $k => $u) {
-        if (!is_array($u)) continue;
-        $i++;
-        $id = $u['id'] ?? '';
-        $email = $u['email'] ?? ($u['login'] ?? '');
-        $role = $u['role'] ?? '';
-        $is_admin = !empty($u['is_admin']) ? 'true' : 'false';
-        printf("%3d) key=%s id=%s email=%s role=%s is_admin=%s\n", $i, (string)$k, (string)$id, (string)$email, (string)$role, $is_admin);
-    }
-    exit(0);
-}
-
-$role = $args['role'] ? strtolower((string)$args['role']) : null;
-if (!$role || !in_array($role, ['admin','user'], true)) {
-    fwrite(STDERR, "[!] --role must be 'admin' or 'user'\n");
-    usage(2);
-}
-$email = $args['email'] ?? null;
-$id    = $args['id'] ?? null;
-if ($email === null && $id === null) {
-    fwrite(STDERR, "[!] Provide --email or --id (or use --list)\n");
-    usage(2);
-}
-
-list($key, $user) = find_user($container, $id !== null ? (string)$id : null, $email !== null ? (string)$email : null);
-if ($key === null) {
-    fwrite(STDERR, "[!] User not found by " . ($email ? "email=$email" : "id=$id") . PHP_EOL);
-    fwrite(STDERR, "    Tip: run `php bin/user-promote.php --list` to see candidates\n");
-    exit(1);
-}
-
-// Update role and compatibility flag
-$container[$key]['role'] = $role;
-$container[$key]['is_admin'] = ($role === 'admin');
-
-save_users($file, $root, $container, $kind);
-echo "[OK] Updated user key=$key: role={$role}" . PHP_EOL;
-
 
 ==================================================
 FILE: /config/auth.php
