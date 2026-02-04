@@ -507,3 +507,132 @@ html[data-theme="dark"] .g6-auth-logo--dark {
 .audit-toolbar input[type=radio] {
   accent-color: #4b9;
 }
+
+/* ------------------------------------------------------------------ */
+/* Off-canvas sidebar (hamburger menu)                                 */
+/* ------------------------------------------------------------------ */
+
+.ui-fab.menu {
+  left: 12px;
+  top: 12px;
+  z-index: 3700; /* above overlay */
+}
+
+.ui-fab.menu svg {
+  width: 18px;
+  height: 18px;
+}
+
+body.sidebar-open {
+  overflow: hidden;
+}
+
+.sidebar-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, .55);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .22s ease;
+  z-index: 3500;
+}
+
+.sidebar-overlay.sidebar-overlay--open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.sidebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 100svh;
+  width: min(320px, 86vw);
+  padding: 12px;
+  transform: translateX(-110%);
+  transition: transform .22s ease;
+  z-index: 3600;
+  pointer-events: none;
+}
+
+.sidebar.sidebar--open {
+  transform: translateX(0);
+  pointer-events: auto;
+}
+
+.sidebar-panel {
+  height: calc(100svh - 24px);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 14px;
+  box-shadow: 0 18px 60px rgba(0, 0, 0, .35);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.sidebar-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.sidebar-title {
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: .2px;
+}
+
+.sidebar-close {
+  border: 1px solid var(--border);
+  background: var(--event-bg);
+  color: var(--fg);
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+
+.sidebar-close svg { width: 16px; height: 16px; }
+
+.sidebar-menu {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sidebar-link {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--event-bg);
+  color: var(--fg);
+  text-decoration: none;
+  transition: transform .08s ease, background .12s ease, border-color .12s ease;
+}
+
+.sidebar-link:hover {
+  border-color: rgba(96, 165, 250, .45);
+  transform: translateY(-1px);
+}
+
+.sidebar-link.is-active {
+  border-color: rgba(96, 165, 250, .75);
+  box-shadow: 0 0 0 2px rgba(96, 165, 250, .12) inset;
+}
+
+.sidebar-link.danger {
+  border-color: rgba(239, 68, 68, .35);
+}
+
+.sidebar-link.danger:hover {
+  border-color: rgba(239, 68, 68, .65);
+}
+

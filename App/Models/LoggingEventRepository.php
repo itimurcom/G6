@@ -74,15 +74,7 @@ final class LoggingEventRepository
 
     public function search(array $filters, int $limit, int $offset): array
     {
-        // COMPAT: FileEventRepository::search(string $q) returns flat array of events with injected '_date'
-        // [DEFERRED] Legacy forwarder (kept for reference; do not remove):
-        // return $this->inner->search($filters, $limit, $offset);
-
-        $q = (string)($filters['text'] ?? '');
-
-        $rows = $this->inner->search($q);
-
-        // normalize filters
+        // Normalize filters
         $type  = isset($filters['type'])  && $filters['type']  !== '' && $filters['type']  !== null ? (string)$filters['type']  : null;
         $owner = isset($filters['owner']) && $filters['owner'] !== '' && $filters['owner'] !== null ? (string)$filters['owner'] : null;
 
@@ -106,6 +98,40 @@ final class LoggingEventRepository
         $start = substr($start, 0, 10);
         $end   = substr($end,   0, 10);
 
+        $offset = max(0, (int)$offset);
+        $limit  = max(0, (int)$limit);
+
+        if ($limit === 0) {
+            return [];
+        }
+
+        // Fetch rows from inner repository.
+        // MySQL repository: search(array $filters, int $limit, int $offset)
+        // Legacy repository: search(string $q)
+        $fetchLimit = max(500, $limit + $offset);
+        if ($fetchLimit > 5000) { $fetchLimit = 5000; }
+
+        try {
+            $rows = $this->inner->search($filters, $fetchLimit, 0);
+        } catch (\TypeError $__e) {
+            $q = (string)($filters['text'] ?? '');
+            $rows = $this->inner->search($q);
+        }
+
+        // If inner returned a date->events map (defensive), flatten it.
+        if (is_array($rows) && $rows !== [] && array_keys($rows) !== range(0, count($rows) - 1)) {
+            $flat = [];
+            foreach ($rows as $k => $v) {
+                if (!is_array($v)) { continue; }
+                foreach ($v as $ev) {
+                    if (!is_array($ev)) { continue; }
+                    if (!isset($ev['_date']) && is_string($k)) { $ev['_date'] = $k; }
+                    $flat[] = $ev;
+                }
+            }
+            $rows = $flat;
+        }
+
         $out = [];
         foreach ($rows as $ev) {
             if (!is_array($ev)) continue;
@@ -118,7 +144,7 @@ final class LoggingEventRepository
             if ($done !== null && (bool)($ev['done'] ?? false) !== $done) continue;
 
             // date filters (inclusive)
-            $d = (string)($ev['_date'] ?? '');
+            $d = (string)($ev['_date'] ?? ($ev['start_date'] ?? ''));
             $d = substr($d, 0, 10);
 
             if ($date !== '') {
@@ -129,13 +155,6 @@ final class LoggingEventRepository
             }
 
             $out[] = $ev;
-        }
-
-        $offset = max(0, (int)$offset);
-        $limit  = max(0, (int)$limit);
-
-        if ($limit === 0) {
-            return [];
         }
 
         return array_values(array_slice($out, $offset, $limit));

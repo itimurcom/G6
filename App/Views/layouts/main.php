@@ -70,8 +70,19 @@
   if (is_file($icons)) { include $icons; }
   ?>
 
+  <!-- Hamburger menu toggle (top-left) -->
+  <button id="sidebarToggle" class="ui-fab menu" type="button" title="Меню"
+          aria-label="Меню" aria-controls="sidebar" aria-expanded="false">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+      <path d="M4 6h16M4 12h16M4 18h16"/>
+    </svg>
+  </button>
+
+  <div id="sidebarOverlay" class="sidebar-overlay" data-sidebar-close aria-hidden="true"></div>
+
+
   <!-- Сайдбар -->
-  <aside id="sidebar" class="sidebar">
+  <aside id="sidebar" class="sidebar" aria-hidden="true">
     <?php
     $side_menu =   dirname(__DIR__) . '/layouts/partials/menu.php';
      if (is_file($side_menu)) { include $side_menu; } 
@@ -96,6 +107,8 @@
         <script> console.log("<?= $_SERVER['DOCUMENT_ROOT'].$src?> not found"); </script>
       <?php } endforeach; ?>
   <?php endif; ?>
+
+  <script src="/assets/js/ui.sidebar.js" defer></script>
 
   <!-- If you still need CSRF bootstrap, keep it inside <body> -->
   <script src="/assets/js/services/bootstrap.csrf.js" defer></script>
