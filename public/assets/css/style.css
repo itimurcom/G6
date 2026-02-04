@@ -515,7 +515,7 @@ html[data-theme="dark"] .g6-auth-logo--dark {
 .ui-fab.menu {
   left: 12px;
   top: 12px;
-  z-index: 3700; /* above overlay */
+  z-index: 3700; /* above overlay */  transition: opacity .22s ease, visibility .22s ease;
 }
 
 .ui-fab.menu svg {
@@ -525,6 +525,12 @@ html[data-theme="dark"] .g6-auth-logo--dark {
 
 body.sidebar-open {
   overflow: hidden;
+}
+
+body.sidebar-open .ui-fab.menu {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
 }
 
 .sidebar-overlay {
