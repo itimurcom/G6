@@ -138,14 +138,6 @@ class ApiBackupController
         return is_array($payload) ? $payload : [];
     }
 
-    /**
-     * Apply diff between current DB and incoming store.
-     * Semantics follow old EventStore::writeDiff():
-     * - delete events missing in incoming
-     * - create new events
-     * - update/move existing events
-     * - preserve original user_id on update; set user_id on create to current actor.
-     */
     protected function applyStoreDiffToDb(array $incomingStore): array
     {
         $currentStore = $this->exportStoreFromDb();
