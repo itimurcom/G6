@@ -1,90 +1,90 @@
 (function () {
     var elList = document.getElementById('audit-list');
     if (!elList) return;
-var isAdmin = String(elList.dataset.isAdmin) === '1';
+    var isAdmin = String(elList.dataset.isAdmin) === '1';
 
-// Toolbar v3: replace "Дії всіх користувачів / Мої дії" radios with a single admin-only checkbox "Мої дії".
-// For non-admin users, scope controls are hidden and the API is forced to "me" server-side.
-var chkMy = null;
-var btnClear = null;
+    // Toolbar v3: replace "Дії всіх користувачів / Мої дії" radios with a single admin-only checkbox "Мої дії".
+    // For non-admin users, scope controls are hidden and the API is forced to "me" server-side.
+    var chkMy = null;
+    var btnClear = null;
 
-function updateClearButton() {
-    if (!btnClear || !q) return;
-    var has = !!(q.value && q.value.trim());
-    try { btnClear.style.display = has ? '' : 'none'; } catch (e) { /* no-op */ }
-}
-
-function rebuildToolbarRow() {
-    var toolbar = null;
-    try {
-        toolbar = (btnRefresh && btnRefresh.closest) ? btnRefresh.closest('.audit-toolbar') : document.querySelector('#audit-block .audit-toolbar');
-    } catch (e) { toolbar = null; }
-    if (!toolbar) return;
-
-    // Hide old scope radios (always)
-    try {
-        Array.prototype.slice.call(toolbar.querySelectorAll('input[name="audit_scope"]')).forEach(function (inp) {
-            try { inp.disabled = true; } catch (e) { /* no-op */ }
-            var lbl = null;
-            try { lbl = inp.closest ? inp.closest('label') : null; } catch (e) { lbl = null; }
-            if (lbl) { try { lbl.style.display = 'none'; } catch (e) { /* no-op */ } }
-            else { try { inp.style.display = 'none'; } catch (e) { /* no-op */ } }
-        });
-    } catch (e) { /* no-op */ }
-
-    // Create admin-only checkbox
-    if (isAdmin && !chkMy) {
-        chkMy = document.createElement('input');
-        chkMy.type = 'checkbox';
-        chkMy.id = 'audit-my';
-        chkMy.className = 'audit-my';
-        chkMy.checked = false;
-
-        var lblMy = document.createElement('label');
-        lblMy.className = 'audit-my-label';
-        lblMy.appendChild(chkMy);
-        lblMy.appendChild(document.createTextNode(' Мої дії'));
-        toolbar.appendChild(lblMy);
+    function updateClearButton() {
+        if (!btnClear || !q) return;
+        var has = !!(q.value && q.value.trim());
+        try { btnClear.style.display = has ? '' : 'none'; } catch (e) { /* no-op */ }
     }
 
-    // Refresh button as icon
-    if (btnRefresh) {
+    function rebuildToolbarRow() {
+        var toolbar = null;
         try {
-            btnRefresh.classList.add('audit-icon-btn');
-            btnRefresh.textContent = '⟳';
-            btnRefresh.title = 'Оновити';
-            btnRefresh.setAttribute('aria-label', 'Оновити');
+            toolbar = (btnRefresh && btnRefresh.closest) ? btnRefresh.closest('.audit-toolbar') : document.querySelector('#audit-block .audit-toolbar');
+        } catch (e) { toolbar = null; }
+        if (!toolbar) return;
+
+        // Hide old scope radios (always)
+        try {
+            Array.prototype.slice.call(toolbar.querySelectorAll('input[name="audit_scope"]')).forEach(function (inp) {
+                try { inp.disabled = true; } catch (e) { /* no-op */ }
+                var lbl = null;
+                try { lbl = inp.closest ? inp.closest('label') : null; } catch (e) { lbl = null; }
+                if (lbl) { try { lbl.style.display = 'none'; } catch (e) { /* no-op */ } }
+                else { try { inp.style.display = 'none'; } catch (e) { /* no-op */ } }
+            });
         } catch (e) { /* no-op */ }
+
+        // Create admin-only checkbox
+        if (isAdmin && !chkMy) {
+            chkMy = document.createElement('input');
+            chkMy.type = 'checkbox';
+            chkMy.id = 'audit-my';
+            chkMy.className = 'audit-my';
+            chkMy.checked = false;
+
+            var lblMy = document.createElement('label');
+            lblMy.className = 'audit-my-label';
+            lblMy.appendChild(chkMy);
+            lblMy.appendChild(document.createTextNode(' Мої дії'));
+            toolbar.appendChild(lblMy);
+        }
+
+        // Refresh button as icon
+        if (btnRefresh) {
+            try {
+                btnRefresh.classList.add('audit-icon-btn');
+                btnRefresh.textContent = '⟳';
+                btnRefresh.title = 'Оновити';
+                btnRefresh.setAttribute('aria-label', 'Оновити');
+            } catch (e) { /* no-op */ }
+        }
+
+        // Clear button (shown only when the search query is not empty)
+        if (!btnClear) {
+            btnClear = document.createElement('button');
+            btnClear.type = 'button';
+            btnClear.id = 'audit-clear';
+            btnClear.className = 'btn audit-icon-btn audit-clear-btn';
+            btnClear.textContent = '✕';
+            btnClear.title = 'Очистити';
+            btnClear.setAttribute('aria-label', 'Очистити');
+            toolbar.appendChild(btnClear);
+        }
+
+        // Re-order controls to a single horizontal row:
+        // action | limit | (admin) my checkbox | search | refresh | clear
+        try {
+            var nodes = [];
+            if (selAction) nodes.push(selAction);
+            if (selLimit) nodes.push(selLimit);
+            if (isAdmin && chkMy && chkMy.parentNode) nodes.push(chkMy.parentNode);
+            if (q) nodes.push(q);
+            if (btnRefresh) nodes.push(btnRefresh);
+            if (btnClear) nodes.push(btnClear);
+
+            nodes.forEach(function (n) { if (n) toolbar.appendChild(n); });
+        } catch (e) { /* no-op */ }
+
+        updateClearButton();
     }
-
-    // Clear button (shown only when the search query is not empty)
-    if (!btnClear) {
-        btnClear = document.createElement('button');
-        btnClear.type = 'button';
-        btnClear.id = 'audit-clear';
-        btnClear.className = 'btn audit-icon-btn audit-clear-btn';
-        btnClear.textContent = '✕';
-        btnClear.title = 'Очистити';
-        btnClear.setAttribute('aria-label', 'Очистити');
-        toolbar.appendChild(btnClear);
-    }
-
-    // Re-order controls to a single horizontal row:
-    // action | limit | (admin) my checkbox | search | refresh | clear
-    try {
-        var nodes = [];
-        if (selAction) nodes.push(selAction);
-        if (selLimit) nodes.push(selLimit);
-        if (isAdmin && chkMy && chkMy.parentNode) nodes.push(chkMy.parentNode);
-        if (q) nodes.push(q);
-        if (btnRefresh) nodes.push(btnRefresh);
-        if (btnClear) nodes.push(btnClear);
-
-        nodes.forEach(function (n) { if (n) toolbar.appendChild(n); });
-    } catch (e) { /* no-op */ }
-
-    updateClearButton();
-}
 
     var scopeRadios = document.querySelectorAll('input[name="audit_scope"]');
     var q = document.getElementById('audit-q');
@@ -208,104 +208,104 @@ function rebuildToolbarRow() {
 
     var isAdmin = String(elList.dataset.isAdmin) === '1';
 
-// Toolbar v3 (within v2 block): admin-only checkbox "Мої дії" + single-row layout + icon buttons.
-var chkMy = null;
-var btnClear = null;
+    // Toolbar v3 (within v2 block): admin-only checkbox "Мої дії" + single-row layout + icon buttons.
+    var chkMy = null;
+    var btnClear = null;
 
-function updateClearButton() {
-    if (!btnClear || !q) return;
-    var has = !!(q.value && q.value.trim());
-    try { btnClear.style.display = has ? '' : 'none'; } catch (e) { /* no-op */ }
-}
-
-function rebuildToolbarRow() {
-    var toolbar = null;
-    try {
-        toolbar = (btnRefresh && btnRefresh.closest) ? btnRefresh.closest('.audit-toolbar') : document.querySelector('#audit-block .audit-toolbar');
-    } catch (e) { toolbar = null; }
-    if (!toolbar) return;
-
-    // Hide old scope radios (always). Keep markup intact, just disable and hide labels.
-    try {
-        Array.prototype.slice.call(toolbar.querySelectorAll('input[name="audit_scope"]')).forEach(function (inp) {
-            try { inp.disabled = true; } catch (e) { /* no-op */ }
-            var lbl = null;
-            try { lbl = inp.closest ? inp.closest('label') : null; } catch (e) { lbl = null; }
-            if (lbl) { try { lbl.style.display = 'none'; } catch (e) { /* no-op */ } }
-            else { try { inp.style.display = 'none'; } catch (e) { /* no-op */ } }
-        });
-    } catch (e) { /* no-op */ }
-
-    // Create admin-only checkbox
-    if (isAdmin && !chkMy) {
-        chkMy = document.createElement('input');
-        chkMy.type = 'checkbox';
-        chkMy.id = 'audit-my';
-        chkMy.className = 'audit-my';
-        chkMy.checked = false;
-
-        var lblMy = document.createElement('label');
-        lblMy.className = 'audit-my-label';
-        lblMy.appendChild(chkMy);
-        lblMy.appendChild(document.createTextNode(' Мої дії'));
-        toolbar.appendChild(lblMy);
-
-        // Filter when enabled (admin only)
-        chkMy.addEventListener('change', function () { try { loadPage(1); } catch (e) { /* no-op */ } });
+    function updateClearButton() {
+        if (!btnClear || !q) return;
+        var has = !!(q.value && q.value.trim());
+        try { btnClear.style.display = has ? '' : 'none'; } catch (e) { /* no-op */ }
     }
 
-    // Refresh button as icon
-    if (btnRefresh) {
+    function rebuildToolbarRow() {
+        var toolbar = null;
         try {
-            btnRefresh.classList.add('audit-icon-btn');
-            btnRefresh.textContent = '⟳';
-            btnRefresh.title = 'Оновити';
-            btnRefresh.setAttribute('aria-label', 'Оновити');
+            toolbar = (btnRefresh && btnRefresh.closest) ? btnRefresh.closest('.audit-toolbar') : document.querySelector('#audit-block .audit-toolbar');
+        } catch (e) { toolbar = null; }
+        if (!toolbar) return;
+
+        // Hide old scope radios (always). Keep markup intact, just disable and hide labels.
+        try {
+            Array.prototype.slice.call(toolbar.querySelectorAll('input[name="audit_scope"]')).forEach(function (inp) {
+                try { inp.disabled = true; } catch (e) { /* no-op */ }
+                var lbl = null;
+                try { lbl = inp.closest ? inp.closest('label') : null; } catch (e) { lbl = null; }
+                if (lbl) { try { lbl.style.display = 'none'; } catch (e) { /* no-op */ } }
+                else { try { inp.style.display = 'none'; } catch (e) { /* no-op */ } }
+            });
         } catch (e) { /* no-op */ }
+
+        // Create admin-only checkbox
+        if (isAdmin && !chkMy) {
+            chkMy = document.createElement('input');
+            chkMy.type = 'checkbox';
+            chkMy.id = 'audit-my';
+            chkMy.className = 'audit-my';
+            chkMy.checked = false;
+
+            var lblMy = document.createElement('label');
+            lblMy.className = 'audit-my-label';
+            lblMy.appendChild(chkMy);
+            lblMy.appendChild(document.createTextNode(' Мої дії'));
+            toolbar.appendChild(lblMy);
+
+            // Filter when enabled (admin only)
+            chkMy.addEventListener('change', function () { try { loadPage(1); } catch (e) { /* no-op */ } });
+        }
+
+        // Refresh button as icon
+        if (btnRefresh) {
+            try {
+                btnRefresh.classList.add('audit-icon-btn');
+                btnRefresh.textContent = '⟳';
+                btnRefresh.title = 'Оновити';
+                btnRefresh.setAttribute('aria-label', 'Оновити');
+            } catch (e) { /* no-op */ }
+        }
+
+        // Clear button (shown only when the search query is not empty)
+        if (!btnClear) {
+            btnClear = document.createElement('button');
+            btnClear.type = 'button';
+            btnClear.id = 'audit-clear';
+            btnClear.className = 'btn audit-icon-btn audit-clear-btn';
+            btnClear.textContent = '✕';
+            btnClear.title = 'Очистити';
+            btnClear.setAttribute('aria-label', 'Очистити');
+            toolbar.appendChild(btnClear);
+
+            btnClear.addEventListener('click', function () {
+                if (!q) return;
+                q.value = '';
+                updateClearButton();
+                try { loadPage(1); } catch (e) { /* no-op */ }
+                try { q.focus(); } catch (e) { /* no-op */ }
+            });
+        }
+
+        // Watch search input to toggle clear button visibility
+        if (q && !q.__auditClearBound) {
+            q.__auditClearBound = true;
+            q.addEventListener('input', updateClearButton);
+        }
+
+        // Re-order controls to a single horizontal row:
+        // action | limit | (admin) my checkbox | search | refresh | clear
+        try {
+            var nodes = [];
+            if (selAction) nodes.push(selAction);
+            if (selLimit) nodes.push(selLimit);
+            if (isAdmin && chkMy && chkMy.parentNode) nodes.push(chkMy.parentNode);
+            if (q) nodes.push(q);
+            if (btnRefresh) nodes.push(btnRefresh);
+            if (btnClear) nodes.push(btnClear);
+
+            nodes.forEach(function (n) { if (n) toolbar.appendChild(n); });
+        } catch (e) { /* no-op */ }
+
+        updateClearButton();
     }
-
-    // Clear button (shown only when the search query is not empty)
-    if (!btnClear) {
-        btnClear = document.createElement('button');
-        btnClear.type = 'button';
-        btnClear.id = 'audit-clear';
-        btnClear.className = 'btn audit-icon-btn audit-clear-btn';
-        btnClear.textContent = '✕';
-        btnClear.title = 'Очистити';
-        btnClear.setAttribute('aria-label', 'Очистити');
-        toolbar.appendChild(btnClear);
-
-        btnClear.addEventListener('click', function () {
-            if (!q) return;
-            q.value = '';
-            updateClearButton();
-            try { loadPage(1); } catch (e) { /* no-op */ }
-            try { q.focus(); } catch (e) { /* no-op */ }
-        });
-    }
-
-    // Watch search input to toggle clear button visibility
-    if (q && !q.__auditClearBound) {
-        q.__auditClearBound = true;
-        q.addEventListener('input', updateClearButton);
-    }
-
-    // Re-order controls to a single horizontal row:
-    // action | limit | (admin) my checkbox | search | refresh | clear
-    try {
-        var nodes = [];
-        if (selAction) nodes.push(selAction);
-        if (selLimit) nodes.push(selLimit);
-        if (isAdmin && chkMy && chkMy.parentNode) nodes.push(chkMy.parentNode);
-        if (q) nodes.push(q);
-        if (btnRefresh) nodes.push(btnRefresh);
-        if (btnClear) nodes.push(btnClear);
-
-        nodes.forEach(function (n) { if (n) toolbar.appendChild(n); });
-    } catch (e) { /* no-op */ }
-
-    updateClearButton();
-}
 
     // Hide admin-only UI if the user is not admin (the markup always exists)
     if (!isAdmin) {
@@ -640,39 +640,40 @@ function rebuildToolbarRow() {
             main.appendChild(openLink);
             tdEv.appendChild(main);
 
-                        if (false) {
+            if (false) {
                 // [DEFERRED] Legacy implementation kept intentionally (do not delete).
-                            // For "Створення події" show clickable title + colored (type) instead of non-informative ID.
-                                    if (summary && summary.action === 'calendar.event.create' && summary.ev && summary.evTitle) {
-                                        var main = document.createElement('div');
-                                        main.className = 'audit-ev-main';
-                            
-                                        var a = document.createElement('a');
-                                        a.href = '#';
-                                        a.className = 'audit-link audit-ev-link';
-                                        a.title = 'Відкрити подію';
-                                        a.textContent = (uaActionLabel('calendar.event.create') + ': «' + summary.evTitle + '»');
-                            
-                                        a.addEventListener('click', function (e) {
-                                            try { e.preventDefault(); } catch (ex) { /* no-op */ }
-                                            tryOpenEventPopup(summary.ev, it);
-                                        });
-                            
-                                        main.appendChild(a);
-                            
-                                        if (summary.evType) {
-                                            var sp = document.createElement('span');
-                                            sp.className = 'audit-ev-type';
-                                            var c = typeColor(summary.evType);
-                                            if (c) sp.style.color = c;
-                                            sp.textContent = ' (' + summary.evType + ')';
-                                            main.appendChild(sp);
-                                        }
-                            
-                                        tdEv.appendChild(main);
-            }
+                // For "Створення події" show clickable title + colored (type) instead of non-informative ID.
+                if (summary && summary.action === 'calendar.event.create' && summary.ev && summary.evTitle) {
+                    var main = document.createElement('div');
+                    main.className = 'audit-ev-main';
 
-        }        } else {
+                    var a = document.createElement('a');
+                    a.href = '#';
+                    a.className = 'audit-link audit-ev-link';
+                    a.title = 'Відкрити подію';
+                    a.textContent = (uaActionLabel('calendar.event.create') + ': «' + summary.evTitle + '»');
+
+                    a.addEventListener('click', function (e) {
+                        try { e.preventDefault(); } catch (ex) { /* no-op */ }
+                        tryOpenEventPopup(summary.ev, it);
+                    });
+
+                    main.appendChild(a);
+
+                    if (summary.evType) {
+                        var sp = document.createElement('span');
+                        sp.className = 'audit-ev-type';
+                        var c = typeColor(summary.evType);
+                        if (c) sp.style.color = c;
+                        sp.textContent = ' (' + summary.evType + ')';
+                        main.appendChild(sp);
+                    }
+
+                    tdEv.appendChild(main);
+                }
+
+            }
+        } else {
             tdEv.innerHTML =
                 '<div class="audit-ev-main">' + esc(summary.title) + '</div>';
         }
@@ -791,27 +792,27 @@ function rebuildToolbarRow() {
     if (btnNext) btnNext.addEventListener('click', function () { if (state.page < state.totalPages) loadPage(state.page + 1); });
     if (btnPrev) btnPrev.addEventListener('click', function () { if (state.page > 1) loadPage(state.page - 1); });
 
-[q, selAction, selLimit].forEach(function (el) { el && el.addEventListener('change', refresh); });
-Array.prototype.slice.call(scopeRadios).forEach(function (r) { r && r.addEventListener('change', refresh); });
+    [q, selAction, selLimit].forEach(function (el) { el && el.addEventListener('change', refresh); });
+    Array.prototype.slice.call(scopeRadios).forEach(function (r) { r && r.addEventListener('change', refresh); });
 
-if (q) {
-    q.addEventListener('input', updateClearButton);
-    q.addEventListener('keydown', function (e) {
-        if (e && e.key === 'Enter') {
-            try { e.preventDefault(); } catch (e2) { /* no-op */ }
-            refresh();
-        }
-    });
-}
-if (chkMy) chkMy.addEventListener('change', refresh);
-if (btnClear) btnClear.addEventListener('click', function () {
     if (q) {
-        q.value = '';
-        updateClearButton();
-        try { q.focus(); } catch (e) { /* no-op */ }
+        q.addEventListener('input', updateClearButton);
+        q.addEventListener('keydown', function (e) {
+            if (e && e.key === 'Enter') {
+                try { e.preventDefault(); } catch (e2) { /* no-op */ }
+                refresh();
+            }
+        });
     }
-    refresh();
-});
+    if (chkMy) chkMy.addEventListener('change', refresh);
+    if (btnClear) btnClear.addEventListener('click', function () {
+        if (q) {
+            q.value = '';
+            updateClearButton();
+            try { q.focus(); } catch (e) { /* no-op */ }
+        }
+        refresh();
+    });
 
     refresh();
 
@@ -877,12 +878,12 @@ if (btnClear) btnClear.addEventListener('click', function () {
         st.id = 'audit-ui-v2-style';
         st.textContent = [
             '#audit-block{width:100%}',
-            '#audit-block .audit-toolbar{flex-wrap:nowrap;gap:10px;align-items:center;overflow-x:auto}','#audit-block #audit-action{flex:0 0 10%;min-width:12em}',
-'#audit-block #audit-limit{flex:0 0 5%;min-width:4em}',
-'#audit-block .audit-my-label{flex:0 0 auto;white-space:nowrap;display:flex;gap:6px;align-items:center;opacity:.85}',
-'#audit-block .audit-my-label input[type=checkbox]{accent-color:#4b9}',
-'#audit-block #audit-q{flex:1 1 auto;min-width:12em}',
-'#audit-block .audit-icon-btn{display:inline-flex;align-items:center;justify-content:center;line-height:1}',
+            '#audit-block .audit-toolbar{flex-wrap:nowrap;gap:10px;align-items:center;overflow-x:auto}', '#audit-block #audit-action{flex:0 0 10%;min-width:12em}',
+            '#audit-block #audit-limit{flex:0 0 5%;min-width:4em}',
+            '#audit-block .audit-my-label{flex:0 0 auto;white-space:nowrap;display:flex;gap:6px;align-items:center;opacity:.85}',
+            '#audit-block .audit-my-label input[type=checkbox]{accent-color:#4b9}',
+            '#audit-block #audit-q{flex:1 1 auto;min-width:12em}',
+            '#audit-block .audit-icon-btn{display:inline-flex;align-items:center;justify-content:center;line-height:1}',
             '#audit-block .audit-table-wrap{width:100%;overflow:auto;border:1px solid var(--border);border-radius:12px;background:var(--event-bg)}',
             '#audit-block .audit-table{width:100%;border-collapse:separate;border-spacing:0}',
             '#audit-block .audit-table th,#audit-block .audit-table td{padding:10px 12px;vertical-align:top;border-bottom:1px solid rgba(255,255,255,.06)}',
@@ -910,7 +911,7 @@ if (btnClear) btnClear.addEventListener('click', function () {
             '#infoOverlay #editEvBtn{background:#22c55e;border-color:#22c55e;color:#fff}',
             '#infoOverlay #editEvBtn:hover{filter:brightness(1.05)}',
             '#infoOverlay #editEvBtn:active{filter:brightness(0.95)}',
-            
+
             '#audit-block .audit-link:hover{text-decoration:underline}',
             '#audit-block .audit-row.t-login .audit-ev-main{color:#60a5fa}',
             '#audit-block .audit-row.t-logout .audit-ev-main{color:#93c5fd}',
@@ -1124,7 +1125,7 @@ if (btnClear) btnClear.addEventListener('click', function () {
         });
     }
 
-    
+
     // === Calendar/Planning "Деталі події" dialogs on Journal page (full features) ===
     var __journalCalUiPromise = null;
 
@@ -1359,60 +1360,60 @@ if (btnClear) btnClear.addEventListener('click', function () {
         } catch (_) { /* no-op */ }
     }
 
-    
-function __journalFixEditBtnFirstOpen(dateISO, id, ev) {
-    try {
-        var didRetry = false;
 
-        function isEditHidden() {
-            var btn = document.getElementById('editEvBtn');
-            if (!btn) return true;
-            try {
-                if (btn.hidden) return true;
-                if (btn.hasAttribute && btn.hasAttribute('hidden')) return true;
-                if (btn.getAttribute && String(btn.getAttribute('aria-hidden') || '') === 'true') return true;
-                // If the button is in DOM but not visible due to CSS
-                var cs = window.getComputedStyle ? window.getComputedStyle(btn) : null;
-                if (cs && (cs.display === 'none' || cs.visibility === 'hidden' || cs.opacity === '0')) return true;
-            } catch (_) { return true; }
-            return false;
-        }
+    function __journalFixEditBtnFirstOpen(dateISO, id, ev) {
+        try {
+            var didRetry = false;
 
-        function retryOnce() {
-            if (didRetry) return;
-            didRetry = true;
-            try { if (ev) __seedEventIntoCalendarCacheForJournal(ev, dateISO, id); } catch (_) { }
-            try {
-                if (window.CalendarApp && window.CalendarApp.ui && typeof window.CalendarApp.ui.openInfo === 'function') {
-                    window.CalendarApp.ui.openInfo(dateISO, id);
-                }
-            } catch (_) { /* no-op */ }
-        }
+            function isEditHidden() {
+                var btn = document.getElementById('editEvBtn');
+                if (!btn) return true;
+                try {
+                    if (btn.hidden) return true;
+                    if (btn.hasAttribute && btn.hasAttribute('hidden')) return true;
+                    if (btn.getAttribute && String(btn.getAttribute('aria-hidden') || '') === 'true') return true;
+                    // If the button is in DOM but not visible due to CSS
+                    var cs = window.getComputedStyle ? window.getComputedStyle(btn) : null;
+                    if (cs && (cs.display === 'none' || cs.visibility === 'hidden' || cs.opacity === '0')) return true;
+                } catch (_) { return true; }
+                return false;
+            }
 
-        // Small delay: on first open, UI scripts may still finish init/bindings.
-        window.setTimeout(function () {
-            try {
-                var ov = document.getElementById('infoOverlay');
-                var shown = !!(ov && ov.classList && ov.classList.contains('show'));
-                if (!shown) return;
-                if (isEditHidden()) retryOnce();
-            } catch (_) { /* no-op */ }
-        }, 180);
+            function retryOnce() {
+                if (didRetry) return;
+                didRetry = true;
+                try { if (ev) __seedEventIntoCalendarCacheForJournal(ev, dateISO, id); } catch (_) { }
+                try {
+                    if (window.CalendarApp && window.CalendarApp.ui && typeof window.CalendarApp.ui.openInfo === 'function') {
+                        window.CalendarApp.ui.openInfo(dateISO, id);
+                    }
+                } catch (_) { /* no-op */ }
+            }
 
-        // One more delayed check (still only one retry total).
-        window.setTimeout(function () {
-            try {
-                var ov = document.getElementById('infoOverlay');
-                var shown = !!(ov && ov.classList && ov.classList.contains('show'));
-                if (!shown) return;
-                if (isEditHidden()) retryOnce();
-            } catch (_) { /* no-op */ }
-        }, 420);
+            // Small delay: on first open, UI scripts may still finish init/bindings.
+            window.setTimeout(function () {
+                try {
+                    var ov = document.getElementById('infoOverlay');
+                    var shown = !!(ov && ov.classList && ov.classList.contains('show'));
+                    if (!shown) return;
+                    if (isEditHidden()) retryOnce();
+                } catch (_) { /* no-op */ }
+            }, 180);
 
-    } catch (_) { /* no-op */ }
-}
+            // One more delayed check (still only one retry total).
+            window.setTimeout(function () {
+                try {
+                    var ov = document.getElementById('infoOverlay');
+                    var shown = !!(ov && ov.classList && ov.classList.contains('show'));
+                    if (!shown) return;
+                    if (isEditHidden()) retryOnce();
+                } catch (_) { /* no-op */ }
+            }, 420);
 
-function openEventDetailsFullFromJournal(ev, it) {
+        } catch (_) { /* no-op */ }
+    }
+
+    function openEventDetailsFullFromJournal(ev, it) {
         if (!ev) return;
 
         var dateISO = (ev && (ev.start_date || ev.date)) ? String(ev.start_date || ev.date) : ((it && it.date) ? String(it.date) : '');
@@ -1434,7 +1435,7 @@ function openEventDetailsFullFromJournal(ev, it) {
             try { openEventModal(ev, it); } catch (_) { }
         });
     }
-function openInfoEventDetails(ev, it) {
+    function openInfoEventDetails(ev, it) {
         try { openEventDetailsFullFromJournal(ev, it); return; } catch (_) { /* fallback below */ }
         if (!ev) return;
 

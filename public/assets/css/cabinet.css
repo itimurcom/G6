@@ -121,7 +121,25 @@
   border-color: var(--cabinet-primary-border);
   color: var(--cabinet-primary-text);
 }
+
 /* TABS (ADD ONLY) */
-.cab-tabs{display:flex;gap:8px;margin:10px 0 16px 0;}
-.cab-tab{border:1px solid #2b2f3a;background:#0e1117;color:#cbd5e1;padding:6px 10px;border-radius:8px;cursor:pointer;font-size:14px;}
-.cab-tab.is-active{background:#1f2937;border-color:#475569;}
+.cab-tabs {
+  display: flex;
+  gap: 8px;
+  margin: 10px 0 16px 0;
+}
+
+.cab-tab {
+  border: 1px solid #2b2f3a;
+  background: #0e1117;
+  color: #cbd5e1;
+  padding: 6px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.cab-tab.is-active {
+  background: #1f2937;
+  border-color: #475569;
+}

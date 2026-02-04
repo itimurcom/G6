@@ -647,7 +647,7 @@ select,
   flex-wrap: wrap;
 }
 
-#eventModal footer > div:last-child {
+#eventModal footer>div:last-child {
   flex-wrap: wrap;
   justify-content: flex-end;
 }
@@ -656,7 +656,8 @@ select,
   #eventModal footer {
     justify-content: flex-start;
   }
-  #eventModal footer > div:last-child {
+
+  #eventModal footer>div:last-child {
     width: 100%;
     justify-content: flex-end;
   }
@@ -913,13 +914,16 @@ body.light .ev--multi,
 
 /* Green action button for edit */
 .btn--green {
-  background: #22c55e;      /* emerald-500 */
+  background: #22c55e;
+  /* emerald-500 */
   border-color: #22c55e;
   color: #fff;
 }
+
 .btn--green:hover {
   filter: brightness(1.05);
 }
+
 .btn--green:active {
   filter: brightness(0.95);
 }

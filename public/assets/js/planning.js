@@ -818,23 +818,23 @@
       return dateISO <= t && t <= endDateISO;
     }
 
-function isOverdueStrict(meta) {
-  // Adapter-only: delegate to global isEventOverdueStrict(ev)
-  var ev = {
-    done: !!(meta && meta.done),
+    function isOverdueStrict(meta) {
+      // Adapter-only: delegate to global isEventOverdueStrict(ev)
+      var ev = {
+        done: !!(meta && meta.done),
 
-    // dates in 'YYYY-MM-DD'
-    start_date: (meta && meta.date) ? String(meta.date).slice(0, 10) : '',
-    end_date:   (meta && meta.endDate) ? String(meta.endDate).slice(0, 10) : '',
+        // dates in 'YYYY-MM-DD'
+        start_date: (meta && meta.date) ? String(meta.date).slice(0, 10) : '',
+        end_date: (meta && meta.endDate) ? String(meta.endDate).slice(0, 10) : '',
 
-    // times in 'HH:MM'
-    time:       (meta && meta.start) ? String(meta.start).slice(0, 5) : '',
-    end_time:   (meta && meta.end) ? String(meta.end).slice(0, 5) : ''
-  };
+        // times in 'HH:MM'
+        time: (meta && meta.start) ? String(meta.start).slice(0, 5) : '',
+        end_time: (meta && meta.end) ? String(meta.end).slice(0, 5) : ''
+      };
 
-  if (typeof isEventOverdueStrict !== 'function') return false;
-  return !!isEventOverdueStrict(ev);
-}
+      if (typeof isEventOverdueStrict !== 'function') return false;
+      return !!isEventOverdueStrict(ev);
+    }
 
 
     function matches(meta, filter) {
