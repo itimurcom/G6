@@ -28,6 +28,90 @@
   if (todayLabel) todayLabel.textContent = longHeaderFmt.format(today).replace('.', '');
   if (todayPanelDate) todayPanelDate.textContent = longHeaderFmt.format(today).replace('.', '');
 
+  /* ===== Today panel: collapse/expand with localStorage ===== */
+  (function initTodayPanelCollapse() {
+    var layout = document.getElementById('calendarLayout') || document.querySelector('.layout');
+    var panel = document.getElementById('todayPanel');
+    var btn = document.getElementById('todayPanelToggle');
+    if (!layout || !panel || !btn) return;
+
+    var KEY = 'calendar.todayPanelCollapsed';
+
+    function safeGet() {
+      try { return localStorage.getItem(KEY); } catch (_) { return null; }
+    }
+
+    function safeSet(v) {
+      try { localStorage.setItem(KEY, v); } catch (_) { }
+    }
+
+    function setBtn(collapsed) {
+      btn.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+      btn.setAttribute('aria-label', collapsed ? 'Показати панель «Сьогодні»' : 'Сховати панель «Сьогодні»');
+      btn.title = collapsed ? 'Показати панель «Сьогодні»' : 'Сховати панель «Сьогодні»';
+      var sp = btn.querySelector('span');
+      if (sp) sp.textContent = collapsed ? '‹' : '›';
+      else btn.textContent = collapsed ? '‹' : '›';
+    }
+
+    var isCollapsed = (safeGet() === '1');
+    layout.classList.add('today-panel-init');
+    if (isCollapsed) {
+      layout.classList.add('today-panel-hidden', 'today-panel-collapsed');
+    }
+    setBtn(isCollapsed);
+    requestAnimationFrame(function () {
+      layout.classList.remove('today-panel-init');
+    });
+
+    var endTimer = null;
+
+    function hidePanel() {
+      if (layout.classList.contains('today-panel-hidden')) return;
+      layout.classList.add('today-panel-hidden');
+      setBtn(true);
+      safeSet('1');
+
+      if (endTimer) { clearTimeout(endTimer); endTimer = null; }
+
+      var onEnd = function (e) {
+        if (e && e.target !== panel) return;
+        panel.removeEventListener('transitionend', onEnd);
+        layout.classList.add('today-panel-collapsed');
+      };
+      panel.addEventListener('transitionend', onEnd);
+
+      // Fallback (in case transitionend doesn't fire)
+      endTimer = setTimeout(function () {
+        panel.removeEventListener('transitionend', onEnd);
+        layout.classList.add('today-panel-collapsed');
+      }, 260);
+    }
+
+    function showPanel() {
+      var collapsedNow = layout.classList.contains('today-panel-hidden') || layout.classList.contains('today-panel-collapsed');
+      if (!collapsedNow) return;
+
+      // First expand the grid column, then slide panel back
+      layout.classList.remove('today-panel-collapsed');
+      requestAnimationFrame(function () {
+        requestAnimationFrame(function () {
+          layout.classList.remove('today-panel-hidden');
+        });
+      });
+
+      setBtn(false);
+      safeSet('0');
+    }
+
+    btn.addEventListener('click', function () {
+      var collapsedNow = layout.classList.contains('today-panel-hidden') || layout.classList.contains('today-panel-collapsed');
+      if (collapsedNow) showPanel();
+      else hidePanel();
+    });
+  })();
+
+
   var renderAllFn = function () {
     // console.log('renderAllFn call');
     updateTypeButtons();
