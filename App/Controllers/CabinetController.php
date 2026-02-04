@@ -53,21 +53,12 @@ class CabinetController extends Controller
             $users = [];
             // 1) через репозиторій, якщо є
             try {
-                $repo = new \App\Models\UserFileRepository();
+                $repo = new \App\Models\UserMysqlRepository();
                 if (method_exists($repo, 'all')) {
                     $users = $repo->all();
                 }
             } catch (\Throwable $e) {
-                // ігноруємо, підемо у fallback
-            }
-
-            // 2) fallback: читання файлу напряму (підтримка {"last_id":...,"rows":[...]} і плоского масиву)
-            if (empty($users)) {
-                $file = \dirname(__DIR__, 2) . '/storage/data/users.json';
-                $db   = json_decode(@file_get_contents($file) ?: '[]', true);
-                $rows = (isset($db['rows']) && is_array($db['rows'])) ? $db['rows'] : (is_array($db) ? $db : []);
-                $users = array_values($rows);
-                usort($users, fn($a,$b) => (int)($a['id'] ?? 0) <=> (int)($b['id'] ?? 0));
+                // ігноруємо
             }
 
             $data['is_admin'] = true;
@@ -102,7 +93,7 @@ class CabinetController extends Controller
                 $errors[] = 'Некоректний e-mail.';
             }
 
-            $repo = new \App\Models\UserFileRepository();
+            $repo = new \App\Models\UserMysqlRepository();
             $logger = new \App\Services\Audit\ActionLogger();
 
             // Перевірка унікальності email
@@ -199,7 +190,7 @@ class CabinetController extends Controller
                 $errors[] = 'Підтвердження пароля не співпадає.';
             }
 
-            $repo = new \App\Models\UserFileRepository();
+            $repo = new \App\Models\UserMysqlRepository();
             $logger = new \App\Services\Audit\ActionLogger();
 
             // Перевіряємо поточний пароль, якщо він існує
@@ -238,53 +229,6 @@ class CabinetController extends Controller
                 // 1) Основний шлях — через репозиторій
                 if (method_exists($repo, 'updateById')) {
                     $updated = $repo->updateById($userId, ['password_hash' => $newHash]);
-                }
-
-                // 2) Fallback: пряме оновлення файлу users.json, якщо updateById не спрацював
-                if (!$updated) {
-                    $file = \dirname(__DIR__, 2) . '/storage/data/users.json';
-                    $raw  = @file_get_contents($file);
-                    $db   = $raw ? json_decode($raw, true) : null;
-                    $changed = false;
-
-                    if (isset($db['rows']) && is_array($db['rows'])) {
-                        foreach ($db['rows'] as &$row) {
-                            if ((int)($row['id'] ?? 0) === $userId) {
-                                $row['password_hash'] = $newHash;
-                                if (!isset($row['updated_at'])) {
-                                    $row['updated_at'] = date('c');
-                                }
-                                $changed = true;
-                                break;
-                            }
-                        }
-                        unset($row);
-                    } elseif (is_array($db)) {
-                        foreach ($db as &$row) {
-                            if ((int)($row['id'] ?? 0) === $userId) {
-                                $row['password_hash'] = $newHash;
-                                if (!isset($row['updated_at'])) {
-                                    $row['updated_at'] = date('c');
-                                }
-                                $changed = true;
-                                break;
-                            }
-                        }
-                        unset($row);
-                        if ($changed) {
-                            $db = [
-                                'last_id' => 0,
-                                'rows'    => $db,
-                            ];
-                        }
-                    }
-
-                    if ($changed) {
-                        $json = json_encode($db, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
-                        if ($json !== false && @file_put_contents($file, $json, LOCK_EX) !== false) {
-                            $updated = true;
-                        }
-                    }
                 }
 
                 if (!$updated) {

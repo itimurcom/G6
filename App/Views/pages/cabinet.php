@@ -14,7 +14,7 @@ $__viewId = defined('CABINET_VIEW_USER_ID')
     : (int)($_GET['user_id'] ?? ($_REQUEST['cabinet_user_id'] ?? ($_SESSION['user_id'] ?? 0)));
 
 $u = null;
-try { $u = (new \App\Models\UserFileRepository())->findById($__viewId); } catch (\Throwable $e) { $u = null; }
+try { $u = (new \App\Models\UserMysqlRepository())->findById($__viewId); } catch (\Throwable $e) { $u = null; }
 if (!$u) { $u = \App\Core\Auth::user() ?? []; }
 $isOwnCabinet = ((int)($_SESSION['user_id'] ?? 0) === (int)($u['id'] ?? 0));
 ?>

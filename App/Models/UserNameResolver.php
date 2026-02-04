@@ -5,44 +5,57 @@ namespace App\Models;
 
 /**
  * Lightweight helper to resolve a user's display name by numeric id.
- * Reads from storage/data/users.json directly to avoid coupling with other repos.
+ *
+ * Stage 1 (no JSON as a data source): resolve via MySQL repository.
+ * JSON is allowed only for backup import/export; user resolution must not read users.json.
  */
 final class UserNameResolver
 {
-    private string $file;
+    private UserRepositoryInterface $repo;
 
-    public function __construct(?string $file = null)
+    /** @var array<int, string|null> */
+    private array $cache = [];
+
+    public function __construct(?UserRepositoryInterface $repo = null)
     {
-        $root = \dirname(__DIR__, 2);
-        $this->file = $file ?: ($root . '/storage/data/users.json');
+        $this->repo = $repo ?: new UserMysqlRepository();
     }
 
     /** Returns the preferred display name by user id, or null if not found. */
     public function getNameById(int $id): ?string
     {
         if ($id <= 0) return null;
-        if (!is_file($this->file)) return null;
 
-        $raw = file_get_contents($this->file);
-        if ($raw === false) return null;
-
-        $data = json_decode($raw, true);
-        $rows = [];
-        if (isset($data['rows']) && is_array($data['rows'])) {
-            $rows = $data['rows'];
-        } elseif (is_array($data)) {
-            $rows = $data;
+        if (array_key_exists($id, $this->cache)) {
+            return $this->cache[$id];
         }
 
-        foreach ($rows as $row) {
-            if ((int)($row['id'] ?? 0) === $id) {
-                $name = (string)($row['name'] ?? '');
-                if ($name !== '') return $name;
-                $login = (string)($row['login'] ?? '');
-                if ($login !== '') return $login;
-                return 'User #' . $id;
-            }
+        $u = null;
+        try {
+            $u = $this->repo->findById($id);
+        } catch (\Throwable $e) {
+            $u = null;
         }
-        return null;
+
+        if (!is_array($u)) {
+            $this->cache[$id] = null;
+            return null;
+        }
+
+        $name = trim((string)($u['name'] ?? ''));
+        if ($name !== '') {
+            $this->cache[$id] = $name;
+            return $name;
+        }
+
+        $login = trim((string)($u['login'] ?? ''));
+        if ($login !== '') {
+            $this->cache[$id] = $login;
+            return $login;
+        }
+
+        $fallback = 'User #' . $id;
+        $this->cache[$id] = $fallback;
+        return $fallback;
     }
 }

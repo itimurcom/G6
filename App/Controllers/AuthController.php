@@ -49,7 +49,7 @@ final class AuthController extends Controller
         }
 
         // Find user by login/email using repository (supports wrapper format)
-        $repo = new \App\Models\UserFileRepository();
+        $repo = new \App\Models\UserMysqlRepository();
         $user = $repo->findByLogin($login);
         if (!$user) { $user = $repo->findByEmail($login); }
 
@@ -156,26 +156,48 @@ final class AuthController extends Controller
             header('Location: /password/setup', true, 302); return '';
         }
 
-        $repo = new \App\Models\UserFileRepository();
+        $repo = new \App\Models\UserMysqlRepository();
         $u    = $repo->findById($uid);
         $ok   = false;
 
         if ($u) {
             $ok = $repo->updateById($uid, [
                 'password_hash' => \password_hash($new, PASSWORD_DEFAULT),
-                'updated_at'    => date('c'),
             ]);
         }
 
         if ($ok) {
             unset($_SESSION['password_setup_user_id'], $_SESSION['password_setup_email'], $_SESSION['password_setup_token']);
 
-            // reload user and login
-            $fresh = $repo->findById($uid);
-            if (method_exists(\App\Core\Auth::class, 'setUser')) {
-                \App\Core\Auth::setUser($fresh);
-            } else {
-                $_SESSION['user'] = $fresh;
+            // reload user and log in via standard Auth flow (MySQL)
+            $fresh = null;
+            try {
+                $fresh = $repo->findById($uid);
+            } catch (\Throwable $e) {
+                $fresh = null;
+            }
+
+            $loginStr = '';
+            if (is_array($fresh)) {
+                $loginStr = (string)($fresh['login'] ?? ($fresh['email'] ?? ''));
+            }
+
+            $loggedIn = false;
+            if ($loginStr !== '') {
+                $loggedIn = \App\Core\Auth::login($loginStr, $new);
+            }
+
+            // Fallback if Auth::login() fails: set minimal session state
+            if (!$loggedIn) {
+                if (is_array($fresh)) {
+                    $_SESSION['user'] = $fresh;
+                    $_SESSION['user_id'] = (int)($fresh['id'] ?? $uid);
+                } else {
+                    $_SESSION['user_id'] = $uid;
+                }
+                if (method_exists(\App\Core\Session::class, 'regenerateId')) {
+                    \App\Core\Session::regenerateId(true);
+                }
             }
             if (method_exists(Session::class, 'regenerateId')) {
                 Session::regenerateId(true);
