@@ -4,6 +4,16 @@
   var THEME_KEY = 'ui-theme';
   var mqMobile = window.matchMedia('(max-width: 900px)');
 
+  // Theme toggle button must exist ONLY on Cabinet page
+  function isCabinetPage() {
+    try {
+      var p = (window.location && window.location.pathname) ? window.location.pathname : '';
+      return (p === '/cabinet' || p === '/cabinet/');
+    } catch (_) {
+      return false;
+    }
+  }
+
   function prefersDark() { return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches; }
   function readTheme() { return localStorage.getItem(THEME_KEY) || (prefersDark() ? 'dark' : 'light'); }
   function saveTheme(t) { localStorage.setItem(THEME_KEY, t); }
@@ -20,6 +30,7 @@
   }
 
   function ensureFAB() {
+    if (!isCabinetPage()) return;
     if (!document.getElementById('themeToggle')) {
       var t = document.createElement('button');
       t.id = 'themeToggle'; t.className = 'ui-fab theme'; t.type = 'button'; t.title = 'Тема';
