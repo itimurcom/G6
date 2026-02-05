@@ -70,6 +70,19 @@
     var q = norm(query || '');
     var t = currentType || 'all';
 
+    // Multi-word search: split into tokens and match all (order-independent)
+    var qTokens = [];
+    if (q) {
+      var parts = q.split(' ');
+      for (var pi = 0; pi < parts.length; pi++) {
+        var tok = parts[pi];
+        if (!tok) continue;
+        // keep short numeric tokens (e.g. "123"), otherwise require at least 2 chars
+        if (tok.length >= 2 || /\d/.test(tok)) qTokens.push(tok);
+      }
+      if (qTokens.length === 0) qTokens = [q];
+    }
+
     // Optional hook to check "overdue" state without hard coupling:
     var overdueFn = (global.CalendarApp && global.CalendarApp.ui && global.CalendarApp.ui.isEventOverdueStrict)
       || (typeof isEventOverdueStrict === 'function' && isEventOverdueStrict) || null;
@@ -143,7 +156,15 @@
 
       if (!q) return true;
       var hay = norm(((ev.title || '') + ' ' + (ev.owner || '')));
-      return hay.indexOf(q) !== -1;
+
+      // Single token: substring match
+      if (qTokens.length <= 1) return hay.indexOf(qTokens[0]) !== -1;
+
+      // Multiple tokens: all tokens must be present
+      for (var ti = 0; ti < qTokens.length; ti++) {
+        if (hay.indexOf(qTokens[ti]) === -1) return false;
+      }
+      return true;
     };
   }
 
