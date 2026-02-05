@@ -31,7 +31,7 @@
   /* ===== Today panel: collapse/expand with localStorage ===== */
   (function initTodayPanelCollapse() {
     var layout = document.getElementById('calendarLayout') || document.querySelector('.layout');
-    var panel = document.getElementById('todayPanel');
+    var panel = document.getElementById('todayPanelInner') || document.getElementById('todayPanel');
     var btn = document.getElementById('todayPanelToggle');
     if (!layout || !panel || !btn) return;
 
@@ -64,42 +64,29 @@
       layout.classList.remove('today-panel-init');
     });
 
-    var endTimer = null;
+
 
     function hidePanel() {
-      if (layout.classList.contains('today-panel-hidden')) return;
-      layout.classList.add('today-panel-hidden');
+      var collapsedNow = layout.classList.contains('today-panel-hidden') || layout.classList.contains('today-panel-collapsed');
+      if (collapsedNow) return;
+
+      // Force layout flush so transitions reliably start (Chrome/Edge)
+      try { if (panel) void panel.offsetWidth; } catch (_) { }
+
+      // Collapse the column and slide the panel out together (no "jump")
+      layout.classList.add('today-panel-hidden', 'today-panel-collapsed');
       setBtn(true);
       safeSet('1');
-
-      if (endTimer) { clearTimeout(endTimer); endTimer = null; }
-
-      var onEnd = function (e) {
-        if (e && e.target !== panel) return;
-        panel.removeEventListener('transitionend', onEnd);
-        layout.classList.add('today-panel-collapsed');
-      };
-      panel.addEventListener('transitionend', onEnd);
-
-      // Fallback (in case transitionend doesn't fire)
-      endTimer = setTimeout(function () {
-        panel.removeEventListener('transitionend', onEnd);
-        layout.classList.add('today-panel-collapsed');
-      }, 260);
     }
 
     function showPanel() {
       var collapsedNow = layout.classList.contains('today-panel-hidden') || layout.classList.contains('today-panel-collapsed');
       if (!collapsedNow) return;
 
-      // First expand the grid column, then slide panel back
-      layout.classList.remove('today-panel-collapsed');
-      requestAnimationFrame(function () {
-        requestAnimationFrame(function () {
-          layout.classList.remove('today-panel-hidden');
-        });
-      });
+      try { if (panel) void panel.offsetWidth; } catch (_) { }
 
+      // Expand the column and slide the panel back together
+      layout.classList.remove('today-panel-hidden', 'today-panel-collapsed');
       setBtn(false);
       safeSet('0');
     }

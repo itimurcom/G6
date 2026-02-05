@@ -1,5 +1,4 @@
 <div class="layout" id="calendarLayout">
-  <button id="todayPanelToggle" class="today-panel-toggle" type="button" aria-label="Сховати панель «Сьогодні»" title="Сховати/показати панель «Сьогодні»" aria-expanded="true"><span aria-hidden="true">›</span></button>
   <main class="calendar">
     <header class="cal-header">
       <div class="heading">
@@ -78,6 +77,8 @@
   </main>
 
   <aside class="today-panel" id="todayPanel">
+    <button id="todayPanelToggle" class="today-panel-toggle" type="button" aria-label="Сховати панель «Сьогодні»" title="Сховати/показати панель «Сьогодні»" aria-expanded="true"><span aria-hidden="true">›</span></button>
+    <div id="todayPanelInner" class="today-panel-inner">
     <header>
       <div class="today-title">Сьогодні</div>
       <div id="todayPanelDate" class="subtle"></div>
@@ -100,6 +101,8 @@
       </div>
       <div id="lateTimeline" class="timeline"></div>
     </section>
+  
+    </div>
   </aside>
 </div>
 
