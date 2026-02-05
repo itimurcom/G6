@@ -33,7 +33,7 @@
     </header>
 
     <div class="filters">
-      <input id="filterText" class="input ev" type="search" placeholder="Пошук: назва або відповідальний">
+      <input id="filterText" class="input ev" type="search" placeholder="Пошук: назва або відповідальний (ENTER — повний пошук)">
       <button id="btnClearFilters" class="btn">Скинути</button>
     </div>
     <div id="quickFilters" class="quick-filters">
