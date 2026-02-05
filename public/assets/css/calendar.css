@@ -40,7 +40,8 @@
 
   .today-panel {
     order: 2;
-    width: 100%;
+    /* width: 100%; */
+    width: 0;
   }
 }
 
@@ -221,7 +222,7 @@ select,
 /* Day cells */
 .cell {
   border: 1px solid var(--border);
-    border-radius: 12px;
+  border-radius: 12px;
   padding: 8px;
   position: relative;
   background: linear-gradient(180deg, rgba(0, 0, 0, .02), rgba(0, 0, 0, 0));
@@ -480,12 +481,14 @@ select,
 
 .layout.today-panel-collapsed {
   gap: 0;
+  margin: 0;
 }
 
 .layout.today-panel-collapsed .today-panel {
   padding: 0;
   border: 0;
-  width: 8px;
+  width: 0;
+  right: -14px;
 }
 
 @media (max-width:1100px) {
@@ -517,7 +520,7 @@ select,
 /* Fold */
 .fold-wrap {
   margin: 8px 0;
-    border-radius: 12px;
+  border-radius: 12px;
 }
 
 .fold-wrap.open {
@@ -878,7 +881,7 @@ select,
 .chat-card {
   position: relative;
   border: 1px solid var(--border);
-    border-radius: 12px;
+  border-radius: 12px;
   padding: 10px 12px;
   background: var(--event-bg);
 }
@@ -1035,4 +1038,8 @@ body.light .ev--multi,
 
 .btn--green:active {
   filter: brightness(0.95);
+}
+
+#sidebarOverlay:not(.sidebar-overlay--open) {
+  display: none;
 }
