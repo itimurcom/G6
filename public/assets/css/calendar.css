@@ -1043,3 +1043,5 @@ body.light .ev--multi,
 #sidebarOverlay:not(.sidebar-overlay--open) {
   display: none;
 }
+/* TEMP: quick filters are hidden (work on them will continue later) */
+#quickFilters { display: none !important; }
