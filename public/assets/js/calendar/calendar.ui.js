@@ -172,12 +172,63 @@
   }
 
   function __collectFullSearchMatches(query) {
-    var q = String(query || '').trim();
-    if (!q) return [];
+    var qRaw = String(query || '').trim();
+    if (!qRaw) return [];
 
     var store = Data.readStore();
-    var matcher = Ev.buildMatcher ? Ev.buildMatcher(currentType, q) : null;
-    if (!matcher) return [];
+
+    // Keep the same type/overdue filtering logic, but handle text matching locally (OR)
+    var typeMatcher = Ev.buildMatcher ? Ev.buildMatcher(currentType, '') : null;
+    if (!typeMatcher) return [];
+
+    var qNormRaw = (Ev.norm ? Ev.norm(qRaw) : String(qRaw).toLowerCase());
+
+    // Full-search tokens:
+    //   "+word" => REQUIRED (AND)
+    //   "word"  => OPTIONAL (OR)
+    // Semantics:
+    //   - if there are REQUIRED tokens: all of them must match
+    //   - if there are OPTIONAL tokens: at least one of them must match
+    var qReq = [];
+    var qOpt = [];
+    if (qNormRaw) {
+      var parts = qNormRaw.split(' ');
+      for (var pi = 0; pi < parts.length; pi++) {
+        var tok0 = parts[pi];
+        if (!tok0) continue;
+
+        var isReq = (tok0.charAt(0) === '+');
+        var tok = isReq ? tok0.slice(1) : tok0;
+        if (!tok) continue;
+
+        // keep short numeric tokens (e.g. "123"), otherwise require at least 2 chars
+        if (tok.length >= 2 || /\d/.test(tok)) (isReq ? qReq : qOpt).push(tok);
+      }
+      // If everything was filtered out as "too short", fallback to the whole query (without leading '+')
+      if (qReq.length === 0 && qOpt.length === 0) {
+        var fallback = qNormRaw.replace(/^\+/, '');
+        if (fallback) qOpt = [fallback];
+      }
+    }
+
+    function textMatches(ev) {
+      if (!qNormRaw) return true;
+      var hay = (Ev.norm
+        ? Ev.norm(((ev && ev.title) || '') + ' ' + ((ev && ev.owner) || ''))
+        : (((ev && ev.title) || '') + ' ' + ((ev && ev.owner) || '')).toLowerCase());
+
+      // Required tokens must all exist
+      for (var ri = 0; ri < qReq.length; ri++) {
+        if (hay.indexOf(qReq[ri]) === -1) return false;
+      }
+
+      // Optional tokens: OR
+      if (qOpt.length === 0) return (qReq.length > 0); // only required tokens defined
+      for (var oi = 0; oi < qOpt.length; oi++) {
+        if (hay.indexOf(qOpt[oi]) !== -1) return true;
+      }
+      return false;
+    }
 
     var out = [];
     for (var dateISO in store) {
@@ -187,7 +238,7 @@
       for (var i = 0; i < arr.length; i++) {
         var ev = arr[i];
         try {
-          if (matcher(ev)) out.push({ dateISO: dateISO, ev: ev });
+          if (typeMatcher(ev) && textMatches(ev)) out.push({ dateISO: dateISO, ev: ev });
         } catch (_) { }
       }
     }
@@ -371,6 +422,11 @@
 
   function setTypeFilter(t) {
     currentType = t || 'all';
+    if (__fullSearchActive) {
+      updateTypeButtons();
+      __refreshFullSearchIfActive();
+      return;
+    }
     withStableScroll(renderAllFn);
   }
 
@@ -398,9 +454,22 @@
     if (e.key === 'Enter') {
       try { e.preventDefault(); } catch (_) { }
       try { e.stopPropagation(); } catch (_) { }
-      __enterFullSearch(filterText.value || '');
+
+      var v = String(filterText.value || '').trim();
+      // Enter on empty string => reset and return to calendar
+      if (!v) {
+        if (btnClearFilters && typeof btnClearFilters.click === 'function') btnClearFilters.click();
+        else {
+          if (__fullSearchActive) __exitFullSearch();
+          setTypeFilter('all');
+        }
+        return;
+      }
+
+      __enterFullSearch(v);
     }
   });
+
 
   if (btnClearFilters) btnClearFilters.addEventListener('click', function () {
     if (__fullSearchActive) __exitFullSearch();
