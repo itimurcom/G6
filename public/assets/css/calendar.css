@@ -1148,3 +1148,7 @@ body.light .ev--multi,
   font-style: italic;
   padding: 8px 4px;
 }
+
+
+/* TEMP: приховано кнопку чату (btnChat) */
+#btnChat{display:none !important;}

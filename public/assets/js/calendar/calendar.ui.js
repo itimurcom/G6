@@ -233,6 +233,29 @@
     __setCalendarContentHidden(false);
   }
 
+  function __refreshFullSearchIfActive() {
+    if (!__fullSearchActive) return;
+    if (!calendarSearchResults || calendarSearchResults.hidden) return;
+    var q = String(__fullSearchLastQuery || '').trim();
+    if (!q) return;
+
+    // Preserve scroll position while re-rendering
+    var prevTop = 0;
+    try { prevTop = calendarSearchResults.scrollTop || 0; } catch (_) { prevTop = 0; }
+
+    calendarSearchResults.innerHTML = '';
+    var matches = __collectFullSearchMatches(q);
+    if (!matches.length) __renderSearchEmpty(calendarSearchResults, q);
+    else __renderSearchResults(calendarSearchResults, q, matches);
+
+    try { calendarSearchResults.scrollTop = prevTop; } catch (_) { }
+  }
+
+  // Re-render full-search results after edits/updates (edit modal fires "calendar:changed")
+  document.addEventListener('calendar:changed', function () {
+    __refreshFullSearchIfActive();
+  });
+
   // Форматери
   var monthFmt = new Intl.DateTimeFormat(locale, { month: 'long' });
 
