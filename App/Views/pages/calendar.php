@@ -3,7 +3,7 @@
     <header class="cal-header">
       <div class="heading">
         <div id="monthLabel" class="title"></div>
-        <div id="todayLabel" class="subtle"></div>
+        <!-- <div id="todayLabel" class="subtle"></div> -->
       </div>
 
       <div class="nav-filters">
