@@ -1045,3 +1045,106 @@ body.light .ev--multi,
 }
 /* TEMP: quick filters are hidden (work on them will continue later) */
 #quickFilters { display: none !important; }
+
+
+/* === Calendar full-search results (Enter in search field) === */
+.calendar-search-results {
+  margin-top: 10px;
+}
+
+.calendar-search-results .planning-section {
+  margin-bottom: 18px;
+}
+
+.calendar-search-results .planning-section__title {
+  font-weight: 800;
+  margin: 8px 0 6px;
+  opacity: .9;
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.calendar-search-results .planning-section__date {
+  color: var(--muted);
+  font-weight: 600;
+  margin-left: auto;
+}
+
+.calendar-search-results .planning-today__list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin: 6px 0 0;
+  padding: 0;
+}
+
+.calendar-search-results .planning-today__item {
+  display: grid;
+  grid-template-columns: 76px minmax(0, 1fr);
+  gap: 10px;
+  align-items: start;
+  padding: 8px 10px;
+  margin: 0;
+  border-left: 3px solid transparent;
+  border-radius: 12px;
+  background: color-mix(in oklab, var(--event-bg) 70%, transparent);
+}
+
+.calendar-search-results .planning-today__time {
+  text-align: right;
+  min-width: 76px;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.15;
+  white-space: pre-line;
+  opacity: .9;
+}
+
+.calendar-search-results .planning-today__details {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.calendar-search-results .planning-today__head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.calendar-search-results .planning-today__title {
+  font-weight: 700;
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.calendar-search-results .planning-today__owner {
+  font-size: 12px;
+  opacity: .75;
+}
+
+.calendar-search-results .planning-today__item.urgent {
+  border-left-color: color-mix(in oklab, #ef4444 70%, var(--border));
+}
+
+.calendar-search-results .planning-today__item.done {
+  opacity: .55;
+  filter: grayscale(1) contrast(.9) brightness(.97);
+}
+
+.calendar-search-results .planning-today__item.done,
+.calendar-search-results .planning-today__item.done * {
+  text-decoration: line-through;
+}
+
+.calendar-search-results .planning-empty {
+  opacity: .7;
+  font-style: italic;
+  padding: 8px 4px;
+}

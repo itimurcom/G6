@@ -45,6 +45,9 @@
       <button class="chip other" data-type="other" data-text="Інше" type="button">Інше</button>
     </div>
 
+    <!-- Calendar full-search results (shown only on Enter) -->
+    <section id="calendarSearchResults" class="calendar-search-results" hidden aria-live="polite"></section>
+
     <section class="weekdays" id="weekdays"></section>
     <section class="grid" id="grid" aria-live="polite"></section>
 

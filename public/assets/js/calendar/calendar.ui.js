@@ -20,6 +20,219 @@
 
   var quickFilters = $('quickFilters');
 
+
+  /* ===== Full-search on Enter (replaces calendar grid with list like "Планування") ===== */
+  var calendarSearchResults = document.getElementById('calendarSearchResults');
+  var calendarWeekdays = document.getElementById('weekdays');
+  var calendarGrid = document.getElementById('grid');
+  var calendarBottomActions = document.querySelector('.calendar .bottom-actions');
+  var calendarLegends = document.querySelectorAll('.calendar .legend');
+
+  var __fullSearchActive = false;
+  var __fullSearchLastQuery = '';
+
+  function __setCalendarContentHidden(hidden) {
+    if (calendarWeekdays) calendarWeekdays.style.display = hidden ? 'none' : '';
+    if (calendarGrid) calendarGrid.style.display = hidden ? 'none' : '';
+    if (calendarBottomActions) calendarBottomActions.style.display = hidden ? 'none' : '';
+    if (calendarLegends && calendarLegends.length) {
+      for (var i = 0; i < calendarLegends.length; i++) {
+        var el = calendarLegends[i];
+        if (!el) continue;
+        // Keep the top type filters bar visible
+        if (el.id === 'typeFiltersBar') continue;
+        el.style.display = hidden ? 'none' : '';
+      }
+    }
+  }
+
+  function __pad2(n) { return ('0' + n).slice(-2); }
+
+  function __isoToShortDM(iso) {
+    var s = String(iso || '').slice(0, 10);
+    var a = s.split('-');
+    if (a.length !== 3) return s;
+    return __pad2(a[2]) + '.' + __pad2(a[1]);
+  }
+
+  function __timeToMin(hhmm) {
+    if (!hhmm) return 0;
+    var a = String(hhmm).split(':');
+    if (a.length < 2) return 0;
+    var h = parseInt(a[0], 10), m = parseInt(a[1], 10);
+    if (isNaN(h) || isNaN(m)) return 0;
+    return h * 60 + m;
+  }
+
+  function __renderSearchEmpty(container, query) {
+    var sec = document.createElement('div');
+    sec.className = 'planning-section';
+
+    var h = document.createElement('div');
+    h.className = 'planning-section__title';
+    h.textContent = 'Результати пошуку: "' + (query || '') + '"';
+
+    var empty = document.createElement('div');
+    empty.className = 'planning-empty';
+    empty.textContent = 'Нічого не знайдено';
+
+    sec.appendChild(h);
+    sec.appendChild(empty);
+    container.appendChild(sec);
+  }
+
+  function __renderSearchResults(container, query, matches) {
+    var sec = document.createElement('div');
+    sec.className = 'planning-section';
+
+    var h = document.createElement('div');
+    h.className = 'planning-section__title';
+
+    var title = document.createElement('span');
+    title.textContent = 'Результати пошуку: "' + (query || '') + '"';
+
+    var meta = document.createElement('span');
+    meta.className = 'planning-section__date';
+    meta.textContent = 'знайдено: ' + (matches.length || 0);
+
+    h.appendChild(title);
+    h.appendChild(meta);
+
+    var ul = document.createElement('ul');
+    ul.className = 'planning-today__list';
+
+    for (var i = 0; i < matches.length; i++) {
+      var m = matches[i];
+      var dateISO = m.dateISO;
+      var ev = m.ev;
+      if (!ev) continue;
+
+      var li = document.createElement('li');
+      li.className = 'planning-today__item';
+      if (ev.urgent) li.classList.add('urgent');
+      if (ev.done) li.classList.add('done');
+
+      // multi-day hint
+      try {
+        var s = (ev.start_date || dateISO || '').slice(0, 10);
+        var e = (ev.end_date || '').slice(0, 10);
+        if (e && s && e !== s) li.classList.add('ev--multi');
+      } catch (_) { }
+
+      var time = document.createElement('div');
+      time.className = 'planning-today__time';
+      var tm = (ev.time && String(ev.time).trim()) ? String(ev.time).trim() : '00:00';
+      time.textContent = __isoToShortDM(dateISO) + '\n' + tm;
+
+      var details = document.createElement('div');
+      details.className = 'planning-today__details';
+
+      var head = document.createElement('div');
+      head.className = 'planning-today__head';
+
+      var tRaw = ev.type || 'evt';
+      var chip = document.createElement('span');
+      chip.className = 'chip ' + (tRaw === 'mi' ? 'mi' : tRaw === 'nas' ? 'nas' : tRaw === 'evt' ? 'evt' : 'other');
+      chip.textContent = (Ev.labelForType ? Ev.labelForType(tRaw) : tRaw);
+
+      var p = document.createElement('span');
+      p.className = 'planning-today__title';
+      p.textContent = ev.title || '(без назви)';
+
+      head.appendChild(chip);
+      head.appendChild(p);
+
+      var owner = document.createElement('span');
+      owner.className = 'planning-today__owner';
+      owner.textContent = ev.owner || '';
+
+      details.appendChild(head);
+      if (ev.owner) details.appendChild(owner);
+
+      li.appendChild(time);
+      li.appendChild(details);
+
+      // click -> open info (shift-click -> edit)
+      (function (dISO, id) {
+        li.addEventListener('click', function (e) {
+          var ui = (window.CalendarApp && window.CalendarApp.ui) || {};
+          try {
+            if (e && e.shiftKey && ui.openModalEdit) ui.openModalEdit(dISO, id);
+            else if (ui.openInfo) ui.openInfo(dISO, id);
+          } catch (_) { }
+        });
+      })(dateISO, ev.id);
+
+      ul.appendChild(li);
+    }
+
+    sec.appendChild(h);
+    sec.appendChild(ul);
+    container.appendChild(sec);
+  }
+
+  function __collectFullSearchMatches(query) {
+    var q = String(query || '').trim();
+    if (!q) return [];
+
+    var store = Data.readStore();
+    var matcher = Ev.buildMatcher ? Ev.buildMatcher(currentType, q) : null;
+    if (!matcher) return [];
+
+    var out = [];
+    for (var dateISO in store) {
+      if (!Object.prototype.hasOwnProperty.call(store, dateISO)) continue;
+      var arr = store[dateISO];
+      if (!Array.isArray(arr) || !arr.length) continue;
+      for (var i = 0; i < arr.length; i++) {
+        var ev = arr[i];
+        try {
+          if (matcher(ev)) out.push({ dateISO: dateISO, ev: ev });
+        } catch (_) { }
+      }
+    }
+
+    out.sort(function (a, b) {
+      if (a.dateISO !== b.dateISO) return a.dateISO < b.dateISO ? 1 : -1; // newest first
+      return __timeToMin(a.ev && a.ev.time) - __timeToMin(b.ev && b.ev.time);
+    });
+
+    return out;
+  }
+
+  function __enterFullSearch(query) {
+    if (!calendarSearchResults) return;
+    var q = String(query || '').trim();
+    if (!q) return;
+
+    __fullSearchActive = true;
+    __fullSearchLastQuery = q;
+
+    __setCalendarContentHidden(true);
+    calendarSearchResults.hidden = false;
+    calendarSearchResults.innerHTML = '';
+
+    var matches = __collectFullSearchMatches(q);
+    if (!matches.length) {
+      __renderSearchEmpty(calendarSearchResults, q);
+    } else {
+      __renderSearchResults(calendarSearchResults, q, matches);
+    }
+
+    // Ensure we start at the top of results
+    try { calendarSearchResults.scrollIntoView({ block: 'start', behavior: 'smooth' }); } catch (_) { }
+  }
+
+  function __exitFullSearch() {
+    if (!calendarSearchResults) return;
+    __fullSearchActive = false;
+    __fullSearchLastQuery = '';
+
+    calendarSearchResults.hidden = true;
+    calendarSearchResults.innerHTML = '';
+    __setCalendarContentHidden(false);
+  }
+
   // Форматери
   var monthFmt = new Intl.DateTimeFormat(locale, { month: 'long' });
 
@@ -153,10 +366,21 @@
   if (btnTypeOverdue) btnTypeOverdue.addEventListener('click', function () { setTypeFilter('overdue'); });
   if (btnTypeReset) btnTypeReset.addEventListener('click', function () { setTypeFilter('all'); });
   if (filterText) filterText.addEventListener('input', function () {
+    if (__fullSearchActive) return;
     withStableScroll(renderAllFn);
   });
 
+  if (filterText) filterText.addEventListener('keydown', function (e) {
+    if (!e) return;
+    if (e.key === 'Enter') {
+      try { e.preventDefault(); } catch (_) { }
+      try { e.stopPropagation(); } catch (_) { }
+      __enterFullSearch(filterText.value || '');
+    }
+  });
+
   if (btnClearFilters) btnClearFilters.addEventListener('click', function () {
+    if (__fullSearchActive) __exitFullSearch();
     if (filterText) filterText.value = ''; setTypeFilter('all');
     filterText.classList.remove('type-mi', 'type-nas', 'type-evt', 'type-other', 'ev--overdue-flash');
     filterText.style.background = 'transparent';
