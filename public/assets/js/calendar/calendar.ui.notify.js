@@ -77,6 +77,35 @@
     } catch (_) { }
   }
 
+
+  function svgIconBell() {
+    return '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'
+      + '<path d="M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9"></path>'
+      + '<path d="M13.73 21a2 2 0 01-3.46 0"></path>'
+      + '</svg>';
+  }
+
+  function svgIconBellOff() {
+    return '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'
+      + '<path d="M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9"></path>'
+      + '<path d="M13.73 21a2 2 0 01-3.46 0"></path>'
+      + '<path d="M4 4l16 16"></path>'
+      + '</svg>';
+  }
+
+  function svgIconMarkAll() {
+    // Proposed design: "double check" icon (mark all as viewed)
+    return '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'
+      + '<path d="M7 12l2 2 4-4"></path>'
+      + '<path d="M13 12l2 2 4-4"></path>'
+      + '</svg>';
+  }
+
+  function setBtnSvg(btn, svg) {
+    if (!btn) return;
+    btn.innerHTML = svg;
+  }
+
   function fmtDate(iso) {
     try {
       if (!Ev || typeof Ev.formatISO !== 'function') return String(iso || '');
@@ -94,6 +123,116 @@
     if (t === 'nas') return 'ТЛГ: НАС';
     if (t === 'evt') return 'Захід';
     return 'Інше';
+  }
+
+  
+
+  // Open event:
+  // - On Calendar page: open modal by (dateISO, id). If the event is not in cache yet — load store first.
+  // - On other pages: store pending {date,id} and navigate to /calendar
+  var KEY_PENDING_OPEN = 'calendar.pendingOpenEvent';
+
+  function openEvent(dateISO, eventId) {
+    var d = String(dateISO || '');
+    var eid = String(eventId || '');
+    if (!eid || !d) return;
+
+    try {
+      var ui = (global.CalendarApp && global.CalendarApp.ui) ? global.CalendarApp.ui : null;
+      var data = (global.CalendarApp && global.CalendarApp.data) ? global.CalendarApp.data : null;
+
+      if (ui && typeof ui.openInfo === 'function') {
+        // If the event isn't in current cache — load store and retry.
+        try {
+          if (data && typeof data.getEventsFor === 'function') {
+            var arr = data.getEventsFor(d) || [];
+            var has = false;
+            for (var i = 0; i < arr.length; i++) {
+              if (arr[i] && String(arr[i].id || '') === eid) { has = true; break; }
+            }
+            if (!has && typeof data.serverLoadStore === 'function' && typeof data._setCache === 'function') {
+              data.serverLoadStore()
+                .then(function (cache) {
+                  try { data._setCache(cache); } catch (_) { }
+                })
+                .catch(function () { /* ignore */ })
+                .then(function () {
+                  try { ui.openInfo(d, eid); } catch (_) { }
+                });
+              return;
+            }
+          }
+        } catch (_) { }
+
+        try { ui.openInfo(d, eid); } catch (_) { }
+        return;
+      }
+    } catch (_) { }
+
+    // Fallback: go to calendar and open after load
+    try { localStorage.setItem(KEY_PENDING_OPEN, JSON.stringify({ date: d, id: eid })); } catch (_) { }
+    try { global.location.href = '/calendar'; } catch (_) { }
+  }
+
+  // If user clicked "open" on another page, consume pending info on Calendar page
+  function tryConsumePendingOpen() {
+    var raw = '';
+    try { raw = localStorage.getItem(KEY_PENDING_OPEN) || ''; } catch (_) { raw = ''; }
+    if (!raw) return;
+
+    var p = null;
+    try { p = JSON.parse(raw); } catch (_) { p = null; }
+    var d = (p && p.date) ? String(p.date) : '';
+    var eid = (p && p.id) ? String(p.id) : '';
+
+    if (!d || !eid) {
+      try { localStorage.removeItem(KEY_PENDING_OPEN); } catch (_) { }
+      return;
+    }
+
+    var tries = 0;
+    var t = global.setInterval(function () {
+      tries++;
+      try {
+        var ui = (global.CalendarApp && global.CalendarApp.ui) ? global.CalendarApp.ui : null;
+        var data = (global.CalendarApp && global.CalendarApp.data) ? global.CalendarApp.data : null;
+
+        if (ui && typeof ui.openInfo === 'function') {
+          // Ensure cache contains event
+          var openNow = function () {
+            try { ui.openInfo(d, eid); } catch (_) { }
+          };
+
+          try {
+            if (data && typeof data.getEventsFor === 'function') {
+              var arr = data.getEventsFor(d) || [];
+              var has = false;
+              for (var i = 0; i < arr.length; i++) {
+                if (arr[i] && String(arr[i].id || '') === eid) { has = true; break; }
+              }
+              if (!has && typeof data.serverLoadStore === 'function' && typeof data._setCache === 'function') {
+                data.serverLoadStore()
+                  .then(function (cache) { try { data._setCache(cache); } catch (_) { } })
+                  .catch(function () { /* ignore */ })
+                  .then(function () { openNow(); });
+              } else {
+                openNow();
+              }
+            } else {
+              openNow();
+            }
+          } catch (_) { openNow(); }
+
+          global.clearInterval(t);
+          try { localStorage.removeItem(KEY_PENDING_OPEN); } catch (_) { }
+          return;
+        }
+      } catch (_) { }
+
+      if (tries >= 80) { // ~4s max
+        global.clearInterval(t);
+      }
+    }, 50);
   }
 
   function makeKey(notif) {
@@ -270,14 +409,14 @@
     btnSound.className = 'notif-iconbtn';
     btnSound.title = soundEnabled ? 'Звук: увімкнено' : 'Звук: вимкнено';
     btnSound.setAttribute('aria-label', btnSound.title);
-    btnSound.textContent = soundEnabled ? 'звук' : 'без звуку';
+    setBtnSvg(btnSound, soundEnabled ? svgIconBell() : svgIconBellOff());
 
     btnClear = document.createElement('button');
     btnClear.type = 'button';
     btnClear.className = 'notif-iconbtn';
-    btnClear.title = 'Відмітити всі';
+    btnClear.title = 'Відмітити всі як переглянуті';
     btnClear.setAttribute('aria-label', 'Відмітити всі повідомлення як переглянуті');
-    btnClear.textContent = 'відмітити всі';
+    setBtnSvg(btnClear, svgIconMarkAll());
 
     actions.appendChild(btnCollapse);
     actions.appendChild(btnSound);
@@ -305,7 +444,7 @@
       safeSet(KEY_SOUND, soundEnabled ? '1' : '0');
       btnSound.title = soundEnabled ? 'Звук: увімкнено' : 'Звук: вимкнено';
       btnSound.setAttribute('aria-label', btnSound.title);
-      btnSound.textContent = soundEnabled ? 'звук' : 'без звуку';
+      setBtnSvg(btnSound, soundEnabled ? svgIconBell() : svgIconBellOff());
 
       // user gesture: unlock audio
       if (soundEnabled) {
@@ -465,10 +604,25 @@
     var ttl = document.createElement('div');
     ttl.className = 'notif-item-title';
 
-    var titleText = document.createElement('div');
-    titleText.textContent = titleStr;
-
-    var subtitle = document.createElement('small');
+    var titleText;
+    // Title becomes a link (works on all pages):
+    // - On Calendar page: opens modal directly
+    // - On other pages: navigates to /calendar and opens after load
+    var canOpenTitle = (kind !== 'event_deleted') && !!eid;
+    if (canOpenTitle) {
+      titleText = document.createElement('a');
+      titleText.className = 'notif-item-title-link notif-link';
+      titleText.href = '#';
+      titleText.textContent = titleStr;
+      titleText.addEventListener('click', function (evClick) {
+        evClick.preventDefault();
+        openEvent(dateISO, eid);
+      });
+    } else {
+      titleText = document.createElement('div');
+      titleText.textContent = titleStr;
+    }
+var subtitle = document.createElement('small');
     var when = [];
     if (dateISO) when.push(fmtDate(dateISO));
     if (time) when.push(time);
@@ -482,6 +636,28 @@
     var body = document.createElement('div');
     body.className = 'notif-body';
     body.textContent = messageForKind(notif, ev);
+
+    if (kind === 'event_deleted') {
+      try { body.style.color = 'var(--danger, #ff4d4d)'; } catch (_) { }
+    }
+
+        // Visible "Відкрити" link (buttons block is temporarily hidden by CSS)
+    var links = null;
+    if (kind !== 'event_deleted') {
+      links = document.createElement('div');
+      links.className = 'notif-links';
+
+      var openLink = document.createElement('a');
+      openLink.className = 'notif-link notif-openlink';
+      openLink.href = '#';
+      openLink.textContent = 'Відкрити';
+      openLink.addEventListener('click', function (e) {
+        try { if (e && typeof e.preventDefault === 'function') e.preventDefault(); } catch (_) { }
+        openEvent(dateISO, eid);
+      });
+
+      links.appendChild(openLink);
+    }
 
     // Optional extra line for date change
     try {
@@ -501,37 +677,13 @@
       }
     } catch (_) { }
 
-    var btns = document.createElement('div');
+        var btns = document.createElement('div');
     btns.className = 'notif-buttons';
-
-    var openBtn = document.createElement('a');
-    openBtn.className = 'notif-link';
-    openBtn.href = '#';
-    openBtn.textContent = 'Відкрити';
 
     var viewedBtn = document.createElement('button');
     viewedBtn.type = 'button';
     viewedBtn.className = 'notif-btn primary viewed';
     viewedBtn.textContent = 'Переглянуто';
-
-    // Deleted events can't be opened
-    var canOpen = (kind !== 'event_deleted');
-    if (canOpen) {
-      openBtn.addEventListener('click', function (e) {
-        try { if (e && typeof e.preventDefault === 'function') e.preventDefault(); } catch (_) { }
-        try {
-          if (global.CalendarApp && global.CalendarApp.ui && typeof global.CalendarApp.ui.openInfo === 'function') {
-            global.CalendarApp.ui.openInfo(String(dateISO || ''), String(eid || ''));
-          }
-        } catch (_) { }
-      });
-    } else {
-      openBtn.setAttribute('aria-disabled', 'true');
-      openBtn.classList.add('is-disabled');
-      openBtn.addEventListener('click', function (e) {
-        try { if (e && typeof e.preventDefault === 'function') e.preventDefault(); } catch (_) { }
-      });
-    }
 
     viewedBtn.addEventListener('click', function () {
       markSeen(notif).then(function (ok) {
@@ -539,7 +691,19 @@
       });
     });
 
-    btns.appendChild(openBtn);
+    // Deleted events can't be opened (no "Відкрити")
+    if (kind !== 'event_deleted') {
+      var openBtn = document.createElement('a');
+      openBtn.className = 'notif-link';
+      openBtn.href = '#';
+      openBtn.textContent = 'Відкрити';
+      openBtn.addEventListener('click', function (e) {
+        try { if (e && typeof e.preventDefault === 'function') e.preventDefault(); } catch (_) { }
+        openEvent(dateISO, eid);
+      });
+      btns.appendChild(openBtn);
+    }
+
     btns.appendChild(viewedBtn);
 
     // Icon (bottom-right)
@@ -549,6 +713,7 @@
 
     item.appendChild(row);
     item.appendChild(body);
+    if (links) item.appendChild(links);
     item.appendChild(btns);
     item.appendChild(icon);
 
@@ -684,6 +849,8 @@
     try { document.addEventListener('calendar:changed', onCalendarChanged); } catch (_) { }
 
     try { startPolling(); } catch (_) { }
+
+    try { tryConsumePendingOpen(); } catch (_) { }
 
     // Public API (optional)
     global.CalendarApp = global.CalendarApp || {};
