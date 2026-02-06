@@ -308,9 +308,9 @@ function ensureUI() {
     btnClear = document.createElement('button');
     btnClear.type = 'button';
     btnClear.className = 'notif-iconbtn';
-    btnClear.title = 'Переглянуто всі';
-    btnClear.setAttribute('aria-label', 'Позначити всі повідомлення як переглянуті');
-    btnClear.textContent = 'переглянуто всі';
+    btnClear.title = 'Відмітити всі';
+    btnClear.setAttribute('aria-label', 'Відмітити всі повідомлення як переглянуті');
+    btnClear.textContent = 'відмітити всі';
 
     actions.appendChild(btnCollapse);
     actions.appendChild(btnSound);
