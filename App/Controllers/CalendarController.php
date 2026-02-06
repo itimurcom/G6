@@ -12,6 +12,7 @@ class CalendarController extends Controller
             'extra_css' => [
                 '/assets/css/calendar.css',
                 '/assets/css/icons.css',
+                '/assets/css/calendar.notify.css',
                 ],
             'extra_js' => [
                 '/assets/js/app.js',
@@ -22,6 +23,7 @@ class CalendarController extends Controller
                 // [DEFERRED] legacy UI backup disabled after V2 cutover; keep for rollback:
                 // '/assets/js/calendar/calendar.ui.backup.js',
                 '/assets/js/calendar/calendar.ui.modals.js',
+                '/assets/js/calendar/calendar.ui.notify.js',
                 ],
             'modules_js'   => [
             ]   ,

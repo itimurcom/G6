@@ -55,6 +55,10 @@ $router->get('/cabinet',                    [\App\Controllers\CabinetController:
 // ---- API V2 (table-like) ----
 $router->get('/api/events/by-date',         [\App\Controllers\ApiEventsController::class,       'byDate']);
 $router->get('/api/events/by-range',        [\App\Controllers\ApiEventsController::class,       'byRange']);
+$router->get('/api/events/updates',         [\App\Controllers\ApiEventsController::class,       'updates']);
+$router->get('/api/notify/unseen',        [\App\Controllers\ApiNotifyController::class,       'unseen']);
+$router->post('/api/notify/seen',         [\App\Controllers\ApiNotifyController::class,       'seen']);
+$router->post('/api/notify/seen-all',     [\App\Controllers\ApiNotifyController::class,       'seenAll']);
 $router->get('/api/audit/list',             [\App\Controllers\ApiAuditController::class,     'list']); // AUDIT: ADD ONLY
 $router->get('/api/events/get',             [\App\Controllers\ApiEventsController::class,       'get']);
 $router->get('/api/events/search',          [\App\Controllers\ApiEventsController::class,       'search']);
