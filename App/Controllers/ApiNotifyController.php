@@ -20,6 +20,7 @@ use PDO;
 final class ApiNotifyController extends Controller
 {
     private PDO $db;
+    private ?bool $hasPayloadColumn = null;
 
     public function __construct() {
         $this->db = Database::connect();
@@ -69,6 +70,29 @@ final class ApiNotifyController extends Controller
         return false;
     }
 
+    private function hasPayloadColumn(): bool
+    {
+        if ($this->hasPayloadColumn !== null) {
+            return (bool)$this->hasPayloadColumn;
+        }
+
+        try {
+            $st = $this->db->prepare(
+                "SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS\n".
+                "WHERE TABLE_SCHEMA = DATABASE()\n".
+                "  AND TABLE_NAME = 'user_notifications'\n".
+                "  AND COLUMN_NAME = 'payload'"
+            );
+            $st->execute();
+            $n = (int)$st->fetchColumn();
+            $this->hasPayloadColumn = ($n > 0);
+        } catch (\Throwable $e) {
+            $this->hasPayloadColumn = false;
+        }
+
+        return (bool)$this->hasPayloadColumn;
+    }
+
     public function unseen(Request $r): string
     {
         $uid = $this->currentUserId();
@@ -83,8 +107,12 @@ final class ApiNotifyController extends Controller
 
         try {
             // 1) Fetch unseen notification rows (no JOIN to avoid schema drift issues).
+            $cols = 'id, user_id, kind, event_id, actor_user_id, created_at, seen_at';
+            if ($this->hasPayloadColumn()) {
+                $cols .= ', payload';
+            }
             $sql = "
-                SELECT id, user_id, kind, event_id, actor_user_id, created_at, seen_at
+                SELECT {$cols}
                 FROM user_notifications
                 WHERE user_id = :uid AND seen_at IS NULL
                 ORDER BY id DESC
@@ -135,6 +163,19 @@ final class ApiNotifyController extends Controller
             $notifications = [];
             foreach ($rows as $row) {
                 $eid = (string)($row['event_id'] ?? '');
+                $payloadRaw = $row['payload'] ?? null;
+                $payload = null;
+                if (is_string($payloadRaw) && $payloadRaw !== '') {
+                    $tmp = json_decode($payloadRaw, true);
+                    if (is_array($tmp)) { $payload = $tmp; }
+                }
+
+                $event = $eid !== '' ? ($eventsById[$eid] ?? null) : null;
+                if ($event === null && is_array($payload) && isset($payload['event']) && is_array($payload['event'])) {
+                    // Deleted/missing event: fall back to snapshot from payload.
+                    $event = $payload['event'];
+                    if (!isset($event['id']) && $eid !== '') { $event['id'] = $eid; }
+                }
                 $notifications[] = [
                     'id'            => (int)($row['id'] ?? 0),
                     'user_id'       => (int)($row['user_id'] ?? 0),
@@ -143,7 +184,8 @@ final class ApiNotifyController extends Controller
                     'actor_user_id' => (int)($row['actor_user_id'] ?? 0),
                     'created_at'    => (string)($row['created_at'] ?? ''),
                     'seen_at'       => $row['seen_at'] ?? null,
-                    'event'         => $eid !== '' ? ($eventsById[$eid] ?? null) : null,
+                    'event'         => $event,
+                    'payload'       => $payload,
                 ];
             }
 

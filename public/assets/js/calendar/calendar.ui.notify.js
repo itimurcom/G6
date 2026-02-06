@@ -1,6 +1,6 @@
-/* calendar.ui.notify.js — sticky notifications (new event toast stack)
-   - listens to document event: "calendar:changed" (from calendar.ui.modals.js)
-   - shows a persistent toast in bottom-right on new event creation
+/* calendar.ui.notify.js — sticky notifications (activity toast stack)
+   - polls server: GET /api/notify/unseen
+   - shows persistent notifications in bottom-right until marked as viewed
    - optional sound (toggle)
 */
 
@@ -23,133 +23,14 @@
   var btnClear = null;
   var btnCollapse = null;
 
-  var byId = Object.create(null); // id -> element
+  // key -> element (key is notification.id when available; otherwise event_id+kind)
+  var byKey = Object.create(null);
+  // event_id|kind -> key (to replace local placeholder with real notification id without duplicating UI)
+  var byEventKind = Object.create(null);
 
-  var KEY_LAST = 'calendar.notify.last_seen';
   var POLL_MS = 7000; // 7s
   var pollTimer = null;
-  var lastSeen = '';
   var inFlight = false;
-
-  function parseServerNow(resp) {
-    try {
-      var sn = resp && resp.server_now ? String(resp.server_now) : '';
-      if (sn && /^\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}$/.test(sn)) return sn;
-    } catch (_) { }
-    return '';
-  }
-
-  function maxCreatedAt(events, fallback) {
-    var max = String(fallback || '') || '';
-    if (!Array.isArray(events)) return max;
-    for (var i = 0; i < events.length; i++) {
-      var c = events[i] && events[i].created_at ? String(events[i].created_at) : '';
-      if (c && (!max || c > max)) max = c;
-    }
-    return max;
-  }
-
-  function safeGetLastSeen() {
-    var v = safeGet(KEY_LAST);
-    return (v && /^\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}$/.test(v)) ? v : '';
-  }
-
-  function safeSetLastSeen(v) {
-    if (v && /^\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}$/.test(v)) {
-      safeSet(KEY_LAST, v);
-    }
-  }
-
-  function fetchUpdates() {
-  if (inFlight) return;
-  inFlight = true;
-
-  var url = '/api/notify/unseen?limit=120';
-  return fetch(url, { headers: { 'Accept': 'application/json' } })
-    .then(function (r) { return r.text().then(function (t) { return { r: r, t: t }; }); })
-    .then(function (rt) {
-      var r = rt.r;
-      var text = rt.t;
-      var payload = null;
-      try { payload = text ? JSON.parse(text) : null; } catch (_) { payload = null; }
-
-      if (!r.ok || !payload || payload.ok !== true) {
-        if (r.status === 401) stopPolling();
-        return;
-      }
-
-      var notifs = Array.isArray(payload.notifications) ? payload.notifications : [];
-
-      // Sync: remove items that are no longer unseen on server (e.g., reviewed in another tab)
-      try {
-        var serverIds = Object.create(null);
-        for (var i = 0; i < notifs.length; i++) {
-          var n0 = notifs[i] || {};
-          var eid0 = String(n0.event_id || (n0.event && n0.event.id) || '');
-          if (eid0) serverIds[eid0] = 1;
-        }
-        for (var k in byId) {
-          if (!Object.prototype.hasOwnProperty.call(byId, k)) continue;
-          if (!serverIds[k]) removeItem(k);
-        }
-      } catch (_) { }
-
-      if (!notifs.length) {
-        updateCount();
-        return;
-      }
-
-      // Ensure local store has these events so openInfo/edit works.
-      Data = (global.CalendarApp && global.CalendarApp.data) || Data;
-      Ev = (global.CalendarApp && global.CalendarApp.events) || Ev;
-
-      // Add notifications (dedup by event.id)
-      for (var j = 0; j < notifs.length; j++) {
-        var n1 = notifs[j] || {};
-        var ev1 = (n1 && n1.event) ? n1.event : null;
-
-        var dateISO = '';
-        var eventId = '';
-        if (ev1) {
-          dateISO = String(ev1.start_date || ev1._date || '');
-          eventId = String(ev1.id || n1.event_id || '');
-        } else {
-          eventId = String(n1.event_id || '');
-        }
-
-        if (!eventId) continue;
-
-        // If no event payload, still show minimal notification
-        if (!ev1) {
-          ev1 = { id: eventId, title: 'Нова подія', type: 'other', time: '' };
-        }
-        if (!dateISO) dateISO = String(ev1.start_date || ev1._date || '');
-
-        addNewEventToast(dateISO, ev1);
-      }
-    })
-    .catch(function () { /* ignore */ })
-    .finally(function () { inFlight = false; });
-}
-
-  function stopPolling() {
-    if (pollTimer) {
-      try { clearInterval(pollTimer); } catch (_) { }
-      pollTimer = null;
-    }
-  }
-
-  function startPolling() {
-  stopPolling();
-
-  // Ensure UI exists (will be hidden if empty)
-  ensureUI();
-  updateCount();
-
-  // first check soon
-  setTimeout(fetchUpdates, 900);
-  pollTimer = setInterval(fetchUpdates, POLL_MS);
-}
 
   function safeGet(key) {
     try { return localStorage.getItem(key); } catch (_) { return null; }
@@ -157,31 +38,6 @@
   function safeSet(key, value) {
     try { localStorage.setItem(key, value); } catch (_) { }
   }
-
-function markSeen(eventId) {
-  var eid = String(eventId || '');
-  if (!eid) return Promise.resolve(false);
-
-  return fetch('/api/notify/seen', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ event_id: eid, kind: 'event_new' })
-  })
-    .then(function (r) { return r.ok ? r.json().catch(function(){ return null; }) : null; })
-    .then(function (p) { return !!(p && p.ok === true); })
-    .catch(function () { return false; });
-}
-
-function markSeenAll() {
-  return fetch('/api/notify/seen-all', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({})
-  })
-    .then(function (r) { return r.ok ? r.json().catch(function(){ return null; }) : null; })
-    .then(function (p) { return !!(p && p.ok === true); })
-    .catch(function () { return false; });
-}
 
   function ensureAudio() {
     if (audioCtx) return audioCtx;
@@ -240,32 +96,143 @@ function markSeenAll() {
     return 'Інше';
   }
 
-  function getEventByIdInDate(dateISO, id) {
-    if (!Data || typeof Data.getEventsFor !== 'function') return null;
-    var arr = Data.getEventsFor(dateISO) || [];
-    for (var i = 0; i < arr.length; i++) {
-      if (arr[i] && String(arr[i].id || '') === String(id || '')) return arr[i];
-    }
+  function makeKey(notif) {
+    try {
+      var nid = notif && (notif.id !== undefined && notif.id !== null) ? String(notif.id) : '';
+      if (nid) return 'n:' + nid;
+    } catch (_) { }
+    var eid = String((notif && (notif.event_id || (notif.event && notif.event.id))) || '');
+    var kind = String((notif && notif.kind) || 'event_new');
+    return 'e:' + eid + ':' + kind;
+  }
+
+  function makeEventKindKey(eid, kind) {
+    return String(eid || '') + '|' + String(kind || '');
+  }
+
+  function parsePayloadMaybe(v) {
+    if (!v) return null;
+    if (typeof v === 'object') return v;
+    if (typeof v !== 'string') return null;
+    try { return JSON.parse(v); } catch (_) { return null; }
+  }
+
+  function extractEventLike(notif) {
+    if (!notif) return null;
+    if (notif.event && typeof notif.event === 'object') return notif.event;
+
+    var p = parsePayloadMaybe(notif.payload);
+    if (!p) return null;
+
+    // common payload formats
+    if (p.event && typeof p.event === 'object') return p.event;
+    if (p.after && typeof p.after === 'object') return p.after;
+    if (p.before && typeof p.before === 'object') return p.before;
+
+    // snapshot directly
+    if (p.title || p.start_date || p.type || p.time) return p;
+
     return null;
   }
 
-  function updateCount() {
-  if (!titleCountEl) return;
-
-  var n = 0;
-  try { n = listEl ? (listEl.children ? listEl.children.length : 0) : 0; } catch (_) { n = 0; }
-  titleCountEl.textContent = n ? ('(' + n + ')') : '';
-
-  // Requirement: hide notification block when there are no messages
-  if (stackRoot) {
-    try {
-      if (n === 0) stackRoot.setAttribute('hidden', 'hidden');
-      else stackRoot.removeAttribute('hidden');
-    } catch (_) { }
+  function extractEventId(notif, ev) {
+    var eid = String((ev && ev.id) || (notif && notif.event_id) || '');
+    return eid;
   }
-}
 
-function ensureUI() {
+  function extractType(notif, ev) {
+    return String((ev && ev.type) || (notif && notif.type) || 'other');
+  }
+
+  function extractDateISO(notif, ev) {
+    return String((ev && (ev.start_date || ev._date)) || (notif && notif.date) || '');
+  }
+
+  function extractTime(ev) {
+    return String((ev && (ev.time || ev.start_time)) || '');
+  }
+
+  function messageForKind(notif, ev) {
+    var kind = String((notif && notif.kind) || 'event_new');
+    if (kind === 'event_new') return 'Додано нову подію.';
+    if (kind === 'event_deleted') return 'Подію видалено.';
+    if (kind === 'event_date_changed') return 'Змінено дату події.';
+    if (kind === 'event_done_changed') {
+      // If we can detect transition, make it clearer
+      var p = parsePayloadMaybe(notif && notif.payload) || null;
+      try {
+        var b = p && p.before ? p.before : null;
+        var a = p && p.after ? p.after : null;
+        if (b && a && (b.done !== undefined) && (a.done !== undefined)) {
+          var bb = String(b.done) === '1' || b.done === true;
+          var aa = String(a.done) === '1' || a.done === true;
+          if (!bb && aa) return 'Позначено як виконано.';
+          if (bb && !aa) return 'Знято позначку «Виконано».';
+        }
+      } catch (_) { }
+      return 'Змінено статус «Виконано».';
+    }
+    return 'Оновлено подію.';
+  }
+
+  function makeIconSvgByType(type) {
+    // stroke-based icons (white via CSS currentColor)
+    type = String(type || 'other');
+
+    // event / "Захід"
+    if (type === 'evt') {
+      return '' +
+        '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">' +
+        '<path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M8 2v3M16 2v3M3 9h18M5 6h14a2 2 0 0 1 2 2v13a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2z"/>' +
+        '<path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="m9.5 14 1.7 1.7 3.8-3.8"/>' +
+        '</svg>';
+    }
+
+    // TLG:MI (single user)
+    if (type === 'mi') {
+      return '' +
+        '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">' +
+        '<path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M20 21a8 8 0 0 0-16 0"/>' +
+        '<circle cx="12" cy="8" r="4" fill="none" stroke="currentColor" stroke-width="2"/>' +
+        '</svg>';
+    }
+
+    // TLG:NAS (group)
+    if (type === 'nas') {
+      return '' +
+        '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">' +
+        '<path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M17 21a6 6 0 0 0-12 0"/>' +
+        '<circle cx="11" cy="8" r="3" fill="none" stroke="currentColor" stroke-width="2"/>' +
+        '<path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M22 21a5 5 0 0 0-7-4"/>' +
+        '<circle cx="18" cy="8" r="2.5" fill="none" stroke="currentColor" stroke-width="2"/>' +
+        '</svg>';
+    }
+
+    // other / default
+    return '' +
+      '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">' +
+      '<path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M5 12h.01M12 12h.01M19 12h.01"/>' +
+      '<path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M4 12a8 8 0 1 0 16 0a8 8 0 1 0-16 0"/>' +
+      '</svg>';
+  }
+
+  function updateCount() {
+    if (!titleCountEl) return;
+
+    var n = 0;
+    try { n = listEl ? (listEl.children ? listEl.children.length : 0) : 0; } catch (_) { n = 0; }
+    titleCountEl.textContent = n ? ('(' + n + ')') : '';
+
+    // Requirement: hide notification block when there are no messages
+    if (stackRoot) {
+      try {
+        if (n === 0) stackRoot.setAttribute('hidden', 'hidden');
+        else stackRoot.removeAttribute('hidden');
+      } catch (_) { }
+    }
+  }
+
+  function ensureUI() {
     if (stackRoot) return;
 
     // Restore settings
@@ -358,10 +325,10 @@ function ensureUI() {
         }
         try {
           if (listEl) listEl.innerHTML = '';
-          for (var k in byId) { if (Object.prototype.hasOwnProperty.call(byId, k)) delete byId[k]; }
+          for (var k in byKey) { if (Object.prototype.hasOwnProperty.call(byKey, k)) delete byKey[k]; }
+          for (var ek in byEventKind) { if (Object.prototype.hasOwnProperty.call(byEventKind, ek)) delete byEventKind[ek]; }
         } catch (_) { }
         updateCount();
-        // Sync with server (in case some items were already reviewed elsewhere)
         try { setTimeout(fetchUpdates, 300); } catch (_) { }
       });
     });
@@ -385,11 +352,10 @@ function ensureUI() {
     updateCount();
   }
 
-  function bumpExisting(id) {
-    var el = byId[String(id || '')];
+  function bumpExisting(key) {
+    var el = byKey[String(key || '')];
     if (!el) return;
 
-    // move to top
     try {
       if (listEl && el.parentNode === listEl) {
         listEl.insertBefore(el, listEl.firstChild);
@@ -404,35 +370,94 @@ function ensureUI() {
     } catch (_) { }
   }
 
-  function removeItem(id) {
-    var key = String(id || '');
-    var el = byId[key];
+  function removeItem(key) {
+    var k = String(key || '');
+    var el = byKey[k];
     if (!el) return;
+
+    // cleanup event-kind mapping if it points to this key
+    try {
+      var eid = String(el.dataset.eventId || '');
+      var kind = String(el.dataset.kind || '');
+      var ek = makeEventKindKey(eid, kind);
+      if (byEventKind[ek] === k) delete byEventKind[ek];
+    } catch (_) { }
+
     try { if (el.parentNode) el.parentNode.removeChild(el); } catch (_) { }
-    try { delete byId[key]; } catch (_) { }
+    try { delete byKey[k]; } catch (_) { }
     updateCount();
   }
 
-  function addNewEventToast(dateISO, ev) {
+  function markSeen(notif) {
+    var nid = '';
+    try { nid = (notif && (notif.id !== undefined && notif.id !== null)) ? String(notif.id) : ''; } catch (_) { nid = ''; }
+
+    var eid = String((notif && notif.event_id) || '');
+    var kind = String((notif && notif.kind) || 'event_new');
+
+    var body = null;
+    if (nid) body = { id: nid };
+    else body = { event_id: eid, kind: kind };
+
+    return fetch('/api/notify/seen', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body || {})
+    })
+      .then(function (r) { return r.ok ? r.json().catch(function(){ return null; }) : null; })
+      .then(function (p) { return !!(p && p.ok === true); })
+      .catch(function () { return false; });
+  }
+
+  function markSeenAll() {
+    return fetch('/api/notify/seen-all', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({})
+    })
+      .then(function (r) { return r.ok ? r.json().catch(function(){ return null; }) : null; })
+      .then(function (p) { return !!(p && p.ok === true); })
+      .catch(function () { return false; });
+  }
+
+  function addNotifyToast(notif, suppressBeep) {
     ensureUI();
-    if (!listEl) return;
+    if (!listEl) return false;
 
-    var id = String((ev && ev.id) || '');
-    if (!id) return;
+    var ev = extractEventLike(notif);
+    var eid = extractEventId(notif, ev);
+    if (!eid) return false;
 
-    if (byId[id]) {
-      bumpExisting(id);
-      updateCount();
-      return;
+    var kind = String((notif && notif.kind) || 'event_new');
+    var key = makeKey(notif);
+
+    // Replace placeholder (event_id|kind) with real notification.id to avoid duplicates
+    var ek = makeEventKindKey(eid, kind);
+    var prevKey = byEventKind[ek];
+    if (prevKey && prevKey !== key) {
+      suppressBeep = true;
+      removeItem(prevKey);
     }
 
-    var type = String((ev && ev.type) || 'other');
+    if (byKey[key]) {
+      bumpExisting(key);
+      updateCount();
+      return false;
+    }
 
+    var type = extractType(notif, ev);
+    var dateISO = extractDateISO(notif, ev);
+    var time = extractTime(ev);
+    var titleStr = (ev && ev.title) ? String(ev.title) : 'Подія';
+
+    // Build item
     var item = document.createElement('div');
     item.className = 'notif-item';
-    item.dataset.id = id;
+    item.dataset.key = key;
+    item.dataset.eventId = eid;
+    item.dataset.kind = kind;
     item.dataset.date = String(dateISO || '');
-    item.dataset.type = type;
+    item.dataset.type = String(type || 'other');
 
     var row = document.createElement('div');
     row.className = 'notif-row';
@@ -441,12 +466,12 @@ function ensureUI() {
     ttl.className = 'notif-item-title';
 
     var titleText = document.createElement('div');
-    titleText.textContent = (ev && ev.title) ? String(ev.title) : 'Нова подія';
+    titleText.textContent = titleStr;
 
     var subtitle = document.createElement('small');
     var when = [];
     if (dateISO) when.push(fmtDate(dateISO));
-    if (ev && ev.time) when.push(String(ev.time));
+    if (time) when.push(time);
     if (type) when.push(labelForType(type));
     subtitle.textContent = when.join(' • ');
 
@@ -456,18 +481,29 @@ function ensureUI() {
 
     var body = document.createElement('div');
     body.className = 'notif-body';
-    body.textContent = 'Додано нову подію.';
+    body.textContent = messageForKind(notif, ev);
 
-    var meta = document.createElement('div');
-    meta.className = 'notif-meta';
-    if (ev && ev.owner) {
-      var m1 = document.createElement('span');
-      m1.textContent = 'Відповідальний: ' + String(ev.owner);
-      meta.appendChild(m1);
-    }
+    // Optional extra line for date change
+    try {
+      if (kind === 'event_date_changed') {
+        var p = parsePayloadMaybe(notif && notif.payload) || null;
+        var b = p && p.before ? p.before : null;
+        var a = p && p.after ? p.after : null;
+        var bDate = b ? String(b.start_date || b._date || '') : '';
+        var aDate = a ? String(a.start_date || a._date || '') : '';
+        if (bDate && aDate && bDate !== aDate) {
+          var extra = document.createElement('div');
+          extra.className = 'notif-body-sub';
+          extra.textContent = 'Було: ' + fmtDate(bDate) + ' → Стало: ' + fmtDate(aDate);
+          body.appendChild(document.createElement('br'));
+          body.appendChild(extra);
+        }
+      }
+    } catch (_) { }
 
     var btns = document.createElement('div');
     btns.className = 'notif-buttons';
+
     var openBtn = document.createElement('a');
     openBtn.className = 'notif-link';
     openBtn.href = '#';
@@ -478,33 +514,144 @@ function ensureUI() {
     viewedBtn.className = 'notif-btn primary viewed';
     viewedBtn.textContent = 'Переглянуто';
 
-    btns.appendChild(openBtn);
-    btns.appendChild(viewedBtn);
-
-    item.appendChild(row);
-    item.appendChild(body);
-    if (meta.children.length) item.appendChild(meta);
-    item.appendChild(btns);    openBtn.addEventListener('click', function (e) {
-      try { if (e && typeof e.preventDefault === 'function') e.preventDefault(); } catch (_) { }
-      try {
-        if (global.CalendarApp && global.CalendarApp.ui && typeof global.CalendarApp.ui.openInfo === 'function') {
-          global.CalendarApp.ui.openInfo(String(dateISO || ''), id);
-        }
-      } catch (_) { }
-    });
+    // Deleted events can't be opened
+    var canOpen = (kind !== 'event_deleted');
+    if (canOpen) {
+      openBtn.addEventListener('click', function (e) {
+        try { if (e && typeof e.preventDefault === 'function') e.preventDefault(); } catch (_) { }
+        try {
+          if (global.CalendarApp && global.CalendarApp.ui && typeof global.CalendarApp.ui.openInfo === 'function') {
+            global.CalendarApp.ui.openInfo(String(dateISO || ''), String(eid || ''));
+          }
+        } catch (_) { }
+      });
+    } else {
+      openBtn.setAttribute('aria-disabled', 'true');
+      openBtn.classList.add('is-disabled');
+      openBtn.addEventListener('click', function (e) {
+        try { if (e && typeof e.preventDefault === 'function') e.preventDefault(); } catch (_) { }
+      });
+    }
 
     viewedBtn.addEventListener('click', function () {
-      markSeen(id).finally(function(){
-        removeItem(id);
+      markSeen(notif).then(function (ok) {
+        if (ok) removeItem(key);
       });
     });
 
+    btns.appendChild(openBtn);
+    btns.appendChild(viewedBtn);
+
+    // Icon (bottom-right)
+    var icon = document.createElement('span');
+    icon.className = 'notif-event-icon';
+    icon.innerHTML = makeIconSvgByType(type);
+
+    item.appendChild(row);
+    item.appendChild(body);
+    item.appendChild(btns);
+    item.appendChild(icon);
+
     // Insert on top
     listEl.insertBefore(item, listEl.firstChild);
-    byId[id] = item;
+
+    byKey[key] = item;
+    byEventKind[ek] = key;
 
     updateCount();
-    playBeep();
+    if (!suppressBeep) playBeep();
+
+    return true;
+  }
+
+  function fetchUpdates() {
+    if (inFlight) return;
+    inFlight = true;
+
+    var url = '/api/notify/unseen?limit=120';
+    return fetch(url, { headers: { 'Accept': 'application/json' } })
+      .then(function (r) { return r.text().then(function (t) { return { r: r, t: t }; }); })
+      .then(function (rt) {
+        var r = rt.r;
+        var text = rt.t;
+        var payload = null;
+        try { payload = text ? JSON.parse(text) : null; } catch (_) { payload = null; }
+
+        if (!r.ok || !payload || payload.ok !== true) {
+          if (r.status === 401) stopPolling();
+          return;
+        }
+
+        var notifs = Array.isArray(payload.notifications) ? payload.notifications : [];
+
+        // Sync: remove items that are no longer unseen on server (reviewed in another tab)
+        try {
+          var serverKeys = Object.create(null);
+          for (var i = 0; i < notifs.length; i++) {
+            var n0 = notifs[i] || {};
+            var k0 = makeKey(n0);
+            serverKeys[k0] = 1;
+
+            // also keep placeholder key alive while server returns real key
+            var ev0 = extractEventLike(n0);
+            var eid0 = extractEventId(n0, ev0);
+            var kind0 = String((n0 && n0.kind) || 'event_new');
+            if (eid0) serverKeys['e:' + eid0 + ':' + kind0] = 1;
+          }
+
+          for (var k in byKey) {
+            if (!Object.prototype.hasOwnProperty.call(byKey, k)) continue;
+
+            // do not auto-remove local placeholders unless server explicitly doesn't have that event/kind for a while
+            if (String(k).indexOf('e:') === 0) continue;
+
+            if (!serverKeys[k]) removeItem(k);
+          }
+        } catch (_) { }
+
+        if (!notifs.length) {
+          updateCount();
+          return;
+        }
+
+        // Refresh handles (in case CalendarApp loaded later)
+        Data = (global.CalendarApp && global.CalendarApp.data) || Data;
+        Ev = (global.CalendarApp && global.CalendarApp.events) || Ev;
+
+        for (var j = 0; j < notifs.length; j++) {
+          var n1 = notifs[j] || {};
+          // add (dedup by notification key)
+          addNotifyToast(n1, false);
+        }
+      })
+      .catch(function () { /* ignore */ })
+      .finally(function () { inFlight = false; });
+  }
+
+  function stopPolling() {
+    if (pollTimer) {
+      try { clearInterval(pollTimer); } catch (_) { }
+      pollTimer = null;
+    }
+  }
+
+  function startPolling() {
+    stopPolling();
+
+    ensureUI();
+    updateCount();
+
+    setTimeout(fetchUpdates, 900);
+    pollTimer = setInterval(fetchUpdates, POLL_MS);
+  }
+
+  function getEventByIdInDate(dateISO, id) {
+    if (!Data || typeof Data.getEventsFor !== 'function') return null;
+    var arr = Data.getEventsFor(dateISO) || [];
+    for (var i = 0; i < arr.length; i++) {
+      if (arr[i] && String(arr[i].id || '') === String(id || '')) return arr[i];
+    }
+    return null;
   }
 
   function onCalendarChanged(e) {
@@ -517,27 +664,25 @@ function ensureUI() {
       var id = String(d.id || '');
       if (!dateISO || !id) return;
 
-      var ev = getEventByIdInDate(dateISO, id);
-      if (!ev) {
-        // fallback minimal payload
-        ev = { id: id, title: 'Нова подія', type: 'other', time: '' };
-      }
+      Data = (global.CalendarApp && global.CalendarApp.data) || Data;
+      Ev = (global.CalendarApp && global.CalendarApp.events) || Ev;
 
-      addNewEventToast(dateISO, ev);
+      var ev = getEventByIdInDate(dateISO, id);
+      if (!ev) ev = { id: id, title: 'Нова подія', type: 'other', time: '' };
+
+      // Local placeholder notification (will be replaced by real notification.id on next poll)
+      addNotifyToast({ id: null, event_id: id, kind: 'event_new', event: ev }, false);
     } catch (_) { }
   }
 
   function init() {
-    // Defer to ensure body exists
     if (document.readyState === 'loading') {
       document.addEventListener('DOMContentLoaded', init, { once: true });
       return;
     }
 
-    // If CalendarApp isn't ready yet, still attach listener; we resolve Data lazily.
     try { document.addEventListener('calendar:changed', onCalendarChanged); } catch (_) { }
 
-    // Poll server for new events created by other users/browsers
     try { startPolling(); } catch (_) { }
 
     // Public API (optional)
@@ -548,11 +693,12 @@ function ensureUI() {
         dateISO = String(dateISO || '');
         id = String(id || '');
         if (!dateISO || !id) return false;
-        // refresh handles
+
         Data = (global.CalendarApp && global.CalendarApp.data) || Data;
         Ev = (global.CalendarApp && global.CalendarApp.events) || Ev;
+
         var ev = getEventByIdInDate(dateISO, id) || { id: id, title: 'Нова подія', type: 'other', time: '' };
-        addNewEventToast(dateISO, ev);
+        addNotifyToast({ id: null, event_id: id, kind: 'event_new', event: ev }, false);
         return true;
       } catch (_) {
         return false;

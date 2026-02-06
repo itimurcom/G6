@@ -5,6 +5,7 @@ namespace App\Models;
 
 use App\Services\Audit\ActionLogger;
 use App\Core\Auth;
+use App\Core\Database;
 
 /**
  * LoggingEventRepository — тонкий декоратор над файловим репозиторієм подій,
@@ -50,6 +51,125 @@ final class LoggingEventRepository
             'user_id'   => $u['id']   ?? null,
             'user_name' => $u['name'] ?? null,
         ];
+    }
+
+    // ---------------------------------------------------------------------
+    // PERSISTENT NOTIFICATIONS (user_notifications)
+    // ---------------------------------------------------------------------
+
+    private function notifyHasPayloadColumn(\PDO $db): bool
+    {
+        static $cached = null;
+        if ($cached !== null) {
+            return (bool)$cached;
+        }
+
+        try {
+            $st = $db->prepare(
+                "SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS\n".
+                "WHERE TABLE_SCHEMA = DATABASE()\n".
+                "  AND TABLE_NAME = 'user_notifications'\n".
+                "  AND COLUMN_NAME = 'payload'"
+            );
+            $st->execute();
+            $cached = ((int)$st->fetchColumn() > 0);
+        } catch (\Throwable $e) {
+            $cached = false;
+        }
+
+        return (bool)$cached;
+    }
+
+    private function snapshotEvent(?array $row, string $fallbackId = ''): ?array
+    {
+        if (!is_array($row)) {
+            if ($fallbackId === '') return null;
+            return [
+                'id' => $fallbackId,
+                'title' => '',
+                'description' => '',
+                'start_date' => '',
+                'end_date' => '',
+                'time' => '',
+                'owner' => '',
+                'type' => 'other',
+                'urgent' => 0,
+                'done' => 0,
+            ];
+        }
+
+        $id = (string)($row['id'] ?? $fallbackId);
+        return [
+            'id'          => $id,
+            'title'       => (string)($row['title'] ?? ''),
+            'description' => (string)($row['description'] ?? ''),
+            'start_date'  => (string)($row['start_date'] ?? ($row['_date'] ?? '')),
+            'end_date'    => (string)($row['end_date'] ?? ''),
+            'time'        => (string)($row['time'] ?? ''),
+            'owner'       => (string)($row['owner'] ?? ''),
+            'type'        => (string)($row['type'] ?? 'other'),
+            'urgent'      => (int)(!empty($row['urgent']) ? 1 : 0),
+            'done'        => (int)(!empty($row['done']) ? 1 : 0),
+        ];
+    }
+
+    private function notifyFanout(string $kind, string $eventId, ?array $payload = null): void
+    {
+        $eventId = (string)$eventId;
+        $kind    = (string)$kind;
+        if ($eventId === '' || $kind === '') return;
+
+        $actorId = (int)(Auth::id() ?? 0);
+
+        try {
+            $db = Database::connect();
+
+            $stU = $db->query('SELECT id FROM users');
+            $users = $stU ? $stU->fetchAll(\PDO::FETCH_ASSOC) : [];
+            if (!$users) return;
+
+            $hasPayload = $this->notifyHasPayloadColumn($db);
+
+            if ($hasPayload) {
+                $sql = "INSERT INTO user_notifications (user_id, kind, event_id, actor_user_id, created_at, payload)\n".
+                       "VALUES (:uid, :kind, :eid, :actor, NOW(), :payload)\n".
+                       "ON DUPLICATE KEY UPDATE seen_at = NULL, created_at = VALUES(created_at), actor_user_id = VALUES(actor_user_id), payload = VALUES(payload)";
+                $st = $db->prepare($sql);
+
+                $payloadJson = $payload !== null
+                    ? json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)
+                    : null;
+
+                foreach ($users as $u) {
+                    $uid = (int)($u['id'] ?? 0);
+                    if ($uid <= 0) continue;
+                    $st->execute([
+                        'uid' => $uid,
+                        'kind' => $kind,
+                        'eid' => $eventId,
+                        'actor' => $actorId,
+                        'payload' => $payloadJson,
+                    ]);
+                }
+            } else {
+                $sql = "INSERT INTO user_notifications (user_id, kind, event_id, actor_user_id, created_at)\n".
+                       "VALUES (:uid, :kind, :eid, :actor, NOW())\n".
+                       "ON DUPLICATE KEY UPDATE seen_at = NULL, created_at = VALUES(created_at), actor_user_id = VALUES(actor_user_id)";
+                $st = $db->prepare($sql);
+                foreach ($users as $u) {
+                    $uid = (int)($u['id'] ?? 0);
+                    if ($uid <= 0) continue;
+                    $st->execute([
+                        'uid' => $uid,
+                        'kind' => $kind,
+                        'eid' => $eventId,
+                        'actor' => $actorId,
+                    ]);
+                }
+            }
+        } catch (\Throwable $e) {
+            // Notifications must never break business logic.
+        }
     }
 
     // ---------------------------------------------------------------------
@@ -204,6 +324,17 @@ final class LoggingEventRepository
             )
         );
 
+        // Activity notification: event deleted
+        if ($ok) {
+            try {
+                $this->notifyFanout('event_deleted', $id, [
+                    'event' => $this->snapshotEvent($before, $id),
+                ]);
+            } catch (\Throwable $__ ) {
+                // ignore
+            }
+        }
+
         return $id;
     }
 
@@ -261,6 +392,35 @@ final class LoggingEventRepository
             )
         );
 
+        // Activity notifications (persistent, cross-browser)
+        if ($ok) {
+            try {
+                $after = $this->inner->get($id);
+
+                $beforeDate = is_array($before) ? (string)($before['start_date'] ?? ($before['_date'] ?? '')) : '';
+                $afterDate  = is_array($after)  ? (string)($after['start_date']  ?? ($after['_date']  ?? '')) : (string)($res['date'] ?? $date);
+                if ($beforeDate !== '' && $afterDate !== '' && $beforeDate !== $afterDate) {
+                    $this->notifyFanout('event_date_changed', $id, [
+                        'from_date' => $beforeDate,
+                        'to_date'   => $afterDate,
+                        'event'     => $this->snapshotEvent($after, $id),
+                    ]);
+                }
+
+                $beforeDone = is_array($before) && array_key_exists('done', $before) ? (bool)$before['done'] : null;
+                $afterDone  = is_array($after)  && array_key_exists('done',  $after)  ? (bool)$after['done']  : null;
+                if ($beforeDone !== null && $afterDone !== null && $beforeDone !== $afterDone) {
+                    $this->notifyFanout('event_done_changed', $id, [
+                        'from_done' => $beforeDone ? 1 : 0,
+                        'to_done'   => $afterDone  ? 1 : 0,
+                        'event'     => $this->snapshotEvent($after, $id),
+                    ]);
+                }
+            } catch (\Throwable $__) {
+                // ignore
+            }
+        }
+
         return (bool)$ok;
     }
 
@@ -295,6 +455,13 @@ final class LoggingEventRepository
                 ]
             )
         );
+
+        if ($ok) {
+            // Notify all users about deletion (store snapshot because event row is gone).
+            $this->notifyFanout('event_deleted', $id, [
+                'event' => $this->snapshotEvent($before, $id),
+            ]);
+        }
 
         return (bool)$ok;
     }
@@ -339,6 +506,19 @@ final class LoggingEventRepository
                 ]
             )
         );
+
+        // Activity notification: done status changed
+        if ($ok) {
+            $beforeDone = is_array($before) && array_key_exists('done', $before) ? (bool)$before['done'] : null;
+            $afterDone  = is_array($after)  && array_key_exists('done',  $after)  ? (bool)$after['done']  : null;
+            if ($beforeDone !== null && $afterDone !== null && $beforeDone !== $afterDone) {
+                $this->notifyFanout('event_done_changed', $id, [
+                    'from_done' => $beforeDone ? 1 : 0,
+                    'to_done'   => $afterDone  ? 1 : 0,
+                    'event'     => $this->snapshotEvent($after, $id),
+                ]);
+            }
+        }
 
         return (bool)$ok;
     }
