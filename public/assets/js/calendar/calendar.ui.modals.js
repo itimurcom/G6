@@ -57,6 +57,8 @@
           if (x && x.ok && x.user) {
             __me.role = x.user.role || null;
             __me.isAdmin = String(__me.role || '').toLowerCase() === 'admin';
+            var __id = parseInt((x.user.id || '0'), 10) || 0;
+            if (__id > 0) { __me.id = __id; }
           }
         })
         .catch(function () { });
@@ -589,6 +591,14 @@
                 var tmp2 = parseInt(mt.dataset.userId, 10);
                 if (!isNaN(tmp2)) myId = tmp2;
               }
+            }
+            if (!myId) {
+              try {
+                if (typeof __me !== 'undefined' && __me && __me.id) {
+                  var tmp3 = parseInt(__me.id, 10);
+                  if (!isNaN(tmp3) && tmp3 > 0) myId = tmp3;
+                }
+              } catch (_e3) { }
             }
             if (myId) { ev.user_id = myId; }
           }

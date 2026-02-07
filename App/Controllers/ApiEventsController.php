@@ -87,55 +87,7 @@ final class ApiEventsController
         }
     }
 
-    
-    public function updates(): void
-    {
-        // Auth required for user-specific session/cookies
-        if (!\App\Core\Auth::check()) { $this->json(['ok'=>false,'error'=>'unauthorized'], 401); return; }
-
-        $since = (string)($_GET['since'] ?? '');
-        $since = trim($since);
-        $limit = (int)($_GET['limit'] ?? 50);
-        if ($limit < 1) { $limit = 1; }
-        if ($limit > 200) { $limit = 200; }
-
-        // If no "since" provided, just return server time (baseline for clients)
-        $serverNow = date('Y-m-d H:i:s');
-        if ($since === '') {
-            $this->json(['ok'=>true,'server_now'=>$serverNow,'events'=>[]]);
-            return;
-        }
-
-        // Basic guard: accept only "YYYY-MM-DD HH:MM:SS" to avoid weird comparisons
-        if (!preg_match('/^\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}$/', $since)) {
-            $this->json(['ok'=>false,'error'=>'bad_since','message'=>'since must be YYYY-MM-DD HH:MM:SS'], 400);
-            return;
-        }
-
-        try {
-            $db = \App\Core\Database::connect();
-            $sql = "SELECT * FROM events WHERE created_at > :since ORDER BY created_at ASC LIMIT " . $limit;
-            $stmt = $db->prepare($sql);
-            $stmt->execute(['since' => $since]);
-            $rows = $stmt->fetchAll();
-            $out = [];
-            if (is_array($rows)) {
-                foreach ($rows as $row) {
-                    if (!is_array($row)) continue;
-                    // Normalize to UI shape
-                    $row['urgent'] = (bool)($row['urgent'] ?? false);
-                    $row['done']   = (bool)($row['done'] ?? false);
-                    $row['_date']  = $row['start_date'] ?? '';
-                    $out[] = $row;
-                }
-            }
-            $this->json(['ok'=>true,'server_now'=>$serverNow,'events'=>$out]);
-        } catch (\Throwable $e) {
-            $this->json(['ok'=>false,'error'=>'internal','message'=>$e->getMessage()], 500);
-        }
-    }
-
-public function create(): void
+    public function create(): void
     {
         if (!$this->requireCsrf()) { return; }
 
@@ -144,16 +96,19 @@ public function create(): void
         try {
             // never trust client-supplied user_id
             if (isset($payload['event']) && is_array($payload['event'])) { unset($payload['event']['user_id']); }
+
+            // Assign author from session so event owner can edit later
+            $meId = (int)(\App\Core\Auth::id() ?? 0);
+            if ($meId > 0) {
+                if (!isset($payload['event']) || !is_array($payload['event'])) { $payload['event'] = []; }
+                $payload['event']['user_id'] = $meId;
+            }
             
             // MySQL repo повертає масив, старий повертав ID. Уніфікуємо:
             $res = $this->repo->create($payload['date'] ?? '', $payload);
             $id = is_array($res) ? ($res['id'] ?? '') : $res;
 
-            
-
-            // Notify all users about new event (persistent notifications)
-            $this->notifyFanoutNewEvent((string)$id);
-$this->json(['ok'=>true,'id'=>$id], 201);
+            $this->json(['ok'=>true,'id'=>$id], 201);
         } catch (\Throwable $e) {
             $this->json(['ok'=>false,'error'=>$e->getMessage()], 400);
         }
@@ -303,50 +258,4 @@ $this->json(['ok'=>true,'id'=>$id], 201);
             $this->json(['ok'=>false,'error'=>'internal','message'=>$e->getMessage()], 500);
         }
     }
-
-private function notifyFanoutNewEvent(string $eventId): void
-{
-    if ($eventId === '') return;
-
-    // Actor (creator) — stored for future use in UI (optional)
-    $actor = null;
-    $actorId = 0;
-    try {
-        $actor = \App\Core\Auth::user();
-        $actorId = (int)($actor['id'] ?? 0);
-    } catch (\Throwable $e) {
-        $actorId = 0;
-    }
-
-    try {
-        $db = \App\Core\Database::connect();
-
-        // Fetch all users once
-        $rows = $db->query("SELECT id FROM users")->fetchAll();
-        if (!is_array($rows) || !$rows) return;
-
-        $sql = "INSERT IGNORE INTO user_notifications (user_id, kind, event_id, actor_user_id, created_at)
-                VALUES (:user_id, :kind, :event_id, :actor_user_id, :created_at)";
-        $stmt = $db->prepare($sql);
-        $now = date('Y-m-d H:i:s');
-
-        foreach ($rows as $row) {
-            if (!is_array($row)) continue;
-            $uid = (int)($row['id'] ?? 0);
-            if ($uid <= 0) continue;
-
-            $stmt->execute([
-                'user_id' => $uid,
-                'kind' => 'event_new',
-                'event_id' => $eventId,
-                'actor_user_id' => ($actorId > 0 ? $actorId : null),
-                'created_at' => $now,
-            ]);
-        }
-    } catch (\Throwable $e) {
-        // Table might not exist yet or DB error — ignore to not break event creation
-        return;
-    }
-}
-
 }

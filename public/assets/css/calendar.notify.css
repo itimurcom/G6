@@ -3,6 +3,8 @@
 /* Container is injected by JS (id: notifStack) */
 #notifStack[hidden] { display: none !important; }
 #notifStack {
+  --notif-icon-color: rgba(255,255,255,.92);
+  --notif-icon-color-light: rgba(0,0,0,.55);
   position: fixed;
   left: 14px;
   bottom: 14px;
@@ -51,7 +53,7 @@
 #notifStack .notif-iconbtn {
   border: 1px solid var(--border);
   background: color-mix(in oklab, var(--bg) 20%, transparent);
-  color: rgba(255,255,255,.92); /* dark theme: white icons */
+  color: var(--notif-icon-color);
   border-radius: 12px;
   width: 38px;
   height: 34px;
@@ -61,13 +63,24 @@
   cursor: pointer;
 }
 
-:root[data-theme=light] #notifStack .notif-iconbtn {
-  color: rgba(0,0,0,.55); /* light theme: gray icons */
+html.light #notifStack,
+body.light #notifStack,
+.theme-light #notifStack,
+:root[data-theme="light"] #notifStack,
+[data-theme="light"] #notifStack {
+  --notif-icon-color: var(--notif-icon-color-light);
+}
+
+/* If the system prefers light scheme and user didn't force dark */
+@media (prefers-color-scheme: light) {
+  :root:not(.theme-dark):not([data-theme="dark"]) #notifStack {
+    --notif-icon-color: var(--notif-icon-color-light);
+  }
 }
 
 #notifStack .notif-iconbtn svg {
-  width: 18px;
-  height: 18px;
+  width: 22px;
+  height: 22px;
   display: block;
 }
 
@@ -107,6 +120,25 @@
   gap: 10px;
 }
 
+#notifStack .notif-item-actions {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: flex-start;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+#notifStack .notif-iconbtn.notif-iconbtn--sm {
+  width: 38px;
+  height: 34px;
+  border-radius: 12px;
+}
+
+#notifStack .notif-iconbtn.notif-iconbtn--sm svg {
+  width: 22px;
+  height: 22px;
+}
+
 #notifStack .notif-item-title {
   font-weight: 900;
   line-height: 1.25;
@@ -114,23 +146,6 @@
   flex-direction: column;
   gap: 2px;
 }
-
-#notifStack .notif-item-title-link {
-  color: inherit;
-  text-decoration: none;
-  display: inline-block;
-}
-
-#notifStack .notif-item-title-link:hover {
-  text-decoration: underline;
-  text-underline-offset: 3px;
-}
-
-#notifStack .notif-link {
-  color: inherit;
-}
-
-
 
 #notifStack .notif-item-title small {
   font-weight: 700;
@@ -161,21 +176,6 @@
   word-break: break-word;
 }
 
-
-#notifStack .notif-links {
-  margin-top: 8px;
-  padding-right: 26px; /* keep space for bottom-right icon */
-  font-weight: 900;
-}
-
-#notifStack .notif-openlink {
-  text-decoration: underline;
-  text-underline-offset: 3px;
-}
-
-#notifStack .notif-openlink:hover {
-  filter: brightness(1.08);
-}
 #notifStack .notif-meta {
   margin-top: 6px;
   color: var(--muted);
@@ -230,21 +230,6 @@
   pointer-events: none;
 }
 
-#notifStack .notif-event-icon {
-  position: absolute;
-      right: 10px;
-  bottom: 10px; /* кнопки всередині повідомлення тимчасово приховані */
-  width: 18px;
-  height: 18px;
-  color: rgba(255,255,255,.88);
-  opacity: 0.92;
-  pointer-events: none;
-  filter: drop-shadow(0 2px 6px rgba(0,0,0,.35));
-}
-
-#notifStack .notif-event-icon svg {
-  display: block;
-}
 
 #notifStack .notif-body-sub {
   color: var(--muted);

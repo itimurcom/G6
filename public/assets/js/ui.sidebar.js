@@ -19,6 +19,41 @@
   }
 
   ready(function () {
+    // Ensure notifications UI is available on every page (even if layout forgot to include assets)
+    function ensureNotifyAssets() {
+      try {
+        var cssPath = '/assets/css/calendar.notify.css';
+        var jsPath = '/assets/js/calendar/calendar.ui.notify.js';
+
+        var hasLink = false;
+        var links = document.querySelectorAll('link[rel="stylesheet"]');
+        for (var i = 0; i < links.length; i++) {
+          var href = String(links[i].getAttribute('href') || '');
+          if (href.indexOf(cssPath) !== -1) { hasLink = true; break; }
+        }
+        if (!hasLink) {
+          var l = document.createElement('link');
+          l.rel = 'stylesheet';
+          l.href = cssPath + '?v=' + Date.now();
+          document.head.appendChild(l);
+        }
+
+        var hasScript = false;
+        var scripts = document.getElementsByTagName('script');
+        for (var j = 0; j < scripts.length; j++) {
+          var src = String(scripts[j].getAttribute('src') || '');
+          if (src.indexOf(jsPath) !== -1) { hasScript = true; break; }
+        }
+        if (!hasScript && !window.__CAL_NOTIFY_LOADED) {
+          var s = document.createElement('script');
+          s.src = jsPath + '?v=' + Date.now();
+          s.defer = true;
+          document.body.appendChild(s);
+        }
+      } catch (_) { }
+    }
+
+    ensureNotifyAssets();
     var toggle = document.getElementById('sidebarToggle');
     var sidebar = document.getElementById('sidebar');
     var overlay = document.getElementById('sidebarOverlay');

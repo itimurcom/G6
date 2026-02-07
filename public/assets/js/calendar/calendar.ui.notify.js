@@ -7,7 +7,11 @@
 (function (global) {
   "use strict";
 
-  var Data = (global.CalendarApp && global.CalendarApp.data) || null;
+  
+  // Prevent double-loading (layout may include the script more than once)
+  if (global.__CAL_NOTIFY_LOADED) return;
+  global.__CAL_NOTIFY_LOADED = true;
+var Data = (global.CalendarApp && global.CalendarApp.data) || null;
   var Ev = (global.CalendarApp && global.CalendarApp.events) || null;
 
   var KEY_SOUND = 'calendar.notify.sound';
@@ -100,6 +104,26 @@
       + '<path d="M13 12l2 2 4-4"></path>'
       + '</svg>';
   }
+
+  function svgIconMarkOne() {
+    // Single "viewed" icon (check)
+    return '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'
+      + '<path d="M20 6L9 17l-5-5"></path>'
+      + '</svg>';
+  }
+
+  function svgIconChevronDown() {
+    return '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'
+      + '<path d="M6 9l6 6 6-6"/>'
+      + '</svg>';
+  }
+
+  function svgIconChevronUp() {
+    return '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'
+      + '<path d="M6 15l6-6 6 6"/>'
+      + '</svg>';
+  }
+
 
   function setBtnSvg(btn, svg) {
     if (!btn) return;
@@ -321,7 +345,7 @@
     // event / "Захід"
     if (type === 'evt') {
       return '' +
-        '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">' +
+        '<svg viewBox="0 0 24 24" aria-hidden="true">' +
         '<path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M8 2v3M16 2v3M3 9h18M5 6h14a2 2 0 0 1 2 2v13a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2z"/>' +
         '<path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="m9.5 14 1.7 1.7 3.8-3.8"/>' +
         '</svg>';
@@ -330,7 +354,7 @@
     // TLG:MI (single user)
     if (type === 'mi') {
       return '' +
-        '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">' +
+        '<svg viewBox="0 0 24 24" aria-hidden="true">' +
         '<path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M20 21a8 8 0 0 0-16 0"/>' +
         '<circle cx="12" cy="8" r="4" fill="none" stroke="currentColor" stroke-width="2"/>' +
         '</svg>';
@@ -339,7 +363,7 @@
     // TLG:NAS (group)
     if (type === 'nas') {
       return '' +
-        '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">' +
+        '<svg viewBox="0 0 24 24" aria-hidden="true">' +
         '<path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M17 21a6 6 0 0 0-12 0"/>' +
         '<circle cx="11" cy="8" r="3" fill="none" stroke="currentColor" stroke-width="2"/>' +
         '<path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M22 21a5 5 0 0 0-7-4"/>' +
@@ -349,7 +373,7 @@
 
     // other / default
     return '' +
-      '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">' +
+      '<svg viewBox="0 0 24 24" aria-hidden="true">' +
       '<path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M5 12h.01M12 12h.01M19 12h.01"/>' +
       '<path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M4 12a8 8 0 1 0 16 0a8 8 0 1 0-16 0"/>' +
       '</svg>';
@@ -402,7 +426,7 @@
     btnCollapse.className = 'notif-iconbtn';
     btnCollapse.title = collapsed ? 'Розгорнути' : 'Згорнути';
     btnCollapse.setAttribute('aria-label', btnCollapse.title);
-    btnCollapse.textContent = collapsed ? '▴' : '▾';
+    setBtnSvg(btnCollapse, collapsed ? svgIconChevronUp() : svgIconChevronDown());
 
     btnSound = document.createElement('button');
     btnSound.type = 'button';
@@ -476,12 +500,12 @@
       var isCollapsed = (listEl.style.display === 'none');
       if (isCollapsed) {
         listEl.style.display = '';
-        btnCollapse.textContent = '▾';
+        setBtnSvg(btnCollapse, svgIconChevronDown());
         btnCollapse.title = 'Згорнути';
         safeSet(KEY_COLLAPSED, '0');
       } else {
         listEl.style.display = 'none';
-        btnCollapse.textContent = '▴';
+        setBtnSvg(btnCollapse, svgIconChevronUp());
         btnCollapse.title = 'Розгорнути';
         safeSet(KEY_COLLAPSED, '1');
       }
@@ -633,6 +657,27 @@ var subtitle = document.createElement('small');
     ttl.appendChild(subtitle);
     row.appendChild(ttl);
 
+    // Per-item action: mark this activity as viewed (single)
+    var itemActions = document.createElement('div');
+    itemActions.className = 'notif-item-actions';
+
+    var markOneBtn = document.createElement('button');
+    markOneBtn.type = 'button';
+    markOneBtn.className = 'notif-iconbtn notif-iconbtn--sm notif-markone';
+    markOneBtn.title = 'Переглянуто';
+    markOneBtn.setAttribute('aria-label', 'Позначити як переглянуте');
+    setBtnSvg(markOneBtn, svgIconMarkOne());
+
+    markOneBtn.addEventListener('click', function (e) {
+      try { if (e && e.stopPropagation) e.stopPropagation(); } catch (_) { }
+      markSeen(notif).then(function (ok) {
+        if (ok) removeItem(key);
+      });
+    });
+
+    itemActions.appendChild(markOneBtn);
+    row.appendChild(itemActions);
+
     var body = document.createElement('div');
     body.className = 'notif-body';
     body.textContent = messageForKind(notif, ev);
@@ -706,17 +751,11 @@ var subtitle = document.createElement('small');
 
     btns.appendChild(viewedBtn);
 
-    // Icon (bottom-right)
-    var icon = document.createElement('span');
-    icon.className = 'notif-event-icon';
-    icon.innerHTML = makeIconSvgByType(type);
 
     item.appendChild(row);
     item.appendChild(body);
     if (links) item.appendChild(links);
     item.appendChild(btns);
-    item.appendChild(icon);
-
     // Insert on top
     listEl.insertBefore(item, listEl.firstChild);
 
