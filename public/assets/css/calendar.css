@@ -675,7 +675,7 @@ select,
   position: fixed;
   left: 16px;
   bottom: 16px;
-  display: flex;
+  display: none; /* TEMP: hide export/import buttons */
   gap: 10px;
   z-index: 10000;
 }

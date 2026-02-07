@@ -18,5 +18,5 @@
   </div>
   <section id="planning-today" data-user-id="<?= (int)($_SESSION['user_id'] ?? 0) ?>"></section>
 </section>
-<? include ("/var/www/html/calendar.localhost/App/Views/layouts/modals/editEvent.php"); ?>
-<? include ("/var/www/html/calendar.localhost/App/Views/layouts/modals/infoEvent.php"); ?>
+<?php include __DIR__ . '/../layouts/modals/editEvent.php'; ?>
+<?php include __DIR__ . '/../layouts/modals/infoEvent.php'; ?>
