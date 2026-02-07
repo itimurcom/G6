@@ -1,18 +1,21 @@
 <div class="layout" id="calendarLayout">
   <main class="calendar">
     <header class="cal-header">
-      <div class="heading">
-        <div id="monthLabel" class="title"></div>
-        <!-- <div id="todayLabel" class="subtle"></div> -->
-      </div>
+      <div class="cal-col cal-col-left">
+        <div class="heading">
+          <div id="monthLabel" class="title"></div>
+          <!-- <div id="todayLabel" class="subtle"></div> -->
+        </div>
 
-      <div class="nav-filters">
-        <div class="nav">
+        <div class="nav" aria-label="Навігація календаря">
           <button id="btnPrev" class="btn">‹</button>
           <button id="btnToday" class="btn">Сьогодні</button>
           <button id="btnNext" class="btn">›</button>
         </div>
-        <div id="typeFiltersBar" class="legend type-filters">
+      </div>
+
+      <div class="cal-col cal-col-right">
+        <div id="typeFiltersBar" class="legend type-filters" aria-label="Фільтри типів">
           <span id="btnTypeEvt"   class="lg" ><i style="background:var(--type-evt)"></i>Захід</span>
           <span id="btnTypeMi"    class="lg"><i style="background:var(--type-mi)"></i>ТЛГ: МИ</span>
           <span id="btnTypeNas"   class="lg"><i style="background:var(--type-nas)"></i>ТЛГ: НАС</span>
@@ -20,22 +23,13 @@
           <span id="btnTypeOverdue" class="lg ev--overdue-flash"><i style="background:var(--type-overdue);"></i>Прострочені</span>
           <span id="btnTypeReset" class="lg reset-type" title="Скинути" style="display:none">×</span>
         </div>
-        <!-- <div class="legend">
-          <span class="lg"><i style="background:var(--type-mi)"></i>ТЛГ: МИ</span>
-          <span class="lg"><i style="background:var(--type-nas)"></i>ТЛГ: НАС</span>
-          <span class="lg"><i style="background:var(--type-evt)"></i>Захід</span>
-          <span class="lg"><i style="background:var(--type-other)"></i>Інше</span>
-          <span class="lg ev--overdue-flash"><i style="background:var(--type-overdue);"></i>Прострочені</span>
-        </div> -->
+
+        <div class="filters">
+          <input id="filterText" class="input ev" type="search" placeholder="Пошук: назва або відповідальний (ENTER — повний пошук)">
+          <button id="btnClearFilters" class="btn">Скинути</button>
+        </div>
       </div>
-
-      <div></div>
     </header>
-
-    <div class="filters">
-      <input id="filterText" class="input ev" type="search" placeholder="Пошук: назва або відповідальний (ENTER — повний пошук)">
-      <button id="btnClearFilters" class="btn">Скинути</button>
-    </div>
     <div id="quickFilters" class="quick-filters">
       <button class="chip evt" data-type="evt" data-text="ВКЗ" type="button">ВКЗ</button>
       <button class="chip evt" data-type="evt" data-text="Селектор" type="button">Селектор</button>

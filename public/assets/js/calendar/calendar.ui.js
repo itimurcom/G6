@@ -12,6 +12,43 @@
   var weekdayShortFmt = new Intl.DateTimeFormat(locale, { weekday: 'short' });
   var currentType = 'all';
 
+  // Current user (for marking "my" events in the calendar grid)
+  var __ME_ID = 0;
+  var __ME_FETCH_STARTED = false;
+  var __ME_READY = false;
+
+  function __ensureMeLoaded() {
+    if (__ME_FETCH_STARTED) return;
+    __ME_FETCH_STARTED = true;
+    try {
+      fetch('/api/users/me')
+        .then(function (r) { return r.json(); })
+        .then(function (x) {
+          try {
+            if (x && x.ok && x.user && x.user.id != null) {
+              var id = parseInt(x.user.id, 10) || 0;
+              if (id > 0) __ME_ID = id;
+            }
+          } catch (_) { }
+          __ME_READY = true;
+          try { if (typeof withStableScroll === 'function') withStableScroll(renderAllFn); else renderAllFn(); } catch (_) { }
+        })
+        .catch(function () {
+          __ME_READY = true;
+        });
+    } catch (_) {
+      __ME_READY = true;
+    }
+  }
+
+  function __isMyEvent(ev) {
+    if (!ev) return false;
+    if (!__ME_READY) return false;
+    if (!__ME_ID) return false;
+    var uid = parseInt(ev.user_id || 0, 10) || 0;
+    return (uid > 0 && uid === __ME_ID);
+  }
+
 
   var todayLabel = $('todayLabel'); // +
   var todayPanelDate = $('todayPanelDate'); // +
@@ -392,6 +429,9 @@
     renderAllCells();
     renderTodayPanel();
   }
+
+  // Load current user id for "my event" badge (async, safe).
+  __ensureMeLoaded();
 
   /* ===== Фільтри типів/пошуку ===== */
   function updateTypeButtons() {
@@ -1005,6 +1045,14 @@
         flag.appendChild(icon); item.appendChild(flag);
       }
       title.appendChild(document.createTextNode(ev.title || ''));
+
+      // "My" marker (created by current user)
+      if (__isMyEvent(ev)) {
+        var ub = document.createElement('span');
+        ub.className = 'event-user-badge';
+        ub.innerHTML = '<svg aria-hidden="true"><use href="#i-user"></use></svg>';
+        item.appendChild(ub);
+      }
 
 
       var del = document.createElement('button'); del.className = 'event-btn'; del.type = 'button'; del.setAttribute('aria-label', 'Видалити'); del.textContent = '×';

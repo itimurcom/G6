@@ -99,4 +99,8 @@
   </g>
 </symbol>
 
+<symbol id="i-user" viewBox="0 0 24 24">
+  <path fill="currentColor" d="M12 12c2.21 0 4-1.79 4-4S14.21 4 12 4 8 5.79 8 8s1.79 4 4 4zm0 2c-3.31 0-6 1.34-6 3v1h12v-1c0-1.66-2.69-3-6-3z"/>
+</symbol>
+
 </svg>

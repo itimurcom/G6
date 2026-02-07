@@ -48,12 +48,33 @@
 /* Header */
 .cal-header {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-columns: auto minmax(0, 1fr);
   align-items: start;
-  gap: 16px 20px;
+  gap: 12px 20px;
   margin-bottom: 10px;
   padding-bottom: 10px;
   border-bottom: 1px dashed var(--border);
+}
+
+.cal-col {
+  display: grid;
+  gap: 10px;
+  align-content: start;
+}
+
+.cal-col-right {
+  min-width: 0;
+}
+
+.cal-header .filters {
+  margin-top: 0;
+}
+
+/* Header responsive */
+@media (max-width: 860px) {
+  .cal-header {
+    grid-template-columns: 1fr;
+  }
 }
 
 /* Nav & filters */
@@ -309,6 +330,30 @@ select,
   grid-column: 2 / -2;
   color: var(--muted);
   font-size: 11px;
+}
+
+/* Badge: created by current user */
+.event-user-badge {
+  position: absolute;
+  right: 6px;
+  bottom: 4px;
+  width: 18px;
+  height: 18px;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  opacity: .92;
+  pointer-events: none;
+}
+
+.event-user-badge svg {
+  width: 18px;
+  height: 18px;
+  display: block;
+}
+
+:root[data-theme="light"] .event-user-badge {
+  color: var(--muted);
 }
 
 .event-btn {
