@@ -4,7 +4,7 @@
   var THEME_KEY = 'ui-theme';
   var mqMobile = window.matchMedia('(max-width: 900px)');
 
-  // Theme toggle button must exist ONLY on Cabinet page
+  // Theme toggle button is available on all pages
   function isCabinetPage() {
     try {
       var p = (window.location && window.location.pathname) ? window.location.pathname : '';
@@ -30,7 +30,6 @@
   }
 
   function ensureFAB() {
-    if (!isCabinetPage()) return;
     if (!document.getElementById('themeToggle')) {
       var t = document.createElement('button');
       t.id = 'themeToggle'; t.className = 'ui-fab theme'; t.type = 'button'; t.title = 'Тема';

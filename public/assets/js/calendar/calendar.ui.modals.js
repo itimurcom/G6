@@ -617,6 +617,8 @@
     if (!ev.title) return;
     if (!ev.type) ev.type = 'evt';
 
+    function __commitSave() {
+
     try {
       if (mode === 'edit') {
         var fromArr = Data.getEventsFor(origDate);
@@ -649,6 +651,35 @@
     }
 
     closeOverlay();
+    }
+
+    // FIX: If user id is still missing on create, fetch it once and retry save.
+    // This prevents cases where admin (or any user) saves an event before /api/users/me finished loading.
+    if ((ev.user_id === undefined || ev.user_id === null || parseInt(ev.user_id || 0, 10) === 0) && mode !== 'edit') {
+      try {
+        fetch('/api/users/me')
+          .then(function (r) { return r.json(); })
+          .then(function (x) {
+            try {
+              if (x && x.ok && x.user) {
+                var __id = parseInt((x.user.id || '0'), 10) || 0;
+                if (__id > 0) {
+                  ev.user_id = __id;
+                  try { if (typeof __me !== 'undefined' && __me) { __me.id = __id; } } catch (_) { }
+                }
+              }
+            } catch (_) { }
+            __commitSave();
+          })
+          .catch(function () { __commitSave(); });
+      } catch (_) {
+        __commitSave();
+      }
+      return;
+    }
+
+    __commitSave();
+
   });
 
 })(window);

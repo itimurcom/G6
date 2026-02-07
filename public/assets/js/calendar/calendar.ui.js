@@ -1048,6 +1048,7 @@
 
       // "My" marker (created by current user)
       if (__isMyEvent(ev)) {
+        try { item.classList.add('has-user-badge'); } catch (_) { item.className += ' has-user-badge'; }
         var ub = document.createElement('span');
         ub.className = 'event-user-badge';
         ub.innerHTML = '<svg aria-hidden="true"><use href="#i-user"></use></svg>';

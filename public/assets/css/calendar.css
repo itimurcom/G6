@@ -332,11 +332,17 @@ select,
   font-size: 11px;
 }
 
+/* Reserve space for the user badge so it never overlaps text */
+.event.has-user-badge .event-title,
+.event.has-user-badge .event-owner {
+  padding-right: 30px;
+}
+
 /* Badge: created by current user */
 .event-user-badge {
   position: absolute;
   right: 6px;
-  bottom: 4px;
+  bottom: 6px;
   width: 24px;
   height: 24px;
   display: grid;
@@ -720,8 +726,7 @@ select,
   position: fixed;
   left: 16px;
   bottom: 16px;
-  display: none;
-  /* TEMP: hide export/import buttons */
+  display: none; /* TEMP: hide export/import buttons */
   gap: 10px;
   z-index: 10000;
 }
@@ -1089,11 +1094,8 @@ body.light .ev--multi,
 #sidebarOverlay:not(.sidebar-overlay--open) {
   display: none;
 }
-
 /* TEMP: quick filters are hidden (work on them will continue later) */
-#quickFilters {
-  display: none !important;
-}
+#quickFilters { display: none !important; }
 
 
 /* === Calendar full-search results (Enter in search field) === */
@@ -1200,6 +1202,4 @@ body.light .ev--multi,
 
 
 /* TEMP: приховано кнопку чату (btnChat) */
-#btnChat {
-  display: none !important;
-}
+#btnChat{display:none !important;}
