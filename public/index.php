@@ -59,6 +59,7 @@ $router->get('/api/events/updates',         [\App\Controllers\ApiEventsControlle
 $router->get('/api/notify/unseen',        [\App\Controllers\ApiNotifyController::class,       'unseen']);
 $router->post('/api/notify/seen',         [\App\Controllers\ApiNotifyController::class,       'seen']);
 $router->post('/api/notify/seen-all',     [\App\Controllers\ApiNotifyController::class,       'seenAll']);
+$router->get('/api/notify/seen-by-event', [\App\Controllers\ApiNotifyController::class,       'seenByEvent']);
 $router->get('/api/audit/list',             [\App\Controllers\ApiAuditController::class,     'list']); // AUDIT: ADD ONLY
 $router->get('/api/events/get',             [\App\Controllers\ApiEventsController::class,       'get']);
 $router->get('/api/events/search',          [\App\Controllers\ApiEventsController::class,       'search']);
@@ -69,6 +70,7 @@ $router->post('/api/events/delete',         [\App\Controllers\ApiEventsControlle
 $router->post('/api/events/done',           [\App\Controllers\ApiEventsController::class,       'done']);
 $router->post('/api/events/urgent',         [\App\Controllers\ApiEventsController::class,       'urgent']);
 $router->post('/api/events/close',          [\App\Controllers\ApiEventsController::class,       'close']);
+$router->post('/api/events/backfill-authors', [\App\Controllers\ApiEventsController::class,       'backfillAuthors']);
 // ---- Users API ----
 $router->get('/api/users/get'
 ,          [\App\Controllers\ApiUsersController::class, 'get']);

@@ -258,4 +258,85 @@ final class ApiEventsController
             $this->json(['ok'=>false,'error'=>'internal','message'=>$e->getMessage()], 500);
         }
     }
+
+    /**
+     * POST /api/events/backfill-authors
+     * Admin-only one-time migration:
+     * - Fills events.user_id where it is NULL/0 using audit_logs ("calendar.event.create").
+     * - Optional JSON: { "mode": "audit" | "force_me" }
+     *   - audit (default): infer author from audit_logs
+     *   - force_me: set all missing authors to current admin id (use only if audit is incomplete)
+     */
+    public function backfillAuthors(): void
+    {
+        if (!$this->requireCsrf()) { return; }
+
+        $me = \App\Core\Auth::user();
+        $me_id = (int)($me['id'] ?? 0);
+        $role = strtolower((string)($me['role'] ?? ''));
+        $is_admin = ($role === 'admin') || !empty($me['is_admin']);
+        if (!$is_admin || $me_id <= 0) { $this->json(['ok'=>false,'error'=>'forbidden'], 403); return; }
+
+        $payload = $this->parseJson();
+        if ($payload === null) { $this->json(['ok'=>false,'error'=>'invalid json'], 400); return; }
+        $mode = strtolower((string)($payload['mode'] ?? 'audit'));
+        if ($mode !== 'audit' && $mode !== 'force_me') { $mode = 'audit'; }
+
+        try {
+            $pdo = \App\Core\Database::connect();
+
+            // how many candidates exist before update
+            $cntStmt = $pdo->query("SELECT COUNT(*) AS c FROM events WHERE user_id IS NULL OR user_id = 0");
+            $before = (int)(($cntStmt ? $cntStmt->fetchColumn() : 0) ?: 0);
+
+            $updated = 0;
+
+            if ($before > 0) {
+                if ($mode === 'force_me') {
+                    $stmt = $pdo->prepare("UPDATE events SET user_id = :uid WHERE user_id IS NULL OR user_id = 0");
+                    $stmt->execute(['uid' => $me_id]);
+                    $updated = (int)$stmt->rowCount();
+                } else {
+                    // Update from earliest audit create record per event
+                    $sql = "
+                        UPDATE events e
+                        JOIN (
+                            SELECT t.entity_id, t.user_id AS author_id
+                            FROM audit_logs t
+                            JOIN (
+                                SELECT entity_id, MIN(created_at) AS min_created
+                                FROM audit_logs
+                                WHERE entity_type = 'event'
+                                  AND action = 'calendar.event.create'
+                                  AND result = 'success'
+                                  AND user_id IS NOT NULL
+                                GROUP BY entity_id
+                            ) m ON m.entity_id = t.entity_id AND m.min_created = t.created_at
+                            WHERE t.user_id IS NOT NULL
+                        ) a ON a.entity_id = e.id
+                        SET e.user_id = a.author_id
+                        WHERE (e.user_id IS NULL OR e.user_id = 0)
+                    ";
+                    $stmt = $pdo->prepare($sql);
+                    $stmt->execute();
+                    $updated = (int)$stmt->rowCount();
+                }
+            }
+
+            $cntStmt2 = $pdo->query("SELECT COUNT(*) AS c FROM events WHERE user_id IS NULL OR user_id = 0");
+            $after = (int)(($cntStmt2 ? $cntStmt2->fetchColumn() : 0) ?: 0);
+
+            $this->json([
+                'ok' => true,
+                'mode' => $mode,
+                'candidates_before' => $before,
+                'updated' => $updated,
+                'remaining' => $after,
+            ]);
+        } catch (\Throwable $e) {
+            $this->json(['ok'=>false,'error'=>'internal','message'=>$e->getMessage()], 500);
+        }
+    }
+
+
 }

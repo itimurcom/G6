@@ -428,6 +428,68 @@
       }
     } catch (e) { /* noop */ }
 
+    
+
+    function __renderSeenBlock(targetEl, payload) {
+      if (!targetEl) return;
+      if (!payload || payload.ok !== true) {
+        targetEl.innerHTML = '<div class="muted">Перегляди: недоступно</div>';
+        return;
+      }
+
+      var seen = Array.isArray(payload.seen) ? payload.seen : [];
+      var unseen = Array.isArray(payload.unseen) ? payload.unseen : [];
+
+      var html = '';
+      html += '<div><strong>Переглянули:</strong></div>';
+
+      if (seen.length === 0) {
+        html += '<div class="muted">Поки ніхто не переглянув</div>';
+      } else {
+        html += '<div class="info-seen-list">';
+        for (var i = 0; i < seen.length; i++) {
+          var it = seen[i] || {};
+          var label = Ev.escapeHtml(String(it.label || ('#' + (it.user_id || ''))));
+          var t = it.seen_at ? Ev.escapeHtml(String(it.seen_at)) : '';
+          html += '<span class="info-seen-chip"><span>' + label + '</span>' + (t ? ('<time>' + t + '</time>') : '') + '</span>';
+        }
+        html += '</div>';
+      }
+
+      if (unseen.length > 0) {
+        html += '<div style="margin-top:10px;"><strong>Не переглянули:</strong></div>';
+        html += '<div class="info-seen-list">';
+        for (var j = 0; j < unseen.length; j++) {
+          var u = unseen[j] || {};
+          var ul = Ev.escapeHtml(String(u.label || ('#' + (u.user_id || ''))));
+          html += '<span class="info-seen-chip"><span>' + ul + '</span></span>';
+        }
+        html += '</div>';
+      }
+
+      targetEl.innerHTML = html;
+    }
+
+    function __loadSeenByEvent(eventId) {
+      var host = $id('infoSeenBlock');
+      if (!host) return;
+
+      host.innerHTML = '<div class="muted">Завантаження переглядів…</div>';
+
+      try {
+        fetch('/api/notify/seen-by-event?event_id=' + encodeURIComponent(String(eventId)), {
+          method: 'GET',
+          headers: { 'Accept': 'application/json' },
+          credentials: 'same-origin'
+        })
+          .then(function (r) { return r.json(); })
+          .then(function (j) { __renderSeenBlock(host, j); })
+          .catch(function () { host.innerHTML = '<div class="muted">Перегляди: помилка завантаження</div>'; });
+      } catch (_) {
+        host.innerHTML = '<div class="muted">Перегляди: недоступно</div>';
+      }
+    }
+
     var infoContent = $id('infoContent');
 
     var arr = Data.getEventsFor(dateISO) || [];
@@ -463,32 +525,48 @@
       }
     }
 
+    
+    var __doneHtml = ev.done
+      ? '<span class="info-done info-done--yes">так</span>'
+      : '<span class="info-done">ні</span>';
+
+    var __createdHtml = (ev.created_at ? Ev.escapeHtml(new Date(ev.created_at).toLocaleString(locale, { hour12: false })) : '—');
+
     var html = '' +
-      '<div class="row">' +
-      '<div><strong>Дата:</strong> ' + Ev.formatISO(dateISO) + ' (' + weekdayShortFmt.format(new Date(Date.UTC(y, m - 1, d))) + ')</div>' +
-      __endBlock +
-      '<div><strong>Час:</strong> ' + (ev.time || '') + '</div>' +
+      '<div class="info-title">' + Ev.escapeHtml(ev.title || '') + '</div>' +
+
+      '<div class="info-cols">' +
+        '<div class="info-col info-col--left">' +
+          '<div class="info-item"><strong>Дата:</strong> ' + Ev.formatISO(dateISO) + ' (' + weekdayShortFmt.format(new Date(Date.UTC(y, m - 1, d))) + ')</div>' +
+          '<div class="info-item"><strong>Відповідальний:</strong> ' + Ev.escapeHtml(ev.owner || '—') + '</div>' +
+          '<div class="info-item"><strong>Тип:</strong> ' + Ev.labelForType(ev.type) + '</div>' +
+          '<div class="info-item"><strong>Власник (створив):</strong> ' + (parseInt(ev.user_id || 0, 10) > 0 ? '<span class="user--name" data-user-id="' + parseInt(ev.user_id, 10) + '"></span>' : '—') + '</div>' +
+        '</div>' +
+
+        '<div class="info-col info-col--right">' +
+          '<div class="info-item"><strong>Час:</strong> ' + (ev.time || '') + '</div>' +
+          '<div class="info-item"><strong>Створено:</strong> ' + __createdHtml + '</div>' +
+          '<div class="info-item" style="position:relative;"><strong>Виконана:</strong> ' + __doneHtml +
+            (ev.urgent ? '<span class="flag-urgent" style="margin-left:10px;"><span class="icon"><svg class="icon"><use href="#i-fire-clock"></use></svg></span></span>' : '') +
+          '</div>' +
+          '<div class="info-item"><strong>Терміновість:</strong> ' + (ev.urgent ? 'так' : 'ні') + '</div>' +
+        '</div>' +
       '</div>' +
 
-      '<div class="row">' +
-      '<div><strong>Тип:</strong> ' + Ev.labelForType(ev.type) + '</div>' +
-      '<div style="position:relative;margin-right:1em;">' +
-      '<strong>Виконана:</strong> ' + (ev.done ? 'так' : 'ні') +
-      (ev.urgent ? '<span style="top:-36px;" class="flag-urgent"><span class="icon"><svg class="icon"><use href="#i-fire-clock"></use></svg></span></span>' : '') +
-      '</div>' +
-      '</div>' +
-      '<div><strong>Назва:</strong> ' + Ev.escapeHtml(ev.title || '') + '</div>' +
-      '<div><strong>Відповідальний:</strong> ' + Ev.escapeHtml(ev.owner || '—') + '</div>' +
-      '<div><strong>Власник (створив):</strong> ' + (parseInt(ev.user_id || 0, 10) > 0 ? '<span class="user--name" data-user-id="' + parseInt(ev.user_id, 10) + '"></span>' : '—') + '</div>' +
-      __authorBlock +
-      '<div><strong>Створено:</strong> ' + (ev.created_at ? Ev.escapeHtml(new Date(ev.created_at).toLocaleString(locale, { hour12: false })) : '—') + '</div>' +
-      '<div><strong>Терміновість:</strong> ' + (ev.urgent ? 'так' : 'ні') + '</div>' +
-      (ev.incoming_no ? '<div><strong>Вхідний №:</strong> ' + Ev.escapeHtml(ev.incoming_no || '—') + '</div>' : '') +
-      (ev.outgoing_no ? '<div><strong>Вихідний №:</strong> ' + Ev.escapeHtml(ev.outgoing_no || '—') + '</div>' : '') +
-      (ev.description ? ('<div><strong>Опис:</strong><br><div class="container auto">' + Ev.escapeHtml(ev.description) + '</div></div>') : '');
+      (ev.incoming_no ? '<div class="info-item" style="margin-top:10px;"><strong>Вхідний №:</strong> ' + Ev.escapeHtml(ev.incoming_no || '—') + '</div>' : '') +
+      (ev.outgoing_no ? '<div class="info-item"><strong>Вихідний №:</strong> ' + Ev.escapeHtml(ev.outgoing_no || '—') + '</div>' : '') +
 
-    if (infoContent) infoContent.innerHTML = html;
+      (__endBlock ? ('<div style="margin-top:10px;">' + __endBlock + '</div>') : '') +
+
+      (ev.description ? ('<div style="margin-top:10px;"><strong>Опис:</strong><br><div class="container auto">' + Ev.escapeHtml(ev.description) + '</div></div>') : '') +
+
+      '<div class="info-seen-divider"></div>' +
+      '<div id="infoSeenBlock" class="info-seen-block"><div class="muted">Завантаження переглядів…</div></div>';
+if (infoContent) infoContent.innerHTML = html;
     setInfoModalType(ev.type);
+
+    try { __loadSeenByEvent(ev.id); } catch (_) { }
+
 
     if (infoOverlay) {
       infoOverlay.classList.add('show');
@@ -617,8 +695,6 @@
     if (!ev.title) return;
     if (!ev.type) ev.type = 'evt';
 
-    function __commitSave() {
-
     try {
       if (mode === 'edit') {
         var fromArr = Data.getEventsFor(origDate);
@@ -651,35 +727,6 @@
     }
 
     closeOverlay();
-    }
-
-    // FIX: If user id is still missing on create, fetch it once and retry save.
-    // This prevents cases where admin (or any user) saves an event before /api/users/me finished loading.
-    if ((ev.user_id === undefined || ev.user_id === null || parseInt(ev.user_id || 0, 10) === 0) && mode !== 'edit') {
-      try {
-        fetch('/api/users/me')
-          .then(function (r) { return r.json(); })
-          .then(function (x) {
-            try {
-              if (x && x.ok && x.user) {
-                var __id = parseInt((x.user.id || '0'), 10) || 0;
-                if (__id > 0) {
-                  ev.user_id = __id;
-                  try { if (typeof __me !== 'undefined' && __me) { __me.id = __id; } } catch (_) { }
-                }
-              }
-            } catch (_) { }
-            __commitSave();
-          })
-          .catch(function () { __commitSave(); });
-      } catch (_) {
-        __commitSave();
-      }
-      return;
-    }
-
-    __commitSave();
-
   });
 
 })(window);

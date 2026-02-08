@@ -251,4 +251,72 @@ final class ApiNotifyController extends Controller
             return $this->json(['ok'=>false,'error'=>'db_error','message'=>$e->getMessage()], 500);
         }
     }
+
+    /**
+     * GET /api/notify/seen-by-event?event_id=...
+     * Admin-only: returns who has seen a notification for the given event.
+     */
+    public function seenByEvent(Request $r): string
+    {
+        if (!Auth::check()) {
+            return $this->json(['ok' => false, 'error' => 'auth'], 401);
+        }
+
+        $me = Auth::user();
+        $role = strtolower((string)($me['role'] ?? ''));
+        $is_admin = ($role === 'admin') || !empty($me['is_admin']);
+
+        if (!$is_admin) {
+            return $this->json(['ok' => false, 'error' => 'forbidden'], 403);
+        }
+
+        $eventId = (string)($r->input('event_id') ?? '');
+        $eventId = trim($eventId);
+
+        if ($eventId === '') {
+            return $this->json(['ok' => false, 'error' => 'bad_request', 'message' => 'event_id is required'], 400);
+        }
+
+        $sql = "
+            SELECT n.user_id, n.seen_at, u.name, u.login
+            FROM user_notifications n
+            LEFT JOIN users u ON u.id = n.user_id
+            WHERE n.event_id = :eid
+            ORDER BY (n.seen_at IS NULL) ASC, n.seen_at DESC, n.user_id ASC
+        ";
+        $st = $this->db->prepare($sql);
+        $st->execute(['eid' => $eventId]);
+        $rows = $st->fetchAll(PDO::FETCH_ASSOC) ?: [];
+
+        $seen = [];
+        $unseen = [];
+
+        foreach ($rows as $r) {
+            $uid = (int)($r['user_id'] ?? 0);
+            $name = (string)($r['name'] ?? '');
+            $login = (string)($r['login'] ?? '');
+            $label = $name !== '' ? $name : ($login !== '' ? $login : ('#' . $uid));
+            $seenAt = $r['seen_at'] ?? null;
+
+            $item = [
+                'user_id'  => $uid,
+                'label'    => $label,
+                'seen_at'  => $seenAt ? (string)$seenAt : null,
+            ];
+
+            if ($seenAt) {
+                $seen[] = $item;
+            } else {
+                $unseen[] = $item;
+            }
+        }
+
+        return $this->json([
+            'ok'       => true,
+            'event_id' => $eventId,
+            'seen'     => $seen,
+            'unseen'   => $unseen,
+        ]);
+    }
+
 }

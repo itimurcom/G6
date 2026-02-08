@@ -1,0 +1,108 @@
+/*
+  Info modal (view event) — additive styles.
+  IMPORTANT: This file is intentionally separate from calendar.css to avoid overwriting consolidated styles.
+*/
+
+#infoModal.modal {
+  width: min(680px, 96vw);
+}
+
+#infoContent .info-title {
+  font-size: 22px;
+  font-weight: 900;
+  line-height: 1.2;
+  margin: 0 0 12px 0;
+}
+
+#infoContent .info-cols {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  column-gap: 24px;
+  row-gap: 10px;
+  align-items: start;
+}
+
+#infoContent .info-col {
+  display: grid;
+  gap: 10px;
+}
+
+#infoContent .info-col--left {
+  min-width: 260px;
+}
+
+#infoContent .info-item {
+  font-size: 14px;
+  line-height: 1.35;
+}
+
+#infoContent .info-item strong {
+  color: var(--muted);
+  font-weight: 800;
+}
+
+#infoContent .info-done {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  font-weight: 900;
+}
+
+#infoContent .info-done--yes {
+  background: rgba(250, 204, 21, 0.18);
+  border-color: rgba(250, 204, 21, 0.55);
+  color: var(--fg);
+}
+
+:root[data-theme="dark"] #infoContent .info-done--yes {
+  background: rgba(250, 204, 21, 0.22);
+}
+
+#infoContent .info-seen-divider {
+  margin-top: 14px;
+  border-top: 1px solid var(--border);
+}
+
+#infoContent .info-seen-block {
+  padding-top: 12px;
+}
+
+#infoContent .info-seen-block .muted {
+  color: var(--muted);
+  font-weight: 800;
+}
+
+#infoContent .info-seen-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+#infoContent .info-seen-chip {
+  display: inline-flex;
+  gap: 8px;
+  align-items: baseline;
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--event-bg);
+  font-weight: 800;
+  font-size: 13px;
+}
+
+#infoContent .info-seen-chip time {
+  font-weight: 700;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+@media (max-width: 780px) {
+  #infoContent .info-cols {
+    grid-template-columns: 1fr;
+  }
+  #infoContent .info-col--left {
+    min-width: 0;
+  }
+}

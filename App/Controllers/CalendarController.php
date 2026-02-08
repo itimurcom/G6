@@ -11,6 +11,7 @@ class CalendarController extends Controller
             'title' => 'Календар',
             'extra_css' => [
                 '/assets/css/calendar.css',
+                '/assets/css/calendar.info.modal.css',
                 '/assets/css/icons.css',
                 '/assets/css/calendar.notify.css',
                 ],
