@@ -581,18 +581,21 @@
     } catch (_) { }
 
     if (ev && ev.end_date) {
+      // Show end date only for multi-day events (>1 day) to avoid redundant info.
       try {
         var startISO = ev.start_date || __findStartDateByScan(id, dateISO);
         var ds = __isoToUTCDate(startISO);
         var de = __isoToUTCDate(ev.end_date);
         if (de >= ds) {
           var days = Math.round((de - ds) / 86400000) + 1;
-          __endBlock = '<div><strong>Дата завершення:</strong> ' + Ev.formatISO(ev.end_date) + ' (' + days + ' ' + ukDayWord(days) + ')</div>';
+          if (days > 1) {
+            __endBlock = '<div class="info-item"><strong>Дата завершення:</strong> ' + Ev.formatISO(ev.end_date) + ' (' + days + ' ' + ukDayWord(days) + ')</div>';
+          }
         } else {
-          __endBlock = '<div><strong>Дата завершення:</strong> ' + Ev.formatISO(ev.end_date) + '</div>';
+          __endBlock = '<div class="info-item"><strong>Дата завершення:</strong> ' + Ev.formatISO(ev.end_date) + '</div>';
         }
       } catch (_) {
-        __endBlock = '<div><strong>Дата завершення:</strong> ' + Ev.formatISO(ev.end_date) + '</div>';
+        __endBlock = '<div class="info-item"><strong>Дата завершення:</strong> ' + Ev.formatISO(ev.end_date) + '</div>';
       }
     }
 
@@ -603,33 +606,63 @@
 
     var __createdHtml = (ev.created_at ? Ev.escapeHtml(new Date(ev.created_at).toLocaleString(locale, { hour12: false })) : '—');
 
+    var __weekday = weekdayShortFmt.format(new Date(Date.UTC(y, m - 1, d)));
+    var __time = (ev.time && String(ev.time).trim() !== '') ? String(ev.time).trim() : '';
+    var __dateTimeHtml = Ev.formatISO(dateISO) + ' (' + __weekday + ')' + (__time ? (' (' + Ev.escapeHtml(__time) + ')') : '');
+
+    var __ownerHtml = (parseInt(ev.user_id || 0, 10) > 0)
+      ? '<span class="user--name" data-user-id="' + parseInt(ev.user_id, 10) + '"></span>'
+      : '—';
+
+    var __descRaw = (typeof ev.description === 'string') ? ev.description : '';
+    var __descHtml = (__descRaw && String(__descRaw).trim() !== '') ? Ev.escapeHtml(__descRaw) : '—';
+
+    var __docsRow = '';
+    if ((ev.incoming_no && String(ev.incoming_no).trim() !== '') || (ev.outgoing_no && String(ev.outgoing_no).trim() !== '')) {
+      __docsRow = '' +
+        '<div class="info-row info-row--docs">' +
+          '<div class="info-item"><strong>Вхідний №:</strong> ' + Ev.escapeHtml(ev.incoming_no || '—') + '</div>' +
+          '<div class="info-item"><strong>Вихідний №:</strong> ' + Ev.escapeHtml(ev.outgoing_no || '—') + '</div>' +
+        '</div>';
+    }
+
     var html = '' +
       '<div class="info-title">' + Ev.escapeHtml(ev.title || '') + '</div>' +
 
-      '<div class="info-cols">' +
-        '<div class="info-col info-col--left">' +
-          '<div class="info-item"><strong>Дата:</strong> ' + Ev.formatISO(dateISO) + ' (' + weekdayShortFmt.format(new Date(Date.UTC(y, m - 1, d))) + ')</div>' +
+      '<div class="info-grid">' +
+        // 1st row: date(+time) + responsible
+        '<div class="info-row">' +
+          '<div class="info-item"><strong>Дата:</strong> ' + __dateTimeHtml + '</div>' +
           '<div class="info-item"><strong>Відповідальний:</strong> ' + Ev.escapeHtml(ev.owner || '—') + '</div>' +
-          '<div class="info-item"><strong>Тип:</strong> ' + Ev.labelForType(ev.type) + '</div>' +
-          '<div class="info-item"><strong>Власник (створив):</strong> ' + (parseInt(ev.user_id || 0, 10) > 0 ? '<span class="user--name" data-user-id="' + parseInt(ev.user_id, 10) + '"></span>' : '—') + '</div>' +
         '</div>' +
 
-        '<div class="info-col info-col--right">' +
-          '<div class="info-item"><strong>Час:</strong> ' + (ev.time || '') + '</div>' +
+        // 2nd row: end date (only for multi-day)
+        (__endBlock ? ('<div class="info-row info-row--full">' + __endBlock + '</div>') : '') +
+
+        // 3rd row: created + type/urgent/done in 3 columns
+        '<div class="info-row info-row--meta3">' +
           '<div class="info-item"><strong>Створено:</strong> ' + __createdHtml + '</div>' +
-          '<div class="info-item" style="position:relative;"><strong>Виконана:</strong> ' + __doneHtml +
-            (ev.urgent ? '<span class="flag-urgent" style="margin-left:10px;"><span class="icon"><svg class="icon"><use href="#i-fire-clock"></use></svg></span></span>' : '') +
+          '<div class="info-meta3">' +
+            '<div class="info-item"><strong>Тип:</strong> ' + Ev.labelForType(ev.type) + '</div>' +
+            '<div class="info-item"><strong>Терміновість:</strong> ' + (ev.urgent ? 'так' : 'ні') + '</div>' +
+            '<div class="info-item"><strong>Виконана:</strong> ' + __doneHtml + '</div>' +
           '</div>' +
-          '<div class="info-item"><strong>Терміновість:</strong> ' + (ev.urgent ? 'так' : 'ні') + '</div>' +
+        '</div>' +
+
+        // Docs row (optional)
+        __docsRow +
+
+        // Owner + "Опис" label in one row (two columns)
+        '<div class="info-row info-row--ownerdesc">' +
+          '<div class="info-item"><strong>Власник (створив):</strong> ' + __ownerHtml + '</div>' +
+          '<div class="info-item info-desc-label"><strong>Опис:</strong></div>' +
+        '</div>' +
+
+        // Description body (always shown)
+        '<div class="info-row info-row--full">' +
+          '<div class="info-desc-body container auto">' + __descHtml + '</div>' +
         '</div>' +
       '</div>' +
-
-      (ev.incoming_no ? '<div class="info-item" style="margin-top:10px;"><strong>Вхідний №:</strong> ' + Ev.escapeHtml(ev.incoming_no || '—') + '</div>' : '') +
-      (ev.outgoing_no ? '<div class="info-item"><strong>Вихідний №:</strong> ' + Ev.escapeHtml(ev.outgoing_no || '—') + '</div>' : '') +
-
-      (__endBlock ? ('<div style="margin-top:10px;">' + __endBlock + '</div>') : '') +
-
-      (ev.description ? ('<div style="margin-top:10px;"><strong>Опис:</strong><br><div class="container auto">' + Ev.escapeHtml(ev.description) + '</div></div>') : '') +
 
       '<div class="info-seen-divider"></div>' +
       '<div id="infoSeenBlock" class="info-seen-block"><div class="muted">Завантаження переглядів…</div></div>';

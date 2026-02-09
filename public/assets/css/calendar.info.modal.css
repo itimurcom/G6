@@ -14,21 +14,39 @@
   margin: 0 0 12px 0;
 }
 
-#infoContent .info-cols {
+/* --- Event info layout (grid rows) --- */
+#infoContent .info-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+#infoContent .info-row {
   display: grid;
-  grid-template-columns: auto 1fr;
+  grid-template-columns: 1fr 1fr;
   column-gap: 24px;
   row-gap: 10px;
   align-items: start;
 }
 
-#infoContent .info-col {
-  display: grid;
-  gap: 10px;
+#infoContent .info-row--full {
+  grid-template-columns: 1fr;
 }
 
-#infoContent .info-col--left {
-  min-width: 260px;
+/* 3rd row: created + (type/urgent/done) */
+#infoContent .info-row--meta3 {
+  grid-template-columns: 220px 1fr;
+}
+
+#infoContent .info-meta3 {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  align-items: start;
+}
+
+#infoContent .info-desc-label {
+  text-align: right;
 }
 
 #infoContent .info-item {
@@ -60,12 +78,12 @@
 }
 
 #infoContent .info-seen-divider {
-  margin-top: 14px;
+  margin: 0;
   border-top: 1px solid var(--border);
 }
 
 #infoContent .info-seen-block {
-  padding-top: 6px;
+  padding: 0;
 }
 
 /* Seen block header: title + "mark viewed" icon button (same style as Activities) */
@@ -156,10 +174,13 @@ body.light #infoContent .info-seen-head,
 }
 
 @media (max-width: 780px) {
-  #infoContent .info-cols {
+  #infoContent .info-row {
     grid-template-columns: 1fr;
   }
-  #infoContent .info-col--left {
-    min-width: 0;
+  #infoContent .info-row--meta3 {
+    grid-template-columns: 1fr;
+  }
+  #infoContent .info-meta3 {
+    grid-template-columns: 1fr;
   }
 }
