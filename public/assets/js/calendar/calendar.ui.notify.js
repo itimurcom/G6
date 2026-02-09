@@ -686,9 +686,17 @@ var subtitle = document.createElement('small');
     if (time) when.push(time);
     if (type) when.push(labelForType(type));
     subtitle.textContent = when.join(' • ');
+var titleLine = document.createElement('div');
+titleLine.className = 'notif-title-line';
 
-    ttl.appendChild(titleText);
-    ttl.appendChild(subtitle);
+var dotType = (type === 'mi' || type === 'nas' || type === 'evt' || type === 'overdue') ? type : 'other';
+var dot = document.createElement('span');
+dot.className = 'notif-dot ' + dotType;
+titleLine.appendChild(dot);
+titleLine.appendChild(titleText);
+
+ttl.appendChild(titleLine);
+ttl.appendChild(subtitle);
     row.appendChild(ttl);
 
     // Per-item action: mark this activity as viewed (single)

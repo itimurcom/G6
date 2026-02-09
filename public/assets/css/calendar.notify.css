@@ -147,6 +147,28 @@ body.light #notifStack,
   gap: 2px;
 }
 
+/* Event-type indicator (same idea as Calendar dot) */
+#notifStack .notif-title-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+#notifStack .notif-dot {
+  display: inline-block;
+  width: 8px;
+  height: 18px;
+  border-radius: 999px;
+  flex: 0 0 8px;
+}
+
+#notifStack .notif-dot.mi { background: var(--type-mi); }
+#notifStack .notif-dot.nas { background: var(--type-nas); }
+#notifStack .notif-dot.evt { background: var(--type-evt); }
+#notifStack .notif-dot.other { background: var(--type-other); }
+#notifStack .notif-dot.overdue { background: var(--type-overdue); }
+
+
 #notifStack .notif-item-title small {
   font-weight: 700;
   color: var(--muted);
