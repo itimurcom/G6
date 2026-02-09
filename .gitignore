@@ -1,0 +1,12 @@
+# Системні файли Windows/WSL
+.DS_Store
+Thumbs.db
+
+# Тимчасові файли VS Code
+.vscode/
+*.log
+
+# Python (якщо є в проекті)
+__pycache__/
+*.py[cod]
+*$py.class
