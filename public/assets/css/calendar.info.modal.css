@@ -33,9 +33,9 @@
   grid-template-columns: 1fr;
 }
 
-/* 3rd row: created + (type/urgent/done) */
+/* 3rd row: created + owner */
 #infoContent .info-row--meta3 {
-  grid-template-columns: 220px 1fr;
+  grid-template-columns: 1fr 1fr;
 }
 
 #infoContent .info-meta3 {
@@ -43,6 +43,11 @@
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 12px;
   align-items: start;
+}
+
+/* Type/Urgent/Done row: ensure full width grid */
+#infoContent .info-meta3--full {
+  width: 100%;
 }
 
 #infoContent .info-desc-label {

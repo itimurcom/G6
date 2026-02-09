@@ -639,10 +639,15 @@
         // 2nd row: end date (only for multi-day)
         (__endBlock ? ('<div class="info-row info-row--full">' + __endBlock + '</div>') : '') +
 
-        // 3rd row: created + type/urgent/done in 3 columns
+        // 3rd row: created + owner (swap with type/urgent/done row)
         '<div class="info-row info-row--meta3">' +
           '<div class="info-item"><strong>Створено:</strong> ' + __createdHtml + '</div>' +
-          '<div class="info-meta3">' +
+          '<div class="info-item"><strong>Власник:</strong> ' + __ownerHtml + '</div>' +
+        '</div>' +
+
+        // Type / Urgent / Done: one row, three columns, full width
+        '<div class="info-row info-row--full">' +
+          '<div class="info-meta3 info-meta3--full">' +
             '<div class="info-item"><strong>Тип:</strong> ' + Ev.labelForType(ev.type) + '</div>' +
             '<div class="info-item"><strong>Терміновість:</strong> ' + (ev.urgent ? 'так' : 'ні') + '</div>' +
             '<div class="info-item"><strong>Виконана:</strong> ' + __doneHtml + '</div>' +
@@ -652,13 +657,7 @@
         // Docs row (optional)
         __docsRow +
 
-        // Owner + "Опис" label in one row (two columns)
-        '<div class="info-row info-row--ownerdesc">' +
-          '<div class="info-item"><strong>Власник (створив):</strong> ' + __ownerHtml + '</div>' +
-          '<div class="info-item info-desc-label"><strong>Опис:</strong></div>' +
-        '</div>' +
-
-        // Description body (always shown)
+        // Description body (always shown). NOTE: the "Опис:" label is intentionally hidden (temporary).
         '<div class="info-row info-row--full">' +
           '<div class="info-desc-body container auto">' + __descHtml + '</div>' +
         '</div>' +
