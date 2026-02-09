@@ -317,24 +317,58 @@ var Data = (global.CalendarApp && global.CalendarApp.data) || null;
 
   function messageForKind(notif, ev) {
     var kind = String((notif && notif.kind) || 'event_new');
+
     if (kind === 'event_new') return 'Додано нову подію.';
     if (kind === 'event_deleted') return 'Подію видалено.';
     if (kind === 'event_date_changed') return 'Змінено дату події.';
+
     if (kind === 'event_done_changed') {
-      // If we can detect transition, make it clearer
       var p = parsePayloadMaybe(notif && notif.payload) || null;
       try {
-        var b = p && p.before ? p.before : null;
-        var a = p && p.after ? p.after : null;
-        if (b && a && (b.done !== undefined) && (a.done !== undefined)) {
-          var bb = String(b.done) === '1' || b.done === true;
-          var aa = String(a.done) === '1' || a.done === true;
-          if (!bb && aa) return 'Позначено як виконано.';
-          if (bb && !aa) return 'Знято позначку «Виконано».';
+        if (p && (p.from_done !== undefined) && (p.to_done !== undefined)) {
+          var fd = String(p.from_done) === '1' || p.from_done === true;
+          var td = String(p.to_done) === '1' || p.to_done === true;
+          if (!fd && td) return 'Позначено як виконано.';
+          if (fd && !td) return 'Знято позначку «Виконано».';
         }
       } catch (_) { }
       return 'Змінено статус «Виконано».';
     }
+
+    if (kind === 'event_urgent_changed') {
+      var p2 = parsePayloadMaybe(notif && notif.payload) || null;
+      try {
+        if (p2 && (p2.from_urgent !== undefined) && (p2.to_urgent !== undefined)) {
+          var fu = String(p2.from_urgent) === '1' || p2.from_urgent === true;
+          var tu = String(p2.to_urgent) === '1' || p2.to_urgent === true;
+          if (!fu && tu) return 'Позначено як термінову.';
+          if (fu && !tu) return 'Знято позначку «Термінова».';
+        }
+      } catch (_) { }
+      return 'Змінено терміновість події.';
+    }
+
+    if (kind === 'event_title_changed') return 'Змінено назву події.';
+    if (kind === 'event_owner_changed') return 'Змінено виконавця.';
+
+    if (kind === 'event_docs_changed') {
+      var p3 = parsePayloadMaybe(notif && notif.payload) || null;
+      try {
+        var bi = p3 ? String(p3.from_in || '') : '';
+        var ai = p3 ? String(p3.to_in || '') : '';
+        var bo = p3 ? String(p3.from_out || '') : '';
+        var ao = p3 ? String(p3.to_out || '') : '';
+
+        var cin = bi.trim() !== ai.trim();
+        var cout = bo.trim() !== ao.trim();
+
+        if (cin && cout) return 'Змінено номери вхідного та вихідного документів.';
+        if (cin) return 'Змінено номер вхідного документа.';
+        if (cout) return 'Змінено номер вихідного документа.';
+      } catch (_) { }
+      return 'Змінено номери документів.';
+    }
+
     return 'Оновлено подію.';
   }
 

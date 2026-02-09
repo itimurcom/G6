@@ -295,7 +295,7 @@ final class LoggingEventRepository
      *
      * Повертаємо ID події (а не масив), бо контролер очікує саме id.
      */
-    public function create(string $date, array $payload): string
+    public     function create(string $date, array $payload): string
     {
         // Витягуємо саму подію з payload
         $event = isset($payload['event']) && is_array($payload['event'])
@@ -310,25 +310,30 @@ final class LoggingEventRepository
         $res = $this->inner->create($date, $event);
         $id  = (string)($res['id'] ?? ($event['id'] ?? ''));
 
+        $ok = ($id !== '');
+
         $this->logger->log(
             'calendar.event.create',
-            $id !== '' ? 'success' : 'error',
+            $ok ? 'success' : 'error',
             array_merge(
                 $this->userContext(),
                 [
                     'entity_type' => 'event',
-                    'entity_id'   => $id ?: null,
+                    'entity_id'   => $ok ? $id : null,
                     'date'        => $res['date'] ?? $date,
                     'payload'     => $event,
                 ]
             )
         );
 
-        // Activity notification: event deleted
+        // Activity notification: new event
         if ($ok) {
             try {
-                $this->notifyFanout('event_deleted', $id, [
-                    'event' => $this->snapshotEvent($before, $id),
+                $after = null;
+                try { $after = $this->inner->get($id); } catch (\Throwable $__) { $after = null; }
+
+                $this->notifyFanout('event_new', $id, [
+                    'event' => $this->snapshotEvent($after, $id),
                 ]);
             } catch (\Throwable $__ ) {
                 // ignore
@@ -416,7 +421,53 @@ final class LoggingEventRepository
                         'event'     => $this->snapshotEvent($after, $id),
                     ]);
                 }
-            } catch (\Throwable $__) {
+            
+                // Activity notifications: important field changes
+                $beforeTitle = is_array($before) ? (string)($before['title'] ?? '') : '';
+                $afterTitle  = is_array($after)  ? (string)($after['title']  ?? '') : '';
+                if (trim($beforeTitle) !== trim($afterTitle)) {
+                    $this->notifyFanout('event_title_changed', $id, [
+                        'from_title' => $beforeTitle,
+                        'to_title'   => $afterTitle,
+                        'event'      => $this->snapshotEvent($after, $id),
+                    ]);
+                }
+
+                $beforeIn  = is_array($before) ? (string)($before['incoming_no'] ?? '') : '';
+                $afterIn   = is_array($after)  ? (string)($after['incoming_no']  ?? '') : '';
+                $beforeOut = is_array($before) ? (string)($before['outgoing_no'] ?? '') : '';
+                $afterOut  = is_array($after)  ? (string)($after['outgoing_no']  ?? '') : '';
+                if (trim($beforeIn) !== trim($afterIn) || trim($beforeOut) !== trim($afterOut)) {
+                    $this->notifyFanout('event_docs_changed', $id, [
+                        'from_in'  => $beforeIn,
+                        'to_in'    => $afterIn,
+                        'from_out' => $beforeOut,
+                        'to_out'   => $afterOut,
+                        'event'    => $this->snapshotEvent($after, $id),
+                    ]);
+                }
+
+                $beforeOwner = is_array($before) ? (string)($before['owner'] ?? '') : '';
+                $afterOwner  = is_array($after)  ? (string)($after['owner']  ?? '') : '';
+                if (trim($beforeOwner) !== trim($afterOwner)) {
+                    $this->notifyFanout('event_owner_changed', $id, [
+                        'from_owner' => $beforeOwner,
+                        'to_owner'   => $afterOwner,
+                        'event'      => $this->snapshotEvent($after, $id),
+                    ]);
+                }
+
+                $beforeUrg2 = is_array($before) && array_key_exists('urgent', $before) ? (bool)$before['urgent'] : null;
+                $afterUrg2  = is_array($after)  && array_key_exists('urgent',  $after) ? (bool)$after['urgent']  : null;
+                if ($beforeUrg2 !== null && $afterUrg2 !== null && $beforeUrg2 !== $afterUrg2) {
+                    $this->notifyFanout('event_urgent_changed', $id, [
+                        'from_urgent' => $beforeUrg2 ? 1 : 0,
+                        'to_urgent'   => $afterUrg2  ? 1 : 0,
+                        'event'       => $this->snapshotEvent($after, $id),
+                    ]);
+                }
+
+} catch (\Throwable $__) {
                 // ignore
             }
         }
@@ -563,6 +614,19 @@ final class LoggingEventRepository
                 ]
             )
         );
+
+        // Activity notification: urgent flag changed
+        if ($ok) {
+            $beforeUrg = is_array($before) && array_key_exists('urgent', $before) ? (bool)$before['urgent'] : null;
+            $afterUrg  = is_array($after)  && array_key_exists('urgent',  $after) ? (bool)$after['urgent']  : null;
+            if ($beforeUrg !== null && $afterUrg !== null && $beforeUrg !== $afterUrg) {
+                $this->notifyFanout('event_urgent_changed', $id, [
+                    'from_urgent' => $beforeUrg ? 1 : 0,
+                    'to_urgent'   => $afterUrg  ? 1 : 0,
+                    'event'       => $this->snapshotEvent($after, $id),
+                ]);
+            }
+        }
 
         return (bool)$ok;
     }
