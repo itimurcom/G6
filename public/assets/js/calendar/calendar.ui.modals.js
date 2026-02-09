@@ -430,10 +430,8 @@
 
     
 
-    function __renderSeenBlock(targetEl, payload) {
-      if (!targetEl) return;
-      if (!payload || payload.ok !== true) {
-        targetEl.innerHTML = '<div class="muted">Перегляди: недоступно</div>';
+    function __renderSeenBlock(targetEl, payload, meId, eventId) {
+      if (!targetEl) {
         return;
       }
 
@@ -442,6 +440,17 @@
 
       var html = '';
       html += '<div><strong>Переглянули:</strong></div>';
+
+      var meInSeen = false;
+      try {
+        var mid = parseInt(meId || 0, 10) || 0;
+        if (mid > 0) {
+          for (var si = 0; si < seen.length; si++) {
+            var sIt = seen[si] || {};
+            if (parseInt(sIt.user_id || 0, 10) === mid) { meInSeen = true; break; }
+          }
+        }
+      } catch (_) { }
 
       if (seen.length === 0) {
         html += '<div class="muted">Поки ніхто не переглянув</div>';
@@ -456,6 +465,13 @@
         html += '</div>';
       }
 
+      // Mark "viewed" action (only if current user is not yet in "seen")
+      if (!meInSeen && (parseInt(meId || 0, 10) > 0)) {
+        html += '<div style="margin-top:10px;">' +
+                '<button type="button" id="infoMarkViewedBtn" class="btn btn--green">Переглянуто</button>' +
+                '</div>';
+      }
+
       if (unseen.length > 0) {
         html += '<div style="margin-top:10px;"><strong>Не переглянули:</strong></div>';
         html += '<div class="info-seen-list">';
@@ -468,6 +484,31 @@
       }
 
       targetEl.innerHTML = html;
+
+      // Bind click after render
+      var btn = $id('infoMarkViewedBtn');
+      if (btn) {
+        btn.addEventListener('click', function () {
+          try {
+            btn.disabled = true;
+            btn.textContent = '...';
+          } catch (_) { }
+
+          try {
+            fetch('/api/notify/viewed', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+              credentials: 'same-origin',
+              body: JSON.stringify({ event_id: String(eventId || '') })
+            })
+              .then(function (r) { return r.json(); })
+              .then(function () { __loadSeenByEvent(eventId); })
+              .catch(function () { __loadSeenByEvent(eventId); });
+          } catch (_) {
+            __loadSeenByEvent(eventId);
+          }
+        });
+      }
     }
 
     function __loadSeenByEvent(eventId) {
@@ -483,7 +524,27 @@
           credentials: 'same-origin'
         })
           .then(function (r) { return r.json(); })
-          .then(function (j) { __renderSeenBlock(host, j); })
+          .then(function (j) {
+            // resolve current user id for "Переглянуто" button
+            var meIdPromise = null;
+            try {
+              if (global.API && global.API.Users && typeof global.API.Users.me === 'function') {
+                meIdPromise = global.API.Users.me()
+                  .then(function (me) {
+                    var id = 0;
+                    try { id = parseInt((me && (me.id || me.user_id)) || 0, 10) || 0; } catch (_) { id = 0; }
+                    return id;
+                  })
+                  .catch(function () { return 0; });
+              }
+            } catch (_) { meIdPromise = null; }
+
+            if (!meIdPromise) meIdPromise = Promise.resolve(0);
+
+            return meIdPromise.then(function (meId) {
+              __renderSeenBlock(host, j, meId, eventId);
+            });
+          })
           .catch(function () { host.innerHTML = '<div class="muted">Перегляди: помилка завантаження</div>'; });
       } catch (_) {
         host.innerHTML = '<div class="muted">Перегляди: недоступно</div>';

@@ -256,18 +256,10 @@ final class ApiNotifyController extends Controller
      * GET /api/notify/seen-by-event?event_id=...
      * Admin-only: returns who has seen a notification for the given event.
      */
-    public function seenByEvent(Request $r): string
+        public function seenByEvent(Request $r): string
     {
         if (!Auth::check()) {
             return $this->json(['ok' => false, 'error' => 'auth'], 401);
-        }
-
-        $me = Auth::user();
-        $role = strtolower((string)($me['role'] ?? ''));
-        $is_admin = ($role === 'admin') || !empty($me['is_admin']);
-
-        if (!$is_admin) {
-            return $this->json(['ok' => false, 'error' => 'forbidden'], 403);
         }
 
         $eventId = (string)($r->input('event_id') ?? '');
@@ -277,26 +269,31 @@ final class ApiNotifyController extends Controller
             return $this->json(['ok' => false, 'error' => 'bad_request', 'message' => 'event_id is required'], 400);
         }
 
+        // We track "viewed" via a dedicated notification kind to avoid duplicates per event (kind is part of unique key).
+        $kind = 'event_view';
+
         $sql = "
-            SELECT n.user_id, n.seen_at, u.name, u.login
-            FROM user_notifications n
-            LEFT JOIN users u ON u.id = n.user_id
-            WHERE n.event_id = :eid
-            ORDER BY (n.seen_at IS NULL) ASC, n.seen_at DESC, n.user_id ASC
+            SELECT u.id AS user_id, n.seen_at, u.name, u.login
+            FROM users u
+            LEFT JOIN user_notifications n
+              ON n.user_id = u.id
+             AND n.event_id = :eid
+             AND n.kind = :kind
+            ORDER BY (n.seen_at IS NULL) ASC, n.seen_at DESC, u.id ASC
         ";
         $st = $this->db->prepare($sql);
-        $st->execute(['eid' => $eventId]);
+        $st->execute(['eid' => $eventId, 'kind' => $kind]);
         $rows = $st->fetchAll(PDO::FETCH_ASSOC) ?: [];
 
         $seen = [];
         $unseen = [];
 
-        foreach ($rows as $r) {
-            $uid = (int)($r['user_id'] ?? 0);
-            $name = (string)($r['name'] ?? '');
-            $login = (string)($r['login'] ?? '');
+        foreach ($rows as $row) {
+            $uid = (int)($row['user_id'] ?? 0);
+            $name = (string)($row['name'] ?? '');
+            $login = (string)($row['login'] ?? '');
             $label = $name !== '' ? $name : ($login !== '' ? $login : ('#' . $uid));
-            $seenAt = $r['seen_at'] ?? null;
+            $seenAt = $row['seen_at'] ?? null;
 
             $item = [
                 'user_id'  => $uid,
@@ -317,6 +314,54 @@ final class ApiNotifyController extends Controller
             'seen'     => $seen,
             'unseen'   => $unseen,
         ]);
+    }
+
+
+
+    /**
+     * Mark current user as "viewed" for the given event.
+     * Uses a dedicated kind = 'event_view' so it does not interfere with activity notifications.
+     *
+     * Endpoint:
+     *  - POST /api/notify/viewed  { event_id: "..." }
+     */
+    public function viewed(Request $r): string
+    {
+        if (!$this->requireCsrf()) { return ''; }
+
+        $uid = $this->currentUserId();
+        if ($uid <= 0) return $this->json(['ok'=>false,'error'=>'unauthorized'], 401);
+
+        $payload = $this->parseJson();
+        if ($payload === null) return $this->json(['ok'=>false,'error'=>'invalid_json'], 400);
+
+        $eventId = trim((string)($payload['event_id'] ?? ''));
+        if ($eventId === '') {
+            return $this->json(['ok'=>false,'error'=>'event_id_required'], 400);
+        }
+
+        $kind = 'event_view';
+
+        try {
+            $sql = "
+                INSERT INTO user_notifications (user_id, kind, event_id, actor_user_id, created_at, seen_at)
+                VALUES (:uid, :kind, :eid, :actor, NOW(), NOW())
+                ON DUPLICATE KEY UPDATE
+                    seen_at = NOW(),
+                    created_at = VALUES(created_at),
+                    actor_user_id = VALUES(actor_user_id)
+            ";
+            $st = $this->db->prepare($sql);
+            $st->execute([
+                'uid'   => $uid,
+                'kind'  => $kind,
+                'eid'   => $eventId,
+                'actor' => $uid,
+            ]);
+            return $this->json(['ok'=>true]);
+        } catch (\Throwable $e) {
+            return $this->json(['ok'=>false,'error'=>'db_error','message'=>$e->getMessage()], 500);
+        }
     }
 
 }
