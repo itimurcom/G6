@@ -65,7 +65,64 @@
 }
 
 #infoContent .info-seen-block {
-  padding-top: 12px;
+  padding-top: 6px;
+}
+
+/* Seen block header: title + "mark viewed" icon button (same style as Activities) */
+#infoContent .info-seen-head {
+  --info-icon-color: rgba(255,255,255,.92);
+  --info-icon-color-light: rgba(0,0,0,.55);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+html.light #infoContent .info-seen-head,
+body.light #infoContent .info-seen-head,
+.theme-light #infoContent .info-seen-head,
+:root[data-theme="light"] #infoContent .info-seen-head,
+[data-theme="light"] #infoContent .info-seen-head {
+  --info-icon-color: var(--info-icon-color-light);
+}
+
+@media (prefers-color-scheme: light) {
+  :root:not(.theme-dark):not([data-theme="dark"]) #infoContent .info-seen-head {
+    --info-icon-color: var(--info-icon-color-light);
+  }
+}
+
+#infoContent .info-seen-head .notif-iconbtn {
+  border: 1px solid var(--border);
+  background: color-mix(in oklab, var(--bg) 20%, transparent);
+  color: var(--info-icon-color);
+  border-radius: 12px;
+  width: 38px;
+  height: 34px;
+  padding: 0;
+  display: inline-grid;
+  place-items: center;
+  cursor: pointer;
+}
+
+#infoContent .info-seen-head .notif-iconbtn svg {
+  width: 22px;
+  height: 22px;
+  display: block;
+}
+
+#infoContent .info-seen-head .notif-iconbtn:hover {
+  filter: brightness(1.06);
+}
+
+#infoContent .info-seen-head .notif-iconbtn:active {
+  filter: brightness(.96);
+}
+
+#infoContent .info-seen-head .notif-iconbtn:disabled {
+  opacity: .65;
+  cursor: default;
 }
 
 #infoContent .info-seen-block .muted {

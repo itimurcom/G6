@@ -439,7 +439,7 @@
       var unseen = Array.isArray(payload.unseen) ? payload.unseen : [];
 
       var html = '';
-      html += '<div><strong>Переглянули:</strong></div>';
+
 
       var meInSeen = false;
       try {
@@ -452,6 +452,23 @@
         }
       } catch (_) { }
 
+      var canMarkViewed = (!meInSeen && (parseInt(meId || 0, 10) > 0));
+
+      html += '<div class="info-seen-head">'
+            + '<strong>Переглянули:</strong>'
+            + (canMarkViewed
+                ? (
+                  '<button type="button" id="infoMarkViewedBtn" class="notif-iconbtn notif-iconbtn--sm info-markviewed"'
+                  + ' title="Переглянуто" aria-label="Позначити як переглянуте">'
+                  + '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'
+                  + '<path d="M20 6L9 17l-5-5"></path>'
+                  + '</svg>'
+                  + '</button>'
+                )
+                : ''
+              )
+            + '</div>';
+
       if (seen.length === 0) {
         html += '<div class="muted">Поки ніхто не переглянув</div>';
       } else {
@@ -463,13 +480,6 @@
           html += '<span class="info-seen-chip"><span>' + label + '</span>' + (t ? ('<time>' + t + '</time>') : '') + '</span>';
         }
         html += '</div>';
-      }
-
-      // Mark "viewed" action (only if current user is not yet in "seen")
-      if (!meInSeen && (parseInt(meId || 0, 10) > 0)) {
-        html += '<div style="margin-top:10px;">' +
-                '<button type="button" id="infoMarkViewedBtn" class="btn btn--green">Переглянуто</button>' +
-                '</div>';
       }
 
       if (unseen.length > 0) {
@@ -491,7 +501,7 @@
         btn.addEventListener('click', function () {
           try {
             btn.disabled = true;
-            btn.textContent = '...';
+            btn.setAttribute('aria-busy', 'true');
           } catch (_) { }
 
           try {
