@@ -124,7 +124,7 @@
       <?php } endforeach; ?>
   <?php endif; ?>
   -->
-<? console_log($_SESSION, '$_SESSION'); ?>
+<?php if (defined('APP_DEBUG') && APP_DEBUG) { console_log($_SESSION, '$_SESSION'); } ?>
 <script src="/assets/js/services/api.users.js?v=1"></script>
 </body>
 </html>
