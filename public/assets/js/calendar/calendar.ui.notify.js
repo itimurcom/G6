@@ -365,6 +365,7 @@ var Data = (global.CalendarApp && global.CalendarApp.data) || null;
     }
 
     if (kind === 'event_title_changed') return 'Змінено назву події.';
+    if (kind === 'event_desc_changed' || kind === 'event_description_changed') return 'Змінено опис події.';
     if (kind === 'event_owner_changed') return 'Змінено виконавця.';
 
     if (kind === 'event_docs_changed') {
