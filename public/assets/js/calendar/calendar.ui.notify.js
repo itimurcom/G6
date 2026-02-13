@@ -316,11 +316,27 @@ var Data = (global.CalendarApp && global.CalendarApp.data) || null;
   }
 
   function messageForKind(notif, ev) {
-    var kind = String((notif && notif.kind) || 'event_new');
+    var kindRaw = String((notif && notif.kind) || 'event_new');
+    var kind = (kindRaw.split('@')[0] || kindRaw);
 
     if (kind === 'event_new') return 'Додано нову подію.';
     if (kind === 'event_deleted') return 'Подію видалено.';
     if (kind === 'event_date_changed') return 'Змінено дату події.';
+
+    if (kind === 'event_time_changed') {
+      var pt = parsePayloadMaybe(notif && notif.payload) || null;
+      try {
+        var ft = pt ? String(pt.from_time || '') : '';
+        var tt = pt ? String(pt.to_time || '') : '';
+        if (ft.trim() && tt.trim()) return 'Змінено час: ' + ft + ' → ' + tt + '.';
+        if (!ft.trim() && tt.trim()) return 'Додано час: ' + tt + '.';
+        if (ft.trim() && !tt.trim()) return 'Прибрано час (' + ft + ').';
+      } catch (_) { }
+      return 'Змінено час події.';
+    }
+
+    if (kind === 'event_closed') return 'Подію закрито.';
+    if (kind === 'event_reopened') return 'Подію відкрито знову.';
 
     if (kind === 'event_done_changed') {
       var p = parsePayloadMaybe(notif && notif.payload) || null;
@@ -625,7 +641,9 @@ var Data = (global.CalendarApp && global.CalendarApp.data) || null;
     var eid = extractEventId(notif, ev);
     if (!eid) return false;
 
-    var kind = String((notif && notif.kind) || 'event_new');
+    var kindRaw = String((notif && notif.kind) || 'event_new');
+    var kind = kindRaw;
+    var baseKind = (kindRaw.split('@')[0] || kindRaw);
     var key = makeKey(notif);
 
     // Replace placeholder (event_id|kind) with real notification.id to avoid duplicates
@@ -666,7 +684,7 @@ var Data = (global.CalendarApp && global.CalendarApp.data) || null;
     // Title becomes a link (works on all pages):
     // - On Calendar page: opens modal directly
     // - On other pages: navigates to /calendar and opens after load
-    var canOpenTitle = (kind !== 'event_deleted') && !!eid;
+    var canOpenTitle = (baseKind !== 'event_deleted') && !!eid;
     if (canOpenTitle) {
       titleText = document.createElement('a');
       titleText.className = 'notif-item-title-link notif-link';
@@ -724,13 +742,13 @@ ttl.appendChild(subtitle);
     body.className = 'notif-body';
     body.textContent = messageForKind(notif, ev);
 
-    if (kind === 'event_deleted') {
+    if (baseKind === 'event_deleted') {
       try { body.style.color = 'var(--danger, #ff4d4d)'; } catch (_) { }
     }
 
         // Visible "Відкрити" link (buttons block is temporarily hidden by CSS)
     var links = null;
-    if (kind !== 'event_deleted') {
+    if (baseKind !== 'event_deleted') {
       links = document.createElement('div');
       links.className = 'notif-links';
 
@@ -748,7 +766,7 @@ ttl.appendChild(subtitle);
 
     // Optional extra line for date change
     try {
-      if (kind === 'event_date_changed') {
+      if (baseKind === 'event_date_changed') {
         var p = parsePayloadMaybe(notif && notif.payload) || null;
         var b = p && p.before ? p.before : null;
         var a = p && p.after ? p.after : null;
@@ -779,7 +797,7 @@ ttl.appendChild(subtitle);
     });
 
     // Deleted events can't be opened (no "Відкрити")
-    if (kind !== 'event_deleted') {
+    if (baseKind !== 'event_deleted') {
       var openBtn = document.createElement('a');
       openBtn.className = 'notif-link';
       openBtn.href = '#';

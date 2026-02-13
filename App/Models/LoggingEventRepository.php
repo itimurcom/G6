@@ -119,6 +119,30 @@ final class LoggingEventRepository
         $kind    = (string)$kind;
         if ($eventId === '' || $kind === '') return;
 
+        // Allow multiple activities for the same event/kind (table has UNIQUE user/kind/event)
+        // We add a short time-suffix to kind for repeatable activity kinds so each change becomes a new row.
+        $repeatableKinds = [
+            'event_time_changed',
+            'event_closed',
+            'event_reopened',
+            'event_done_changed',
+            'event_urgent_changed',
+            'event_title_changed',
+            'event_docs_changed',
+            'event_owner_changed',
+            'event_date_changed',
+        ];
+        if (in_array($kind, $repeatableKinds, true)) {
+            $ts = date('His');
+            $ms = (int)round((microtime(true) - floor(microtime(true))) * 1000);
+            $suffix = $ts . sprintf('%03d', $ms); // HHMMSSmmm
+            $kind = $kind . '@' . $suffix;
+            if (strlen($kind) > 32) {
+                $kind = substr($kind, 0, 32);
+            }
+        }
+
+
         $actorId = (int)(Auth::id() ?? 0);
 
         try {
@@ -409,6 +433,29 @@ final class LoggingEventRepository
                         'from_date' => $beforeDate,
                         'to_date'   => $afterDate,
                         'event'     => $this->snapshotEvent($after, $id),
+                    ]);
+                }
+
+                // Activity notifications: time changed (important for Today drag&drop)
+                $beforeTime = is_array($before) ? (string)($before['time'] ?? ($before['start_time'] ?? '')) : '';
+                $afterTime  = is_array($after)  ? (string)($after['time']  ?? ($after['start_time']  ?? '')) : '';
+                if (trim($beforeTime) !== trim($afterTime)) {
+                    $this->notifyFanout('event_time_changed', $id, [
+                        'from_time' => $beforeTime,
+                        'to_time'   => $afterTime,
+                        'event'     => $this->snapshotEvent($after, $id),
+                    ]);
+                }
+
+                // Activity notifications: closed / reopened (Today checkmark uses /api/events/close)
+                $beforeClosed = is_array($before) ? !empty($before['close_time']) : false;
+                $afterClosed  = is_array($after)  ? !empty($after['close_time'])  : false;
+                if ($beforeClosed !== $afterClosed) {
+                    $this->notifyFanout($afterClosed ? 'event_closed' : 'event_reopened', $id, [
+                        'from_close_time' => is_array($before) ? (string)($before['close_time'] ?? '') : '',
+                        'to_close_time'   => is_array($after)  ? (string)($after['close_time']  ?? '') : '',
+                        'close_user_id'   => is_array($after)  ? (string)($after['close_user_id'] ?? '') : '',
+                        'event'           => $this->snapshotEvent($after, $id),
                     ]);
                 }
 
