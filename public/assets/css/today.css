@@ -1,0 +1,35 @@
+/* today.css — standalone /today view (Today panel only)
+   Keeps the Today panel styling from calendar.css, but frames it as a window.
+*/
+
+body {
+  /* Light overlay-like background for illustration */
+  min-height: 100vh;
+}
+
+.today-only-shell {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 18px;
+}
+
+/* Ensure the panel looks like a popup/window and never stretches full width */
+.today-panel.today-only {
+  width: min(520px, 96vw);
+}
+
+/* Provide room for borders/shadows and keep it crisp */
+.today-panel.today-only .today-panel-inner {
+  height: min(860px, 92vh);
+  overflow: auto;
+}
+
+/* Hide any global floating UI elements injected by app.js on this page */
+#themeToggle,
+#sidebarToggle,
+.ui-fab,
+#notifStack {
+  display: none !important;
+}

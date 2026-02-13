@@ -12,6 +12,17 @@
   var weekdayShortFmt = new Intl.DateTimeFormat(locale, { weekday: 'short' });
   var currentType = 'all';
 
+  // Page mode: /today shows only the Today panel (no calendar grid/month navigation)
+  var __TODAY_ONLY = (function () {
+    try {
+      var p = (global.location && global.location.pathname) ? String(global.location.pathname) : '';
+      p = p.replace(/\/+$/, '') || '/';
+      return (p === '/today');
+    } catch (_) {
+      return false;
+    }
+  })();
+
   // Current user (for marking "my" events in the calendar grid)
   var __ME_ID = 0;
   var __ME_FETCH_STARTED = false;
@@ -354,6 +365,7 @@
 
   /* ===== Today panel: collapse/expand with localStorage ===== */
   (function initTodayPanelCollapse() {
+    if (__TODAY_ONLY) return;
     var layout = document.getElementById('calendarLayout') || document.querySelector('.layout');
     var panel = document.getElementById('todayPanelInner') || document.getElementById('todayPanel');
     var btn = document.getElementById('todayPanelToggle');
@@ -536,6 +548,7 @@
 
   /* ===== Навігація місяців ===== */
   function changeMonth(delta) {
+    if (__TODAY_ONLY) return;
     var m = state.month + delta, y = state.year;
     if (m < 0) { m += 12; y--; } if (m > 11) { m -= 12; y++; }
     state.month = m; state.year = y;
@@ -554,11 +567,13 @@
   if (btnNext) btnNext.addEventListener('click', function () { changeMonth(1); });
   if (btnToday) btnToday.addEventListener('click', function () { state.year = today.getFullYear(); state.month = today.getMonth(); renderCalendar(); });
 
-  window.addEventListener('keydown', function (e) {
-    if (['INPUT', 'SELECT', 'TEXTAREA'].includes(e.target && e.target.tagName)) return;
-    if (e.key === 'ArrowLeft') changeMonth(-1);
-    if (e.key === 'ArrowRight') changeMonth(1);
-  });
+  if (!__TODAY_ONLY) {
+    window.addEventListener('keydown', function (e) {
+      if (['INPUT', 'SELECT', 'TEXTAREA'].includes(e.target && e.target.tagName)) return;
+      if (e.key === 'ArrowLeft') changeMonth(-1);
+      if (e.key === 'ArrowRight') changeMonth(1);
+    });
+  }
 
   // window.addEventListener('keydown',function(e){ if(e.key==='Escape'){ try{ closeOverlay(); }catch(_){ } try{ closeInfo(); }catch(_){ } } });
   // Do NOT early-return on inputs for Escape
@@ -1124,8 +1139,13 @@
 
     hourHoverCount = {}; quarterHas = {};
 
-    var todayISO = Ev.toISODate(today);
-    var nextISO = Ev.toISODate(new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1));
+    // Re-evaluate "today" on each render (keeps /today correct after midnight)
+    var now = new Date();
+    today = now;
+    try { if (todayPanelDate) todayPanelDate.textContent = longHeaderFmt.format(now).replace('.', ''); } catch (_) { }
+
+    var todayISO = Ev.toISODate(now);
+    var nextISO = Ev.toISODate(new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1));
 
     var matcher = Ev.buildMatcher(currentType, filterText ? filterText.value : '');
     var allToday = getEventsForDayExpanded(todayISO)
@@ -1317,6 +1337,10 @@
   }
 
   function calendar_init() {
+    if (__TODAY_ONLY) {
+      return today_only_init();
+    }
+
     // Рендер каркасу
     renderCalendar();
     // Завантаження й первинний рендер
@@ -1324,6 +1348,18 @@
       Data._setCache(Data.ensureStoreShape(data));
       migrateEnsureIds();
       withStableScroll(renderAllFn);
+    });
+  }
+
+  // /today — only Today panel (data load + timeline render)
+  function today_only_init() {
+    return Data.serverLoadStore().then(function (data) {
+      Data._setCache(Data.ensureStoreShape(data));
+      migrateEnsureIds();
+      try {
+        if (typeof withStableScroll === 'function') withStableScroll(renderAllFn);
+        else renderAllFn();
+      } catch (_) { }
     });
   }
 
