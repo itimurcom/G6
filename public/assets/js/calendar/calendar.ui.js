@@ -1336,6 +1336,58 @@
     if (changed) Data.writeStore(s);
   }
 
+  function openTodayPopupWindow() {
+    try {
+      var url = '/today/';
+
+      // Dimensions: ~35% of screen width, up to 560px; height up to 900px
+      var sw = (window.screen && window.screen.availWidth) ? window.screen.availWidth : 1200;
+      var sh = (window.screen && window.screen.availHeight) ? window.screen.availHeight : 800;
+
+      var w = Math.max(360, Math.min(560, Math.floor(sw * 0.36)));
+      var h = Math.max(520, Math.min(900, Math.floor(sh * 0.92)));
+
+      var left = Math.max(0, Math.floor((sw - w) / 2));
+      var top  = Math.max(0, Math.floor((sh - h) / 2));
+
+      var features = [
+        'popup=yes',
+        'toolbar=no',
+        'location=no',
+        'directories=no',
+        'status=no',
+        'menubar=no',
+        'scrollbars=yes',
+        'resizable=yes',
+        'width=' + w,
+        'height=' + h,
+        'left=' + left,
+        'top=' + top
+      ].join(',');
+
+      var win = window.open(url, 'calendarToday', features);
+
+      if (!win) {
+        alert('Браузер заблокував спливаюче вікно. Дозвольте pop-up для цього сайту.');
+        return;
+      }
+
+      try { win.opener = null; } catch (_) { }
+      try { win.focus(); } catch (_) { }
+    } catch (_) { }
+  }
+
+  function wireTodayPopupOpenButton() {
+    var btn = document.getElementById('btnOpenTodayWindow');
+    if (!btn || btn.__wired) return;
+    btn.__wired = true;
+
+    btn.addEventListener('click', function (e) {
+      try { e.preventDefault(); } catch (_) { }
+      openTodayPopupWindow();
+    });
+  }
+
   function calendar_init() {
     if (__TODAY_ONLY) {
       return today_only_init();
@@ -1343,6 +1395,7 @@
 
     // Рендер каркасу
     renderCalendar();
+    wireTodayPopupOpenButton();
     // Завантаження й первинний рендер
     Data.serverLoadStore().then(function (data) {
       Data._setCache(Data.ensureStoreShape(data));

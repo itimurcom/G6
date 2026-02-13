@@ -476,6 +476,29 @@ select,
   align-items: center;
 }
 
+.today-panel header .today-header-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.today-panel header .today-header-right .subtle {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.today-panel header .today-window-btn {
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  box-shadow: 0 8px 18px rgba(0, 0, 0, .10);
+}
+
+.today-panel header .today-window-btn svg {
+  width: 18px;
+  height: 18px;
+}
+
 .today-title {
   color: var(--today);
   font-weight: 900;
