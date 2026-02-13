@@ -128,6 +128,7 @@ final class LoggingEventRepository
             'event_done_changed',
             'event_urgent_changed',
             'event_title_changed',
+            'event_desc_changed',
             'event_docs_changed',
             'event_owner_changed',
             'event_date_changed',
@@ -405,6 +406,18 @@ final class LoggingEventRepository
 
         $ok = !isset($res['error']);
 
+        // IMPORTANT: for audit/journal diffs we must store the persisted "after" snapshot,
+        // not the raw incoming payload (which may omit fields like start_date/description).
+        // This prevents false positives (e.g. "Дата" change when only "Опис" was edited).
+        $after = null;
+        if ($ok) {
+            try {
+                $after = $this->inner->get($id);
+            } catch (\Throwable $__) {
+                $after = null;
+            }
+        }
+
         $this->logger->log(
             'calendar.event.update',
             $ok ? 'success' : 'error',
@@ -415,16 +428,21 @@ final class LoggingEventRepository
                     'entity_id'     => $id,
                     'date'          => $res['date'] ?? $date,
                     'event_before'  => $before,
-                    'event_after'   => $event,
+                    'event_after'   => $after ?? $event,
+                    // Keep raw incoming payload for debugging (does not affect UI).
+                    'event_payload' => $event,
                     'update_result' => $res,
                 ]
             )
         );
 
-        // Activity notifications (persistent, cross-browser)
+
+// Activity notifications (persistent, cross-browser)
         if ($ok) {
             try {
-                $after = $this->inner->get($id);
+                if (!is_array($after)) {
+                    $after = $this->inner->get($id);
+                }
 
                 $beforeDate = is_array($before) ? (string)($before['start_date'] ?? ($before['_date'] ?? '')) : '';
                 $afterDate  = is_array($after)  ? (string)($after['start_date']  ?? ($after['_date']  ?? '')) : (string)($res['date'] ?? $date);
@@ -479,6 +497,15 @@ final class LoggingEventRepository
                         'event'      => $this->snapshotEvent($after, $id),
                     ]);
                 }
+
+
+$beforeDesc = is_array($before) ? (string)($before['description'] ?? '') : '';
+$afterDesc  = is_array($after)  ? (string)($after['description']  ?? '') : '';
+if (trim($beforeDesc) !== trim($afterDesc)) {
+    $this->notifyFanout('event_desc_changed', $id, [
+        'event' => $this->snapshotEvent($after, $id),
+    ]);
+}
 
                 $beforeIn  = is_array($before) ? (string)($before['incoming_no'] ?? '') : '';
                 $afterIn   = is_array($after)  ? (string)($after['incoming_no']  ?? '') : '';

@@ -386,6 +386,12 @@
         if (action === 'calendar.event.delete') return 'Видалення події';
         if (action === 'calendar.event.done') return 'Зміна статусу виконання';
         if (action === 'calendar.event.urgent') return 'Зміна терміновості';
+        if (action === 'auth.register') return 'Реєстрація користувача';
+        if (action === 'cabinet.change_password') return 'Зміна власного пароля';
+        if (action === 'cabinet.profile_update') return 'Оновлення профілю';
+        if (action === 'user.create') return 'Створення користувача (Адмін)';
+        if (action === 'user.update') return 'Редагування користувача (Адмін)';
+        if (action === 'user.password') return 'Зміна пароля користувача (Адмін)';
         return action || 'Подія';
     }
 
@@ -397,6 +403,12 @@
         if (it.action === 'calendar.event.delete') return 't-delete';
         if (it.action === 'calendar.event.done') return 't-update';
         if (it.action === 'calendar.event.urgent') return 't-update';
+        if (it.action === 'auth.register') return 't-create';
+        if (it.action === 'cabinet.change_password') return 't-update';
+        if (it.action === 'cabinet.profile_update') return 't-update';
+        if (it.action === 'user.create') return 't-create';
+        if (it.action === 'user.update') return 't-update';
+        if (it.action === 'user.password') return 't-update';
         return 't-other';
     }
 
@@ -520,6 +532,7 @@
         if (!before || !after) return changes;
         var fields = [
             ['title', 'Назва'],
+            ['description', 'Опис'],
             ['time', 'Час'],
             ['start_date', 'Дата початку'],
             ['end_date', 'Дата кінця'],
