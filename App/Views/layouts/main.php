@@ -6,6 +6,14 @@
   <title><?= isset($title) ? htmlspecialchars($title) : 'Планувальник' ?></title>
 
   <!-- Base UI styles -->
+  <script>
+    (function () {
+      try {
+        var v = localStorage.getItem('ui-font-scale');
+        if (v) document.documentElement.style.setProperty('--font-scale', v);
+      } catch (e) { /* no-op */ }
+    })();
+  </script>
   <link rel="stylesheet" href="/assets/css/style.css">
   <?php
     // compute path and calendar flag (preserve your logic)

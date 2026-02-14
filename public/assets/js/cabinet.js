@@ -75,3 +75,40 @@
         apply(next);
     });
 })();
+
+
+
+// Cabinet Settings: Font scale (ui-font-scale) — ADD ONLY
+(function () {
+    var KEY = 'ui-font-scale';
+    var buttons = document.querySelectorAll('[data-font-scale]');
+    if (!buttons || !buttons.length) return;
+
+    function read() {
+        try { return localStorage.getItem(KEY) || '1'; }
+        catch (e) { return '1'; }
+    }
+    function write(v) {
+        try { localStorage.setItem(KEY, v); } catch (e) { /* no-op */ }
+    }
+    function apply(v) {
+        var allowed = ['0.75','1','1.25','1.5'];
+        var val = (allowed.indexOf(String(v)) !== -1) ? String(v) : '1';
+        document.documentElement.style.setProperty('--font-scale', val);
+        buttons.forEach(function (b) {
+            b.classList.toggle('is-active', String(b.dataset.fontScale) === val);
+        });
+    }
+
+    // init
+    apply(read());
+
+    // click
+    buttons.forEach(function (b) {
+        b.addEventListener('click', function () {
+            var v = String(b.dataset.fontScale || '1');
+            write(v);
+            apply(v);
+        });
+    });
+})();

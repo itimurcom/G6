@@ -1,13 +1,25 @@
 :root {
   --font-size: var(--fs-sm);
 /* Typography scale (single source of truth) */
---fs-xs: 11px;          /* tiny meta / owner */
---fs-sm: 12px;          /* default small text */
---fs-md: 13px;          /* base UI text */
---fs-ui: 14px;          /* inputs/buttons in some views */
---fs-lg: 18px;          /* large icon/text */
---fs-xl: 22px;          /* modal titles */
---fs-2xl: 24px;         /* big icon buttons */
+--font-scale: 1;        /* 0.75 / 1 / 1.25 / 1.5 (set via Cabinet > Налаштування) */
+
+/* Raw (base) sizes */
+--fs-xs-raw: 11px;      /* tiny meta / owner */
+--fs-sm-raw: 12px;      /* default small text */
+--fs-md-raw: 13px;      /* base UI text */
+--fs-ui-raw: 14px;      /* inputs/buttons in some views */
+--fs-lg-raw: 18px;      /* large icon/text */
+--fs-xl-raw: 22px;
+--fs-2xl-raw: 24px;     /* big icon buttons */
+
+/* Scaled sizes (used across the project) */
+--fs-xs: calc(var(--fs-xs-raw) * var(--font-scale));
+--fs-sm: calc(var(--fs-sm-raw) * var(--font-scale));
+--fs-md: calc(var(--fs-md-raw) * var(--font-scale));
+--fs-ui: calc(var(--fs-ui-raw) * var(--font-scale));
+--fs-lg: calc(var(--fs-lg-raw) * var(--font-scale));
+--fs-xl: calc(var(--fs-xl-raw) * var(--font-scale));
+--fs-2xl: calc(var(--fs-2xl-raw) * var(--font-scale));
 --fs-icon-emph: 2em;    /* emphasized icon inside modals */
 
 --fs-plus: 1.2em;       /* relative "larger" markers */
