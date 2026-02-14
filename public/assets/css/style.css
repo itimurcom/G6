@@ -38,6 +38,13 @@
   --done: #0030ff;
   --fab-size: 33px;
   --gap: 12px;
+
+  /* Scrollbars */
+  --scrollbar-size: 10px;
+  --scrollbar-track: color-mix(in oklab, var(--bg) 86%, var(--border));
+  --scrollbar-thumb: color-mix(in oklab, var(--muted) 55%, var(--border));
+  --scrollbar-thumb-hover: color-mix(in oklab, var(--muted) 70%, var(--border));
+
 }
 
 :root[data-theme="light"] {
@@ -48,6 +55,11 @@
   --border: #e5e7eb;
   --today: #f59e0b;
   --event-bg: #f8fafc;
+
+
+  --scrollbar-track: color-mix(in oklab, var(--bg) 92%, var(--border));
+  --scrollbar-thumb: color-mix(in oklab, var(--muted) 45%, var(--border));
+  --scrollbar-thumb-hover: color-mix(in oklab, var(--muted) 60%, var(--border));
 }
 
 * {
@@ -66,6 +78,32 @@ body {
   color: var(--fg);
   font: 500 var(--font-size)/1.5 system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Helvetica, Arial;
 }
+
+/* Scrollbars (global) */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+}
+
+*::-webkit-scrollbar {
+  width: var(--scrollbar-size);
+  height: var(--scrollbar-size);
+}
+
+*::-webkit-scrollbar-track {
+  background: var(--scrollbar-track);
+}
+
+*::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb);
+  border-radius: 999px;
+  border: 2px solid var(--scrollbar-track);
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: var(--scrollbar-thumb-hover);
+}
+
 
 .page {
   padding: 0 0 var(--gap);
