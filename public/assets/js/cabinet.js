@@ -36,3 +36,42 @@
 
     setTab(initialTab);
 })();
+
+
+
+// Cabinet Settings: Theme toggle (ui-theme) — ADD ONLY
+(function () {
+    var KEY = 'ui-theme';
+    var el = document.getElementById('uiThemeToggle');
+    if (!el) return;
+
+    function prefersDark() {
+        try { return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches; }
+        catch (e) { return false; }
+    }
+    function read() {
+        try { return localStorage.getItem(KEY) || (prefersDark() ? 'dark' : 'light'); }
+        catch (e) { return (prefersDark() ? 'dark' : 'light'); }
+    }
+    function write(v) {
+        try { localStorage.setItem(KEY, v); } catch (e) { /* no-op */ }
+    }
+    function apply(v) {
+        var theme = (v === 'dark') ? 'dark' : 'light';
+        document.documentElement.setAttribute('data-theme', theme);
+
+        // If app.js FAB exists, it will update icon via click handler; we don't rely on internals.
+        // Keep checkbox in sync:
+        el.checked = (theme === 'dark');
+    }
+
+    // init
+    apply(read());
+
+    // user change
+    el.addEventListener('change', function () {
+        var next = el.checked ? 'dark' : 'light';
+        write(next);
+        apply(next);
+    });
+})();

@@ -93,7 +93,7 @@
 }
 
 .field label {
-  font-size: var(--fs-ui);
+  font-size: 14px;
   color: var(--cabinet-text);
 }
 
@@ -136,10 +136,112 @@
   padding: 6px 10px;
   border-radius: 8px;
   cursor: pointer;
-  font-size: var(--fs-ui);
+  font-size: 14px;
 }
 
 .cab-tab.is-active {
   background: #1f2937;
   border-color: #475569;
+}
+
+
+/* --- Cabinet: Settings UI (Theme + Font scale) --- */
+.cabinet-settings{
+  display:grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+  max-width: 720px;
+}
+
+.cab-card{
+  background: var(--cabinet-card-bg);
+  border: 1px solid var(--cabinet-border);
+  border-radius: 14px;
+  box-shadow: var(--cabinet-shadow);
+  overflow: hidden;
+}
+
+.cab-card__title{
+  padding: 12px 14px;
+  font-size: var(--fs-ui);
+  font-weight: 700;
+  border-bottom: 1px solid var(--cabinet-border);
+}
+
+.cab-card__body{
+  padding: 12px 14px;
+}
+
+.hint{
+  margin-top: 8px;
+  font-size: var(--fs-meta);
+  opacity: .78;
+}
+
+/* Switch */
+.ui-switch{
+  display:flex;
+  align-items:center;
+  gap: 10px;
+  user-select:none;
+}
+.ui-switch input{
+  position:absolute;
+  opacity:0;
+  pointer-events:none;
+}
+.ui-switch__track{
+  width: 44px;
+  height: 26px;
+  border-radius: 999px;
+  background: rgba(148,163,184,.6);
+  border: 1px solid var(--cabinet-border);
+  position: relative;
+  flex: 0 0 auto;
+  transition: background .15s ease;
+}
+.ui-switch__track:after{
+  content:'';
+  width: 20px;
+  height: 20px;
+  border-radius: 999px;
+  background: #fff;
+  position:absolute;
+  top: 2px;
+  left: 2px;
+  box-shadow: 0 2px 8px rgba(0,0,0,.18);
+  transition: transform .15s ease;
+}
+.ui-switch input:checked + .ui-switch__track{
+  background: rgba(37,99,235,.85);
+}
+.ui-switch input:checked + .ui-switch__track:after{
+  transform: translateX(18px);
+}
+.ui-switch__label{
+  font-size: var(--fs-sm);
+  font-weight: 600;
+}
+
+/* Segmented buttons */
+.ui-seg{
+  display:flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.ui-seg__btn{
+  appearance:none;
+  border: 1px solid var(--cabinet-border);
+  background: var(--cabinet-btn-bg);
+  color: var(--cabinet-btn-text);
+  border-radius: 12px;
+  padding: 8px 10px;
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  cursor:pointer;
+}
+.ui-seg__btn.is-active{
+  background: var(--cabinet-primary-bg);
+  border-color: var(--cabinet-primary-border);
+  color: var(--cabinet-primary-text);
 }

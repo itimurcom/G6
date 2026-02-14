@@ -23,6 +23,7 @@ $isOwnCabinet = ((int)($_SESSION['user_id'] ?? 0) === (int)($u['id'] ?? 0));
   <nav class="legend">
     <span class="lg is-active" data-tab="profile">Профіль</span>
     <span class="lg" data-tab="security">Безпека</span>
+    <span class="lg" data-tab="settings">Налаштування</span>
     <span class="lg" data-tab="users">Користувачі</span>
     <span class="lg" data-tab="journal">Журнал</span>
   </nav>
@@ -58,6 +59,37 @@ if ($flashError): ?>
           </tr>    
         </table>
     </section>
+    <section class="cabinet-tab" data-tab="settings" style="display:none">
+      <div class='sub-title'>Налаштування</div>
+
+      <div class="cabinet-settings">
+        <div class="cab-card">
+          <div class="cab-card__title">Тема</div>
+          <div class="cab-card__body">
+            <label class="ui-switch">
+              <input id="uiThemeToggle" type="checkbox" />
+              <span class="ui-switch__track" aria-hidden="true"></span>
+              <span class="ui-switch__label">Темна тема</span>
+            </label>
+            <div class="hint">Перемикає світлу/темну тему. Налаштування зберігається в браузері.</div>
+          </div>
+        </div>
+
+        <div class="cab-card">
+          <div class="cab-card__title">Розмір шрифта</div>
+          <div class="cab-card__body">
+            <div class="ui-seg" role="group" aria-label="Розмір шрифта">
+              <button type="button" class="ui-seg__btn" data-font-scale="0.75">75%</button>
+              <button type="button" class="ui-seg__btn" data-font-scale="1">100%</button>
+              <button type="button" class="ui-seg__btn" data-font-scale="1.25">125%</button>
+              <button type="button" class="ui-seg__btn" data-font-scale="1.5">150%</button>
+            </div>
+            <div class="hint">Застосовується до всього інтерфейсу. Налаштування зберігається в браузері.</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
 
     <section class="cabinet-tab" data-tab="security">
       <div class='sub-title'>Безпека</div>
