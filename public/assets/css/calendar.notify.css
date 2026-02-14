@@ -172,7 +172,7 @@ body.light #notifStack,
 #notifStack .notif-item-title small {
   font-weight: 700;
   color: var(--muted);
-  font-size: 12px;
+  font-size: var(--fs-sm);
 }
 
 #notifStack .notif-close {
@@ -202,7 +202,7 @@ body.light #notifStack,
   margin-top: 6px;
   color: var(--muted);
   font-weight: 700;
-  font-size: 12px;
+  font-size: var(--fs-sm);
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
@@ -219,7 +219,7 @@ body.light #notifStack,
   border-radius: 12px;
   padding: 7px 10px;
   font-weight: 900;
-  font-size: 12px;
+  font-size: var(--fs-sm);
   cursor: pointer;
 }
 
@@ -256,7 +256,7 @@ body.light #notifStack,
 #notifStack .notif-body-sub {
   color: var(--muted);
   font-weight: 800;
-  font-size: 12px;
+  font-size: var(--fs-sm);
 }
 
 @media (max-width: 520px) {

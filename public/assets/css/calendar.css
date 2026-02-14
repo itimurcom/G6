@@ -168,7 +168,7 @@
   height: 28px;
   display: inline-grid;
   place-items: center;
-  font-size: 18px;
+  font-size: var(--fs-lg);
   padding: 0;
 }
 
@@ -183,7 +183,7 @@
 .chip {
   border-radius: 999px;
   padding: 3px 10px;
-  font-size: 12px;
+  font-size: var(--fs-sm);
   cursor: pointer;
 }
 
@@ -232,7 +232,7 @@ select,
 
 .weekday {
   text-align: center;
-  font-size: 12px;
+  font-size: var(--fs-sm);
   font-weight: 800;
   text-transform: uppercase;
   color: var(--muted);
@@ -271,7 +271,7 @@ select,
   position: relative;
   top: -4px;
   left: -4px;
-  font-size: larger;
+  font-size: var(--fs-plus);
   opacity: 40%;
   pointer-events: none;
 }
@@ -300,7 +300,7 @@ select,
   background: var(--event-bg);
   border-radius: 10px;
   padding: 6px 8px;
-  font-size: 12px;
+  font-size: var(--fs-sm);
   line-height: 1.25;
   display: grid;
   grid-template-columns: 6px auto 1fr auto;
@@ -329,7 +329,7 @@ select,
 .event-owner {
   grid-column: 2 / -2;
   color: var(--muted);
-  font-size: 11px;
+  font-size: var(--fs-xs);
 }
 
 /* Reserve space for the user badge so it never overlaps text */
@@ -370,7 +370,7 @@ select,
 .event-btn {
   border: 0;
   background: transparent;
-  font-size: 24px;
+  font-size: var(--fs-2xl);
   line-height: 1;
   cursor: pointer;
   color: var(--muted);
@@ -422,7 +422,7 @@ select,
   display: flex;
   gap: 12px;
   align-items: center;
-  font-size: 12px;
+  font-size: var(--fs-sm);
   color: var(--muted);
   margin-top: 12px;
 }
@@ -527,7 +527,7 @@ select,
 
 .today-panel-toggle span {
   font-weight: 900;
-  font-size: 18px;
+  font-size: var(--fs-lg);
   line-height: 1;
   transform: translateX(1px);
 }
@@ -661,7 +661,7 @@ select,
 .time.qmin {
   font-weight: 700;
   opacity: .8;
-  font-size: 13px;
+  font-size: var(--fs-md);
 }
 
 .items {
@@ -671,7 +671,7 @@ select,
 }
 
 .item {
-  font-size: 13px;
+  font-size: var(--fs-md);
   cursor: pointer;
   position: relative;
 }
@@ -885,7 +885,7 @@ select,
 }
 
 .modal label {
-  font-size: 13px;
+  font-size: var(--fs-md);
   color: var(--muted);
   font-weight: 700;
 }
@@ -912,7 +912,7 @@ select,
 }
 
 .modal .urgent-icon {
-  font-size: 2em;
+  font-size: var(--fs-icon-emph);
   opacity: 70%;
 }
 
@@ -1089,7 +1089,7 @@ body.light .ev--multi,
 
 /* Creator meta in info modal */
 .info-meta {
-  font-size: .85em;
+  font-size: var(--fs-meta);
   opacity: .75;
   margin-top: .5rem;
 }
@@ -1204,7 +1204,7 @@ body.light .ev--multi,
 }
 
 .calendar-search-results .planning-today__owner {
-  font-size: 12px;
+  font-size: var(--fs-sm);
   opacity: .75;
 }
 
@@ -1239,7 +1239,7 @@ body.light .ev--multi,
 }
 
 #infoContent .info-title {
-  font-size: 22px;
+  font-size: var(--fs-xl);
   font-weight: 900;
   line-height: 1.15;
   margin: 6px 0 10px 0;
@@ -1285,7 +1285,7 @@ body.light .ev--multi,
 }
 
 #infoContent .info-seen-block {
-  font-size: 13px;
+  font-size: var(--fs-md);
   color: var(--fg);
 }
 
@@ -1312,5 +1312,5 @@ body.light .ev--multi,
 
 #infoContent .info-seen-chip time {
   color: var(--muted);
-  font-size: 12px;
+  font-size: var(--fs-sm);
 }

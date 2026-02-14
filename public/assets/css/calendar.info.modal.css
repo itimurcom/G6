@@ -8,7 +8,7 @@
 }
 
 #infoContent .info-title {
-  font-size: 22px;
+  font-size: var(--fs-xl);
   font-weight: 900;
   line-height: 1.2;
   margin: 0 0 12px 0;
@@ -55,7 +55,7 @@
 }
 
 #infoContent .info-item {
-  font-size: 14px;
+  font-size: var(--fs-ui);
   line-height: 1.35;
 }
 
@@ -169,13 +169,13 @@ body.light #infoContent .info-seen-head,
   border-radius: 999px;
   background: var(--event-bg);
   font-weight: 800;
-  font-size: 13px;
+  font-size: var(--fs-md);
 }
 
 #infoContent .info-seen-chip time {
   font-weight: 700;
   color: var(--muted);
-  font-size: 12px;
+  font-size: var(--fs-sm);
 }
 
 @media (max-width: 780px) {

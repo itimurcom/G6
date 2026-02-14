@@ -1,5 +1,21 @@
 :root {
-  --font-size: 12px;
+  --font-size: var(--fs-sm);
+/* Typography scale (single source of truth) */
+--fs-xs: 11px;          /* tiny meta / owner */
+--fs-sm: 12px;          /* default small text */
+--fs-md: 13px;          /* base UI text */
+--fs-ui: 14px;          /* inputs/buttons in some views */
+--fs-lg: 18px;          /* large icon/text */
+--fs-xl: 22px;          /* modal titles */
+--fs-2xl: 24px;         /* big icon buttons */
+--fs-icon-emph: 2em;    /* emphasized icon inside modals */
+
+--fs-plus: 1.2em;       /* relative "larger" markers */
+--fs-meta: .85em;       /* secondary meta blocks */
+
+--fs-title: clamp(20px, 2.6vw, 28px);
+--fs-subtitle: clamp(20px, .6vw, 200px);
+
   --bg: #0b0f16;
   --fg: #e5e7eb;
   --muted: #9ca3af;
@@ -151,13 +167,13 @@ body {
 }
 
 .title {
-  font-size: clamp(20px, 2.6vw, 28px);
+  font-size: var(--fs-title);
   font-weight: 800;
   margin-bottom: .4em;
 }
 
 .sub-title {
-  font-size: clamp(20px, .6vw, 200px);
+  font-size: var(--fs-subtitle);
   font-weight: 800;
   margin-bottom: .8em;
 }
@@ -586,7 +602,7 @@ body.sidebar-open .ui-fab.menu {
 }
 
 .sidebar-title {
-  font-size: 14px;
+  font-size: var(--fs-ui);
   font-weight: 800;
   letter-spacing: .2px;
 }

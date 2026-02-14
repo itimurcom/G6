@@ -77,7 +77,7 @@
 }
 
 .planning-today__owner {
-  font-size: 12px;
+  font-size: var(--fs-sm);
   opacity: .75;
 }
 

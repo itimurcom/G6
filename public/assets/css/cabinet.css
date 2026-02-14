@@ -93,7 +93,7 @@
 }
 
 .field label {
-  font-size: 14px;
+  font-size: var(--fs-ui);
   color: var(--cabinet-text);
 }
 
@@ -136,7 +136,7 @@
   padding: 6px 10px;
   border-radius: 8px;
   cursor: pointer;
-  font-size: 14px;
+  font-size: var(--fs-ui);
 }
 
 .cab-tab.is-active {
