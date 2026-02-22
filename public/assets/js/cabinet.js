@@ -112,3 +112,19 @@
         });
     });
 })();
+
+// P15.7: cabinet toast payload (password change success)
+(function () {
+    var el = document.getElementById('cabinetToastPayload');
+    if (!el) return;
+
+    var kind = (el.getAttribute('data-kind') || 'info').toLowerCase();
+    var msg = el.getAttribute('data-message') || '';
+    if (!msg) return;
+
+    if (window.UiToast && typeof window.UiToast.show === 'function') {
+        var ms = (kind === 'success') ? 1200 : 1800;
+        window.UiToast.show(msg, kind, ms);
+    }
+})();
+

@@ -35,18 +35,37 @@ $isOwnCabinet = ((int)($_SESSION['user_id'] ?? 0) === (int)($u['id'] ?? 0));
 
 <div tabs="cabinet-wrap">
 
+
 <?php
 $flashError   = \App\Core\Session::flash('error');
 $flashSuccess = \App\Core\Session::flash('success');
-if ($flashError): ?>
+
+// P15.7: avoid duplicate password alerts; show password success as toast instead
+$__hasPwWord = function ($s): bool {
+  $s = (string)$s;
+  if ($s == '') return false;
+  if (function_exists('mb_stripos')) return (mb_stripos($s, 'парол') !== false);
+  return (stripos($s, 'парол') !== false);
+};
+
+$__pwFlashErr = (!empty($flashError) && $__hasPwWord($flashError)) ? (string)$flashError : '';
+$__pwFlashOk  = (!empty($flashSuccess) && $__hasPwWord($flashSuccess)) ? (string)$flashSuccess : '';
+
+$__globalErr  = (!empty($flashError) && $__pwFlashErr === '') ? (string)$flashError : '';
+$__globalOk   = (!empty($flashSuccess) && $__pwFlashOk === '') ? (string)$flashSuccess : '';
+?>
+<?php if ($__globalErr): ?>
   <div class="alert alert--error">
-    <?= htmlspecialchars($flashError, ENT_QUOTES) ?>
+    <?= htmlspecialchars($__globalErr, ENT_QUOTES) ?>
   </div>
 <?php endif; ?>
-<?php if ($flashSuccess): ?>
+<?php if ($__globalOk): ?>
   <div class="alert alert--success">
-    <?= htmlspecialchars($flashSuccess, ENT_QUOTES) ?>
+    <?= htmlspecialchars($__globalOk, ENT_QUOTES) ?>
   </div>
+<?php endif; ?>
+<?php if ($__pwFlashOk): ?>
+  <div id="cabinetToastPayload" data-kind="success" data-message="<?= htmlspecialchars($__pwFlashOk, ENT_QUOTES) ?>" hidden></div>
 <?php endif; ?>
 
     <section class="cabinet-tab" data-tab="profile">
@@ -107,26 +126,13 @@ if ($flashError): ?>
           <div class="cab-card__title">Зміна пароля</div>
           <div class="cab-card__body">
             <?php
-              // P15.6: show password-related flash messages inline (near the password form)
-              $__hasPwWord = function ($s): bool {
-                $s = (string)$s;
-                if ($s === '') return false;
-                if (function_exists('mb_stripos')) return (mb_stripos($s, 'парол') !== false);
-                return (stripos($s, 'парол') !== false);
-              };
-              $__pwFlashErr = (!empty($flashError) && $__hasPwWord($flashError)) ? (string)$flashError : '';
-              $__pwFlashOk  = (!empty($flashSuccess) && $__hasPwWord($flashSuccess)) ? (string)$flashSuccess : '';
-            ?>
-            <?php if ($__pwFlashErr): ?>
-              <div class="alert alert--error cab-alert-inline">
-                <?= htmlspecialchars($__pwFlashErr, ENT_QUOTES) ?>
-              </div>
-            <?php endif; ?>
-            <?php if ($__pwFlashOk): ?>
-              <div class="alert alert--success cab-alert-inline">
-                <?= htmlspecialchars($__pwFlashOk, ENT_QUOTES) ?>
-              </div>
-            <?php endif; ?>
+  // P15.7: password errors are shown inline; password success is shown as toast (see cabinetToastPayload)
+?>
+<?php if (!empty($__pwFlashErr)): ?>
+  <div class="alert alert--error cab-alert-inline">
+    <?= htmlspecialchars($__pwFlashErr, ENT_QUOTES) ?>
+  </div>
+<?php endif; ?>
             <form class="cab-form" method="post" action="/cabinet/password/change">
               <div class="field">
                 <label>Поточний пароль</label>

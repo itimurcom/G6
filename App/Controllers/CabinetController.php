@@ -34,6 +34,7 @@ class CabinetController extends Controller
             ],
             'extra_js'  => [
                 '/assets/js/app.js',
+                '/assets/js/services/ui.toast.js',
                 '/assets/js/cabinet.js',
                 '/assets/js/journal.js',
             ],
