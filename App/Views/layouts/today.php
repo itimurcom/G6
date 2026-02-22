@@ -5,6 +5,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title><?= isset($title) ? htmlspecialchars($title) : 'Сьогодні' ?></title>
 
+<?php
+  \App\Security\Csrf::ensureToken();
+  $__csrf = \App\Security\Csrf::token();
+?>
+<meta name="csrf-token" content="<?= htmlspecialchars($__csrf, ENT_QUOTES) ?>">
+
+
   <!-- Base UI styles -->
   <script>
     (function () {
