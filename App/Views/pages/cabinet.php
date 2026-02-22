@@ -24,7 +24,9 @@ $isOwnCabinet = ((int)($_SESSION['user_id'] ?? 0) === (int)($u['id'] ?? 0));
     <span class="lg is-active" data-tab="profile">Профіль</span>
     <span class="lg" data-tab="security">Безпека</span>
     <span class="lg" data-tab="settings">Налаштування</span>
+    <?php if (!empty($is_admin)): ?>
     <span class="lg" data-tab="users">Користувачі</span>
+    <?php endif; ?>
     <span class="lg" data-tab="journal">Журнал</span>
   </nav>
   <span class="user--name" data-user-id="<?= (int)($u['id'] ?? 0) ?>">loading…</span>
