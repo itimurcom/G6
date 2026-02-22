@@ -106,6 +106,27 @@ if ($flashError): ?>
         <div class="cab-card">
           <div class="cab-card__title">Зміна пароля</div>
           <div class="cab-card__body">
+            <?php
+              // P15.6: show password-related flash messages inline (near the password form)
+              $__hasPwWord = function ($s): bool {
+                $s = (string)$s;
+                if ($s === '') return false;
+                if (function_exists('mb_stripos')) return (mb_stripos($s, 'парол') !== false);
+                return (stripos($s, 'парол') !== false);
+              };
+              $__pwFlashErr = (!empty($flashError) && $__hasPwWord($flashError)) ? (string)$flashError : '';
+              $__pwFlashOk  = (!empty($flashSuccess) && $__hasPwWord($flashSuccess)) ? (string)$flashSuccess : '';
+            ?>
+            <?php if ($__pwFlashErr): ?>
+              <div class="alert alert--error cab-alert-inline">
+                <?= htmlspecialchars($__pwFlashErr, ENT_QUOTES) ?>
+              </div>
+            <?php endif; ?>
+            <?php if ($__pwFlashOk): ?>
+              <div class="alert alert--success cab-alert-inline">
+                <?= htmlspecialchars($__pwFlashOk, ENT_QUOTES) ?>
+              </div>
+            <?php endif; ?>
             <form class="cab-form" method="post" action="/cabinet/password/change">
               <div class="field">
                 <label>Поточний пароль</label>

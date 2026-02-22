@@ -283,3 +283,9 @@
 .cab-table tr:last-child td{
   border-bottom: 0;
 }
+
+
+/* P15.6: inline alerts in Security card */
+.cab-alert-inline {
+  margin-bottom: 12px;
+}

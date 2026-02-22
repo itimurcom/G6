@@ -301,6 +301,20 @@ body {
   color: #fecaca;
 }
 
+.alert--success {
+  background: rgba(34, 197, 94, 0.12);
+  border: 1px solid rgba(34, 197, 94, 0.35);
+  color: #166534;
+}
+
+[data-theme="dark"] .alert--success,
+.theme-dark .alert--success,
+.dark .alert--success {
+  background: rgba(34, 197, 94, 0.15);
+  border-color: rgba(34, 197, 94, 0.45);
+  color: #bbf7d0;
+}
+
 .btn.btn--primary {
   background: var(--blue-600, #2563EB);
   border-color: var(--blue-600, #2563EB);
