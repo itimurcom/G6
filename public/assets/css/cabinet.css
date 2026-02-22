@@ -1,3 +1,4 @@
+/* P15.5: Cabinet cards on Profile/Security/Users 
 /* ----- THEME TOKENS (light by default) ----- */
 :root {
   --cabinet-text: #0b1220;
@@ -244,4 +245,41 @@
   background: var(--cabinet-primary-bg);
   border-color: var(--cabinet-primary-border);
   color: var(--cabinet-primary-text);
+}
+
+
+/* Cabinet cards: helpers for Profile/Security/Users */
+.cab-form { margin: 0; }
+
+.cab-kv{
+  display: grid;
+  grid-template-columns: 160px 1fr;
+  gap: 10px 14px;
+}
+.cab-kv__k{
+  font-size: var(--fs-sm);
+  font-weight: 800;
+  opacity: .86;
+}
+.cab-kv__v{
+  font-size: var(--fs-ui);
+}
+
+.cab-table{
+  width: 100%;
+  border-collapse: collapse;
+}
+.cab-table th,
+.cab-table td{
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--cabinet-border);
+  text-align: left;
+}
+.cab-table th{
+  font-size: var(--fs-meta);
+  font-weight: 900;
+  opacity: .85;
+}
+.cab-table tr:last-child td{
+  border-bottom: 0;
 }

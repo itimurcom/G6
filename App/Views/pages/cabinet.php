@@ -19,6 +19,7 @@ if (!$u) { $u = \App\Core\Auth::user() ?? []; }
 $isOwnCabinet = ((int)($_SESSION['user_id'] ?? 0) === (int)($u['id'] ?? 0));
 ?>
 <header class="cal-header">
+  <!-- CABINET CARDS UI PATCH P15.5 -->
   <div class="title">Кабінет</div>
   <nav class="legend">
     <span class="lg is-active" data-tab="profile">Профіль</span>
@@ -50,16 +51,21 @@ if ($flashError): ?>
 
     <section class="cabinet-tab" data-tab="profile">
       <div class='sub-title'>Профіль</div>
-        <table>
-          <tr>
-            <td class='space'><label>Ім’я</label><span></td>
-            <td class='space'><?= htmlspecialchars($u['name'] ?? '') ?></td>
-          </tr>
-           <tr>
-            <td class='space'><label>Ел. пошта</label></td>
-            <td class='space'><?= htmlspecialchars($u['email'] ?? '') ?></td>
-          </tr>    
-        </table>
+
+      <div class="cabinet-settings">
+        <div class="cab-card">
+          <div class="cab-card__title">Основне</div>
+          <div class="cab-card__body">
+            <div class="cab-kv">
+              <div class="cab-kv__k">Ім’я</div>
+              <div class="cab-kv__v"><?= htmlspecialchars($u['name'] ?? '', ENT_QUOTES) ?></div>
+
+              <div class="cab-kv__k">Ел. пошта</div>
+              <div class="cab-kv__v"><?= htmlspecialchars($u['email'] ?? '', ENT_QUOTES) ?></div>
+            </div>
+          </div>
+        </div>
+      </div>
     </section>
     <section class="cabinet-tab" data-tab="settings" style="display:none">
       <div class='sub-title'>Налаштування</div>
@@ -95,38 +101,52 @@ if ($flashError): ?>
 
     <section class="cabinet-tab" data-tab="security">
       <div class='sub-title'>Безпека</div>
-      <form method="post" action="/cabinet/password/change">
-        <div class="field">
-          <label>Поточний пароль</label>
-          <input class="input" type="password" name="current_password" required>
+
+      <div class="cabinet-settings">
+        <div class="cab-card">
+          <div class="cab-card__title">Зміна пароля</div>
+          <div class="cab-card__body">
+            <form class="cab-form" method="post" action="/cabinet/password/change">
+              <div class="field">
+                <label>Поточний пароль</label>
+                <input class="input" type="password" name="current_password" required>
+              </div>
+              <div class="field">
+                <label>Новий пароль</label>
+                <input class="input" type="password" name="new_password" minlength="8" required>
+              </div>
+              <div class="field">
+                <label>Підтвердження нового пароля</label>
+                <input class="input" type="password" name="confirm_password" minlength="8" required>
+              </div>
+
+              <input type="hidden" name="_csrf" value="<?= htmlspecialchars(\App\Security\Csrf::token(), ENT_QUOTES) ?>">
+              <button class="btn btn--primary" type="submit">Змінити пароль</button>
+              <div class="hint">Мінімальна довжина пароля — 8 символів.</div>
+            </form>
+          </div>
         </div>
-        <div class="field">
-          <label>Новий пароль</label>
-          <input class="input" type="password" name="new_password" minlength="8" required>
-        </div>
-        <div class="field">
-          <label>Підтвердження нового пароля</label>
-          <input class="input" type="password" name="confirm_password" minlength="8" required>
-        </div>
-        <input type="hidden" name="_csrf" value="<?= htmlspecialchars(\App\Security\Csrf::token(), ENT_QUOTES) ?>">
-        <button class="btn btn--primary" type="submit">Змінити пароль</button>
-      </form>
+      </div>
     </section>
 
 <?php if (!empty($is_admin) && !empty($users) && is_array($users)): ?>
   <section class="cabinet-tab" data-tab="users">
     <div class='sub-title'>Користувачі</div>
-    <div class="table-wrap">
-      <table>
-        <thead>
-          <tr>
-            <th style="text-align:left;padding:6px 8px;">Логін</th>
-            <th style="text-align:left;padding:6px 8px;">Email</th>
-            <th style="text-align:left;padding:6px 8px;">Тип</th>
-          </tr>
-        </thead>
-        <tbody>
-          <?php foreach ($users as $row):
+
+    <div class="cabinet-settings">
+      <div class="cab-card">
+        <div class="cab-card__title">Список користувачів</div>
+        <div class="cab-card__body">
+          <table class="cab-table">
+            <thead>
+              <tr>
+                <th>Логін</th>
+                <th>Email</th>
+                <th>Тип</th>
+              </tr>
+            </thead>
+            <tbody>
+              <?php foreach ($users as $row):
             $email = (string)($row['email'] ?? '');
             $login = (string)($row['login'] ?? ($row['username'] ?? ''));
             if ($login === '' || mb_strtolower($login) === mb_strtolower($email)) {
@@ -142,10 +162,12 @@ if ($flashError): ?>
               <td class='space'><?= $type ?></td>
             </tr>
           <?php endforeach; ?>
-        </tbody>
-      </table>
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
-  </section>  
+  </section>    
 <?php endif; ?>
 
 
