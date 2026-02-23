@@ -322,10 +322,8 @@ $__toastErr = \App\Core\Session::flash('toast_error');
               </div>
             </div>
           </div>
-          </div>
         </div>
       </div>
-    </div>
   </section>    
 <?php endif; ?>
 
