@@ -389,10 +389,25 @@
         if (action === 'auth.register') return 'Реєстрація користувача';
         if (action === 'cabinet.change_password') return 'Зміна власного пароля';
         if (action === 'cabinet.profile_update') return 'Оновлення профілю';
+        if (action === 'cabinet.admin_user_update') return 'Редагування користувача (Адмін)';
+        if (action === 'cabinet.admin_user_password') return 'Зміна пароля користувача (Адмін)';
         if (action === 'user.create') return 'Створення користувача (Адмін)';
         if (action === 'user.update') return 'Редагування користувача (Адмін)';
         if (action === 'user.password') return 'Зміна пароля користувача (Адмін)';
         return action || 'Подія';
+    }
+
+    function uaUserFieldLabel(k) {
+        var s = (k || '').toString();
+        if (!s) return '';
+        var t = s.toLowerCase();
+        if (t === 'name') return 'Імʼя';
+        if (t === 'login' || t === 'username') return 'Логін';
+        if (t === 'email') return 'Email';
+        if (t === 'role') return 'Роль';
+        if (t === 'is_admin') return 'Прапор is_admin';
+        if (t === 'password' || t === 'password_hash') return 'Пароль';
+        return s;
     }
 
     function cssType(it) {
@@ -406,6 +421,8 @@
         if (it.action === 'auth.register') return 't-create';
         if (it.action === 'cabinet.change_password') return 't-update';
         if (it.action === 'cabinet.profile_update') return 't-update';
+        if (it.action === 'cabinet.admin_user_update') return 't-update';
+        if (it.action === 'cabinet.admin_user_password') return 't-update';
         if (it.action === 'user.create') return 't-create';
         if (it.action === 'user.update') return 't-update';
         if (it.action === 'user.password') return 't-update';
@@ -573,6 +590,9 @@
                 : 'Знято терміновість';
         }
 
+        // Admin user actions: show target user + changed fields (P15.18)
+        var __adminUserAction = (action === 'cabinet.admin_user_update' || action === 'cabinet.admin_user_password');
+
         var title = label;
         if (action.indexOf('calendar.event.') === 0) {
             if (evTitle) title = label + ': «' + evTitle + '»';
@@ -592,6 +612,48 @@
             sub = 'Статус: ' + ((it.done === true || String(it.done) === '1' || String(it.done) === 'true') ? 'виконано' : 'не виконано');
         } else if (action === 'calendar.event.urgent') {
             sub = 'Терміново: ' + ((it.urgent === true || String(it.urgent) === '1' || String(it.urgent) === 'true') ? 'так' : 'ні');
+        }
+
+        // Admin user actions: provide meaningful context (target + changed)
+        if (__adminUserAction) {
+            var parts = [];
+            var tid = (it.target_id !== undefined && it.target_id !== null) ? String(it.target_id) : '';
+            if (!tid && it.entity_id !== undefined && it.entity_id !== null) tid = String(it.entity_id);
+            if (tid) parts.push('Користувач: ID ' + tid);
+
+            // changed can be array, JSON string, or object
+            var changed = it.changed;
+            var chArr = [];
+            if (changed) {
+                if (Object.prototype.toString.call(changed) === '[object Array]') {
+                    chArr = changed.slice(0);
+                } else if (typeof changed === 'string') {
+                    var s = changed.trim();
+                    if (s) {
+                        try {
+                            var o = JSON.parse(s);
+                            if (Object.prototype.toString.call(o) === '[object Array]') chArr = o;
+                        } catch (e) {
+                            // Fallback: comma/space separated
+                            chArr = s.split(/[,\s]+/).filter(Boolean);
+                        }
+                    }
+                } else if (typeof changed === 'object') {
+                    try { chArr = Object.keys(changed); } catch (e2) { chArr = []; }
+                }
+            }
+
+            if (chArr && chArr.length) {
+                var labels = [];
+                chArr.forEach(function (k) {
+                    var lbl = uaUserFieldLabel(k);
+                    if (lbl && labels.indexOf(lbl) === -1) labels.push(lbl);
+                });
+                if (labels.length) parts.push('Зміни: ' + labels.join(', '));
+            }
+
+            if (it.ip) parts.push('IP: ' + String(it.ip));
+            sub = parts.join(' | ');
         }
 
         if (!sub && evWhen) sub = 'Коли: ' + evWhen;
