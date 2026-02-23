@@ -11,6 +11,7 @@ class HomeController extends Controller
             'title' => 'Планування',
             'extra_css' => [
                 '/assets/css/calendar.css',
+                '/assets/css/calendar.info.modal.css', // P15.30: info modal styles for Planning page (same popup UI as Calendar)
                 '/assets/css/planning.css',
                 '/assets/css/icons.css',
             ],
