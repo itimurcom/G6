@@ -546,6 +546,8 @@
 
     function diffEvent(before, after) {
         var changes = [];
+        before = asObj(before) || before;
+        after  = asObj(after)  || after;
         if (!before || !after) return changes;
         var fields = [
             ['title', 'Назва'],
@@ -567,6 +569,31 @@
             var b = (after[k] === undefined || after[k] === null) ? '' : String(after[k]);
             if (a !== b) changes.push({ key: k, label: label, from: a, to: b });
         });
+        return changes;
+    }
+
+    function diffUser(before, after) {
+        var changes = [];
+        before = asObj(before) || before;
+        after  = asObj(after)  || after;
+        if (!before || !after) return changes;
+
+        var fields = [
+            ['name', 'Імʼя'],
+            ['login', 'Логін'],
+            ['email', 'Email'],
+            ['role', 'Роль'],
+            ['is_admin', 'is_admin']
+        ];
+
+        fields.forEach(function (f) {
+            var k = f[0];
+            var label = f[1];
+            var a = (before[k] === undefined || before[k] === null) ? '' : String(before[k]);
+            var b = (after[k] === undefined || after[k] === null) ? '' : String(after[k]);
+            if (a !== b) changes.push({ key: k, label: label, from: a, to: b });
+        });
+
         return changes;
     }
 
@@ -601,7 +628,7 @@
 
         var sub = '';
         if (action === 'auth.login' || action === 'auth.logout') {
-            if (it.ip) sub = 'IP: ' + String(it.ip);
+            // IP is shown in a dedicated column.
         } else if (action === 'calendar.event.update') {
             var changes = diffEvent(it.event_before, it.event_after);
             if (changes.length) {
@@ -614,46 +641,81 @@
             sub = 'Терміново: ' + ((it.urgent === true || String(it.urgent) === '1' || String(it.urgent) === 'true') ? 'так' : 'ні');
         }
 
-        // Admin user actions: provide meaningful context (target + changed)
+        // Admin user actions: show target user in the "Подія" column, keep "Дані" as action description only.
         if (__adminUserAction) {
-            var parts = [];
             var tid = (it.target_id !== undefined && it.target_id !== null) ? String(it.target_id) : '';
             if (!tid && it.entity_id !== undefined && it.entity_id !== null) tid = String(it.entity_id);
-            if (tid) parts.push('Користувач: ID ' + tid);
 
-            // changed can be array, JSON string, or object
-            var changed = it.changed;
-            var chArr = [];
-            if (changed) {
-                if (Object.prototype.toString.call(changed) === '[object Array]') {
-                    chArr = changed.slice(0);
-                } else if (typeof changed === 'string') {
-                    var s = changed.trim();
-                    if (s) {
-                        try {
-                            var o = JSON.parse(s);
-                            if (Object.prototype.toString.call(o) === '[object Array]') chArr = o;
-                        } catch (e) {
-                            // Fallback: comma/space separated
-                            chArr = s.split(/[,\s]+/).filter(Boolean);
+            var tlogin = (it.target_login !== undefined && it.target_login !== null) ? String(it.target_login) : '';
+            var tname  = (it.target_name  !== undefined && it.target_name  !== null) ? String(it.target_name)  : '';
+
+            var who = '';
+            if (tlogin) who = '«' + tlogin + '»';
+            else if (tname) who = '«' + tname + '»';
+            else if (tid) who = 'ID ' + tid;
+            else who = '—';
+
+            if (action === 'cabinet.admin_user_update') {
+                title = 'Редагування користувача: ' + who;
+            } else if (action === 'cabinet.admin_user_password') {
+                title = 'Зміна пароля користувача: ' + who;
+            }
+
+            function normErrors(errs) {
+                try {
+                    if (!errs) return '';
+                    if (Object.prototype.toString.call(errs) === '[object Array]') return errs.join(' ');
+                    if (typeof errs === 'string') return errs;
+                    if (typeof errs === 'object') return Object.keys(errs).map(function (k) { return k + ': ' + errs[k]; }).join(' ');
+                } catch (e) { /* no-op */ }
+                return String(errs || '');
+            }
+
+            if (action === 'cabinet.admin_user_password') {
+                sub = 'Пароль змінено.';
+                if (String(it.result || '') !== 'success') {
+                    var errText = normErrors(it.errors);
+                    if (errText) sub = 'Помилка: ' + errText;
+                    else sub = 'Помилка зміни пароля.';
+                }
+            } else {
+                // Update user: show changed fields only
+                var changed = it.changed;
+                var chArr = [];
+                if (changed) {
+                    if (Object.prototype.toString.call(changed) === '[object Array]') {
+                        chArr = changed.slice(0);
+                    } else if (typeof changed === 'string') {
+                        var s2 = changed.trim();
+                        if (s2) {
+                            try {
+                                var o2 = JSON.parse(s2);
+                                if (Object.prototype.toString.call(o2) === '[object Array]') chArr = o2;
+                            } catch (e2) {
+                                chArr = s2.split(/[,\s]+/).filter(Boolean);
+                            }
                         }
+                    } else if (typeof changed === 'object') {
+                        try { chArr = Object.keys(changed); } catch (e3) { chArr = []; }
                     }
-                } else if (typeof changed === 'object') {
-                    try { chArr = Object.keys(changed); } catch (e2) { chArr = []; }
+                }
+
+                if (String(it.result || '') !== 'success') {
+                    var errText2 = normErrors(it.errors);
+                    if (errText2) sub = 'Помилка: ' + errText2;
+                    else sub = 'Помилка збереження даних.';
+                } else if (chArr && chArr.length) {
+                    var labels = [];
+                    chArr.forEach(function (k) {
+                        var lbl = uaUserFieldLabel(k);
+                        if (lbl && labels.indexOf(lbl) === -1) labels.push(lbl);
+                    });
+                    if (labels.length) sub = 'Зміни: ' + labels.join(', ');
+                    else sub = 'Дані користувача оновлено.';
+                } else {
+                    sub = 'Дані користувача оновлено.';
                 }
             }
-
-            if (chArr && chArr.length) {
-                var labels = [];
-                chArr.forEach(function (k) {
-                    var lbl = uaUserFieldLabel(k);
-                    if (lbl && labels.indexOf(lbl) === -1) labels.push(lbl);
-                });
-                if (labels.length) parts.push('Зміни: ' + labels.join(', '));
-            }
-
-            if (it.ip) parts.push('IP: ' + String(it.ip));
-            sub = parts.join(' | ');
         }
 
         if (!sub && evWhen) sub = 'Коли: ' + evWhen;
@@ -762,6 +824,11 @@
         tdAu.className = 'audit-col-author';
         tdAu.innerHTML = '<span class="audit-author" title="user_id: ' + escAttr(String(it.user_id || '')) + '">' + esc(author) + '</span>';
 
+        var tdIp = document.createElement('td');
+        tdIp.className = 'audit-col-ip';
+        var ipText = (it.ip === undefined || it.ip === null || String(it.ip).trim() === '') ? '—' : String(it.ip);
+        tdIp.innerHTML = '<span class="audit-ip">' + esc(ipText) + '</span>';
+
         var tdRes = document.createElement('td');
         tdRes.className = 'audit-col-result';
         tdRes.innerHTML = '<span class="audit-result audit-result--' + escAttr(result || 'other') + '">' + esc(result || '—') + '</span>';
@@ -782,6 +849,7 @@
         tr.appendChild(tdEv);
         tr.appendChild(tdCtx);
         tr.appendChild(tdAu);
+        tr.appendChild(tdIp);
         tr.appendChild(tdRes);
         tr.appendChild(tdMore);
         return tr;
@@ -911,6 +979,7 @@
             '<th class="audit-col-ev">Подія</th>' +
             '<th class="audit-col-ctx">Дані</th>' +
             '<th class="audit-col-author">Автор</th>' +
+            '<th class="audit-col-ip">IP</th>' +
             '<th class="audit-col-result">Статус</th>' +
             '<th class="audit-col-more">Деталі</th>' +
             '</tr>';
@@ -967,11 +1036,13 @@
             '#audit-block .audit-col-ts{white-space:nowrap;min-width:150px}',
             '#audit-block .audit-col-ctx{white-space:nowrap;min-width:220px}',
             '#audit-block .audit-col-author{white-space:nowrap;min-width:120px}',
+            '#audit-block .audit-col-ip{white-space:nowrap;min-width:110px}',
             '#audit-block .audit-col-result{white-space:nowrap;min-width:90px}',
             '#audit-block .audit-col-more{white-space:nowrap;min-width:90px}',
             '#audit-block .audit-ev-main{font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
             '#audit-block .audit-ev-sub{opacity:.78;font-size:12px;margin-top:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
             '#audit-block .audit-author{color:#22c55e;font-weight:800}',
+            '#audit-block .audit-ip{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace;font-size:12px;opacity:.85}',
             '#audit-block .audit-result{display:inline-flex;align-items:center;gap:6px;padding:3px 8px;border-radius:999px;font-size:12px;border:1px solid rgba(255,255,255,.10)}',
             ':root[data-theme="light"] #audit-block .audit-result{border:1px solid rgba(0,0,0,.10)}',
             '#audit-block .audit-result--success{background:rgba(34,197,94,.14)}',
@@ -1701,7 +1772,12 @@
         var ev = pickEventSnapshot(it);
         var evWhen = formatEventWhen(ev) || (it.date ? String(it.date) : '');
 
-        var diff = diffEvent(it.event_before, it.event_after);
+        var diff = [];
+        if ((it.action || '') === 'cabinet.admin_user_update') {
+            diff = diffUser(it.user_before, it.user_after);
+        } else {
+            diff = diffEvent(it.event_before, it.event_after);
+        }
 
         body.innerHTML = '';
         var top = document.createElement('div');

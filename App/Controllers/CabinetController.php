@@ -378,6 +378,16 @@ class CabinetController extends Controller
                 'is_admin' => $isAdminFlag,
             ];
 
+            // Audit snapshot: user state before update (safe fields only)
+            $userBefore = [
+                'name'     => (string)($target['name'] ?? ''),
+                'login'    => (string)($target['login'] ?? ($target['username'] ?? '')),
+                'email'    => $target['email'] ?? null,
+                'role'     => (string)($target['role'] ?? ''),
+                'is_admin' => (int)($target['is_admin'] ?? 0),
+            ];
+
+
             $changed = [];
             foreach ($update as $k => $v) {
                 if ($k === 'password_hash') { $changed[] = 'password'; continue; }
@@ -404,10 +414,13 @@ class CabinetController extends Controller
                     return '';
                 }
 
+                $freshAfter = null;
+
                 // If admin updated their own account, refresh session
                 if ((int)($me['id'] ?? 0) === $targetId) {
                     try {
                         $fresh = $repo->findById($targetId);
+                        $freshAfter = $fresh;
                         if (is_array($fresh)) {
                             $roleFresh = (string)($fresh['role'] ?? '');
                             $isAdmFresh = (mb_strtolower($roleFresh) === 'admin') || !empty($fresh['is_admin']);
@@ -423,14 +436,31 @@ class CabinetController extends Controller
                     } catch (\Throwable $e) { /* ignore */ }
                 }
 
+
+                // Audit snapshot: user state after update (safe fields only)
+                if (!is_array($freshAfter)) {
+                    try { $freshAfter = $repo->findById($targetId); } catch (\Throwable $e) { $freshAfter = null; }
+                }
+                $userAfter = [
+                    'name'     => is_array($freshAfter) ? (string)($freshAfter['name'] ?? '') : (string)$name,
+                    'login'    => is_array($freshAfter) ? (string)($freshAfter['login'] ?? ($freshAfter['username'] ?? '')) : (string)$login,
+                    'email'    => is_array($freshAfter) ? ($freshAfter['email'] ?? null) : (($email === '') ? null : $email),
+                    'role'     => is_array($freshAfter) ? (string)($freshAfter['role'] ?? '') : (string)$role,
+                    'is_admin' => is_array($freshAfter) ? (int)($freshAfter['is_admin'] ?? 0) : (int)$isAdminFlag,
+                ];
+
                 if (method_exists(\App\Core\Session::class, 'flash')) {
                     \App\Core\Session::flash('toast_success', 'Дані користувача оновлено.');
                 }
 
                 $logger->log('cabinet.admin_user_update', 'success', [
-                    'admin_id'  => (int)($me['id'] ?? 0),
-                    'target_id' => $targetId,
-                    'changed'   => $changed,
+                    'admin_id'     => (int)($me['id'] ?? 0),
+                    'target_id'    => $targetId,
+                    'target_login' => (string)$login,
+                    'target_name'  => (string)$name,
+                    'changed'      => $changed,
+                    'user_before'  => $userBefore,
+                    'user_after'   => $userAfter,
                 ]);
             } catch (\Throwable $e) {
                 if (method_exists(\App\Core\Session::class, 'flash')) {
@@ -525,9 +555,11 @@ class CabinetController extends Controller
                 \App\Core\Session::flash('toast_success', 'Пароль користувача ' . $label . ' змінено.');
 
                 $logger->log('cabinet.admin_user_password', 'success', [
-                    'admin_id'  => (int)($me['id'] ?? 0),
-                    'target_id' => $targetId,
-                    'changed'   => ['password'],
+                    'admin_id'     => (int)($me['id'] ?? 0),
+                    'target_id'    => $targetId,
+                    'target_login' => (string)$login,
+                    'target_name'  => (string)($target['name'] ?? ''),
+                    'changed'      => ['password'],
                 ]);
             } catch (\Throwable $e) {
                 \App\Core\Session::flash('toast_error', 'Не вдалося змінити пароль користувача.');

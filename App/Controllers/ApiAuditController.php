@@ -92,9 +92,58 @@ final class ApiAuditController extends Controller
             $stmt->execute($params);
             $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-            $items = array_map(function($row) {
+            // Enrich admin user actions with target login/name for older records that only have target_id.
+            // This lets the Journal UI show "Редагування користувача: <login>" instead of "ID <n>".
+            $adminUserActions = ['cabinet.admin_user_update', 'cabinet.admin_user_password', 'user.update', 'user.password'];
+            $needUserIds = [];
+            foreach ($rows as $row) {
+                $act = (string)($row['action'] ?? '');
+                if (!in_array($act, $adminUserActions, true)) continue;
+                $payloadTmp = json_decode($row['payload'] ?? '{}', true);
+                if (!is_array($payloadTmp)) $payloadTmp = [];
+                $tid = $payloadTmp['target_id'] ?? ($row['entity_id'] ?? null);
+                $tlogin = $payloadTmp['target_login'] ?? null;
+                if ($tid !== null && $tid !== '' && ($tlogin === null || trim((string)$tlogin) === '')) {
+                    $needUserIds[(int)$tid] = true;
+                }
+            }
+
+            $usersMap = [];
+            if (!empty($needUserIds)) {
+                $ids = array_keys($needUserIds);
+                $placeholders = implode(',', array_fill(0, count($ids), '?'));
+                $stmtU = $this->db->prepare("SELECT id, login, name FROM users WHERE id IN ($placeholders)");
+                $stmtU->execute($ids);
+                $uRows = $stmtU->fetchAll(PDO::FETCH_ASSOC);
+                foreach ($uRows as $u) {
+                    $uid2 = (int)($u['id'] ?? 0);
+                    if ($uid2 > 0) {
+                        $usersMap[$uid2] = [
+                            'login' => (string)($u['login'] ?? ''),
+                            'name'  => (string)($u['name'] ?? ''),
+                        ];
+                    }
+                }
+            }
+
+            $items = array_map(function($row) use ($usersMap, $adminUserActions) {
                 $payload = json_decode($row['payload'] ?? '{}', true);
                 if (!is_array($payload)) $payload = [];
+
+                $act = (string)($row['action'] ?? '');
+                if (in_array($act, $adminUserActions, true)) {
+                    $tid = $payload['target_id'] ?? ($row['entity_id'] ?? null);
+                    $tidInt = (int)$tid;
+                    if ($tidInt > 0) {
+                        $tlogin = $payload['target_login'] ?? null;
+                        if ($tlogin === null || trim((string)$tlogin) === '') {
+                            if (isset($usersMap[$tidInt])) {
+                                $payload['target_login'] = $usersMap[$tidInt]['login'];
+                                $payload['target_name']  = $usersMap[$tidInt]['name'];
+                            }
+                        }
+                    }
+                }
                 
                 return array_merge($payload, [
                     'ts'          => $row['created_at'],
