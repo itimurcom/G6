@@ -15,6 +15,7 @@
   <div class="planning-toolbar" id="planning-toolbar">
     <label><input type="radio" name="planning-scope" value="all" checked> Всі задачі</label>
     <label><input type="radio" name="planning-scope" value="my"> Мої задачі</label>
+    <label><input type="radio" name="planning-scope" value="exec"> На виконанні</label>
   </div>
   <section id="planning-today" data-user-id="<?= (int)($_SESSION['user_id'] ?? 0) ?>"></section>
 </section>

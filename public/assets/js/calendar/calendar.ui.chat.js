@@ -34,7 +34,7 @@
           flag.appendChild(icon); card.appendChild(flag);
         }
         card.innerHTML += '<div><strong>' + Ev.escapeHtml(ev.time || '') + ' • ' + Ev.escapeHtml(ev.title) + '</strong></div>' +
-          '<div style="color:var(--muted)">Відповідальний: ' + Ev.escapeHtml(ev.owner || '—') + ' • Тип: ' + Ev.labelForType(ev.type) + '</div>' +
+          '<div style="color:var(--muted)">Відповідальний: ' + Ev.escapeHtml((Ev && typeof Ev.ownerDisplay === 'function') ? (Ev.ownerDisplay(ev) || '—') : (ev.owner || '—')) + ' • Тип: ' + Ev.labelForType(ev.type) + '</div>' +
           '<div>Пояснення: коротка підготовка до «ВКЗ», при потребі — матеріали/довідки.</div>';
         chatContent.appendChild(card);
       });

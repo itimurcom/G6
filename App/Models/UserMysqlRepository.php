@@ -60,4 +60,27 @@ class UserMysqlRepository implements UserRepositoryInterface {
         $sql = "UPDATE users SET " . implode(', ', $fields) . " WHERE id = :id";
         return $this->db->prepare($sql)->execute($params);
     }
+
+    /**
+     * Lightweight search for autocomplete.
+     * Returns only safe fields.
+     */
+    public function search(string $q, int $limit = 10): array {
+        $q = trim((string)$q);
+        if ($q === '') return [];
+
+        $limit = max(1, min(25, (int)$limit));
+        $like = '%' . $q . '%';
+
+        // NOTE: LIMIT must be an integer literal in MySQL for some PDO configs.
+        $sql = "SELECT id, login, name, email, role, is_admin
+                FROM users
+                WHERE login LIKE ? OR name LIKE ? OR email LIKE ?
+                ORDER BY login ASC
+                LIMIT {$limit}";
+
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute([$like, $like, $like]);
+        return $stmt->fetchAll();
+    }
 }

@@ -60,6 +60,69 @@
     return out;
   }
 
+  // === Responsible (owner) helpers ===
+  // Storage format (optional): JSON string in ev.owner
+  //  - {t:"user", id:12, login:"admin", name:"Admin", label:"Admin (admin)"}
+  //  - {t:"text", text:"External org"}
+  // Legacy format: plain string
+  function parseOwnerField(owner) {
+    try {
+      if (owner == null) return { type: 'text', text: '', user_id: 0, login: '', name: '', label: '' };
+      if (typeof owner !== 'string') owner = String(owner);
+      var s = owner.trim();
+      if (!s) return { type: 'text', text: '', user_id: 0, login: '', name: '', label: '' };
+      if (s.charAt(0) === '{' && s.charAt(s.length - 1) === '}') {
+        var o = JSON.parse(s);
+        if (o && typeof o === 'object') {
+          var t = String(o.t || o.type || 'text').toLowerCase();
+          if (t === 'user') {
+            var id = parseInt(o.id || o.user_id || 0, 10) || 0;
+            var login = String(o.login || '');
+            var name = String(o.name || '');
+            var label = String(o.label || o.display || '');
+            return { type: 'user', text: '', user_id: id, login: login, name: name, label: label };
+          }
+          var txt = String(o.text || o.value || '');
+          return { type: 'text', text: txt, user_id: 0, login: '', name: '', label: '' };
+        }
+      }
+      // Legacy: treat as free text
+      return { type: 'text', text: s, user_id: 0, login: '', name: '', label: '' };
+    } catch (_) {
+      // Fallback: treat as free text
+      try {
+        return { type: 'text', text: String(owner || '').trim(), user_id: 0, login: '', name: '', label: '' };
+      } catch (_2) {
+        return { type: 'text', text: '', user_id: 0, login: '', name: '', label: '' };
+      }
+    }
+  }
+
+  function ownerDisplay(ev) {
+    try {
+      var parsed = parseOwnerField(ev && ev.owner);
+      if (parsed.type === 'user') {
+        if (parsed.label) return parsed.label;
+        if (parsed.name && parsed.login) return parsed.name + ' (' + parsed.login + ')';
+        if (parsed.login) return parsed.login;
+        if (parsed.user_id) return 'ID ' + parsed.user_id;
+        return '';
+      }
+      return parsed.text || '';
+    } catch (_) {
+      return (ev && ev.owner) ? String(ev.owner) : '';
+    }
+  }
+
+  function ownerUserId(ev) {
+    try {
+      var parsed = parseOwnerField(ev && ev.owner);
+      return (parsed.type === 'user') ? (parseInt(parsed.user_id || 0, 10) || 0) : 0;
+    } catch (_) {
+      return 0;
+    }
+  }
+
   function formatISO(iso) {
     var d = new Date(iso);
     return new Intl.DateTimeFormat('uk-UA', { day: 'numeric', month: 'long', year: 'numeric' }).format(d);
@@ -155,7 +218,7 @@
       if (!pass) return false;
 
       if (!q) return true;
-      var hay = norm(((ev.title || '') + ' ' + (ev.owner || '')));
+      var hay = norm(((ev.title || '') + ' ' + (ownerDisplay(ev) || '')));
 
       // Single token: substring match
       if (qTokens.length <= 1) return hay.indexOf(qTokens[0]) !== -1;
@@ -201,6 +264,9 @@
     escapeHtml,
     norm,
     formatISO,
+    parseOwnerField,
+    ownerDisplay,
+    ownerUserId,
     buildMatcher,
     migrateArray,
     updateEventTimeInArray

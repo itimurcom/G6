@@ -5,6 +5,13 @@
   var Data = (global.CalendarApp && global.CalendarApp.data) || {};
   var Ev = (global.CalendarApp && global.CalendarApp.events) || {};
 
+  function __ownerText(ev) {
+    try {
+      if (Ev && typeof Ev.ownerDisplay === 'function') return Ev.ownerDisplay(ev) || '';
+    } catch (_) { }
+    return (ev && ev.owner) ? String(ev.owner) : '';
+  }
+
   /* ===== Стан інтерфейсу ===== */
   var locale = 'uk-UA';
   var today = new Date();
@@ -192,10 +199,10 @@
 
       var owner = document.createElement('span');
       owner.className = 'planning-today__owner';
-      owner.textContent = ev.owner || '';
+      owner.textContent = __ownerText(ev);
 
       details.appendChild(head);
-      if (ev.owner) details.appendChild(owner);
+      if (__ownerText(ev)) details.appendChild(owner);
 
       li.appendChild(time);
       li.appendChild(details);
@@ -262,8 +269,8 @@
     function textMatches(ev) {
       if (!qNormRaw) return true;
       var hay = (Ev.norm
-        ? Ev.norm(((ev && ev.title) || '') + ' ' + ((ev && ev.owner) || ''))
-        : (((ev && ev.title) || '') + ' ' + ((ev && ev.owner) || '')).toLowerCase());
+        ? Ev.norm(((ev && ev.title) || '') + ' ' + (__ownerText(ev) || ''))
+        : (((ev && ev.title) || '') + ' ' + (__ownerText(ev) || '')).toLowerCase());
 
       // Required tokens must all exist
       for (var ri = 0; ri < qReq.length; ri++) {
@@ -1072,7 +1079,7 @@
 
 
       var del = document.createElement('button'); del.className = 'event-btn'; del.type = 'button'; del.setAttribute('aria-label', 'Видалити'); del.textContent = '×';
-      var owner = document.createElement('div'); owner.className = 'event-owner'; owner.textContent = Ev.labelForType(ev.type) + (ev.owner ? (' • Відповідальний: ' + ev.owner) : '');
+      var owner = document.createElement('div'); owner.className = 'event-owner'; owner.textContent = Ev.labelForType(ev.type) + (__ownerText(ev) ? (' • Відповідальний: ' + __ownerText(ev)) : '');
 
       del.addEventListener('click', function (e) {
         e.stopPropagation(); var eid = e.currentTarget.parentElement.getAttribute('data-id');
@@ -1297,7 +1304,7 @@
               flag.appendChild(icon); row.appendChild(flag);
             }
             var dot = document.createElement('span'); dot.className = 'dot ' + (ev.type || 'evt'); row.appendChild(dot);
-            var label = (ev.time || '') + ' — ' + ev.title + (ev.owner ? (' • ' + ev.owner) : '');
+            var label = (ev.time || '') + ' — ' + ev.title + (__ownerText(ev) ? (' • ' + __ownerText(ev)) : '');
             row.appendChild(document.createTextNode(label));
             row.addEventListener('click', function () {
               // В Today-панелі відкриваємо Info

@@ -40,7 +40,11 @@
       <div class="row">
         <div>
           <label for="inputOwner">Відповідальний</label>
-          <input id="inputOwner" name="owner" type="text" placeholder="Ім'я або команда">
+          <div class="owner-autocomplete">
+            <input id="inputOwner" name="owner" type="text" placeholder="Ім'я (login) або довільний текст" autocomplete="off">
+            <input id="inputOwnerUserId" name="owner_user_id" type="hidden" value="">
+            <div id="ownerSuggest" class="owner-suggest" hidden></div>
+          </div>
         </div>
         <div>
           <label for="inputType">Тип</label>

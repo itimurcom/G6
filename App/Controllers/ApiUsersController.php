@@ -47,6 +47,39 @@ final class ApiUsersController
     // --- Публічні методи API ---
 
     /**
+     * GET /api/users/search?q=adm&limit=10
+     * Autocomplete search for assigning "Responsible".
+     * доступно будь-якому авторизованому користувачу
+     */
+    public function search(): void
+    {
+        try {
+            $uid = Auth::id();
+            if (!$uid) {
+                $this->json(['ok' => false, 'error' => 'unauthorized'], 401);
+                return;
+            }
+
+            $q = (string)($_GET['q'] ?? ($_GET['term'] ?? ''));
+            $limit = (int)($_GET['limit'] ?? 10);
+
+            $rows = $this->users->search($q, $limit);
+            $out = array_map(function($u) {
+                return [
+                    'id'    => (int)($u['id'] ?? 0),
+                    'login' => (string)($u['login'] ?? ''),
+                    'name'  => (string)(($u['name'] ?? '') !== '' ? $u['name'] : ($u['login'] ?? '')),
+                    'email' => $u['email'] ?? null,
+                ];
+            }, is_array($rows) ? $rows : []);
+
+            $this->json(['ok' => true, 'users' => $out]);
+        } catch (\Throwable $e) {
+            $this->json(['ok' => false, 'error' => 'internal', 'message' => $e->getMessage()], 500);
+        }
+    }
+
+    /**
      * GET /api/users/me
      * Повертає профіль поточного користувача
      */

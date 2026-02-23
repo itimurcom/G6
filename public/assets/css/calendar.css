@@ -1314,3 +1314,51 @@ body.light .ev--multi,
   color: var(--muted);
   font-size: var(--fs-sm);
 }
+
+/* === Owner autocomplete (Responsible) === */
+.owner-autocomplete {
+  position: relative;
+}
+
+.owner-suggest {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(100% + 6px);
+  z-index: 2000;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: rgba(20, 24, 30, 0.98);
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.35);
+  overflow: auto;
+  max-height: 220px;
+}
+
+.owner-suggest .owner-suggest__item {
+  padding: 8px 10px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.owner-suggest .owner-suggest__item:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.owner-suggest .owner-suggest__main {
+  font-weight: 600;
+}
+
+.owner-suggest .owner-suggest__sub {
+  color: var(--muted);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.owner-suggest .owner-suggest__empty {
+  padding: 10px;
+  color: var(--muted);
+  font-size: 12px;
+}

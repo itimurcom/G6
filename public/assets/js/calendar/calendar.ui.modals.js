@@ -80,6 +80,8 @@
   var inputTitle = $id('inputTitle');
 
   var inputOwner = $id('inputOwner');
+  var inputOwnerUserId = $id('inputOwnerUserId');
+  var ownerSuggest = $id('ownerSuggest');
   var inputType = $id('inputType');
   var inputUrgent = $id('inputUrgent');
   var inputDone = $id('inputDone');
@@ -104,6 +106,152 @@
 
 
   var __lastFocusEl = null;
+
+  // === Owner autocomplete state ===
+  var __ownerPick = null; // {id, login, name, label}
+  var __ownerSuggestTimer = null;
+
+  function __ownerParseRaw(raw) {
+    try {
+      if (Ev && typeof Ev.parseOwnerField === 'function') return Ev.parseOwnerField(raw);
+    } catch (_) { }
+    var s = (raw == null) ? '' : String(raw);
+    return { type: 'text', text: s.trim(), user_id: 0, login: '', name: '', label: '' };
+  }
+
+  function __ownerSetText(text) {
+    if (inputOwner) inputOwner.value = (text == null) ? '' : String(text);
+    if (inputOwnerUserId) inputOwnerUserId.value = '';
+    __ownerPick = null;
+  }
+
+  function __ownerSetUser(u) {
+    if (!u || !u.id) { __ownerSetText((inputOwner && inputOwner.value) ? inputOwner.value : ''); return; }
+    __ownerPick = {
+      id: parseInt(u.id, 10) || 0,
+      login: String(u.login || ''),
+      name: String(u.name || ''),
+      label: String(u.label || (u.name ? (u.name + (u.login ? (' (' + u.login + ')') : '')) : u.login))
+    };
+    if (inputOwner) inputOwner.value = __ownerPick.label;
+    if (inputOwnerUserId) inputOwnerUserId.value = String(__ownerPick.id);
+    __ownerHideSuggest();
+  }
+
+  function __ownerHideSuggest() {
+    if (!ownerSuggest) return;
+    ownerSuggest.hidden = true;
+    ownerSuggest.innerHTML = '';
+  }
+
+  function __ownerRenderSuggest(list) {
+    if (!ownerSuggest) return;
+    ownerSuggest.innerHTML = '';
+    if (!Array.isArray(list) || !list.length) {
+      var empty = document.createElement('div');
+      empty.className = 'owner-suggest__empty';
+      empty.textContent = 'Нічого не знайдено';
+      ownerSuggest.appendChild(empty);
+      ownerSuggest.hidden = false;
+      return;
+    }
+
+    for (var i = 0; i < list.length; i++) {
+      var u = list[i] || {};
+      var id = parseInt(u.id || 0, 10) || 0;
+      if (!id) continue;
+      var login = String(u.login || '');
+      var name = String(u.name || login);
+      var label = name + (login ? (' (' + login + ')') : '');
+
+      var item = document.createElement('div');
+      item.className = 'owner-suggest__item';
+      item.setAttribute('role', 'button');
+      item.tabIndex = 0;
+
+      var main = document.createElement('div');
+      main.className = 'owner-suggest__main';
+      main.textContent = label;
+
+      var sub = document.createElement('div');
+      sub.className = 'owner-suggest__sub';
+      sub.textContent = u.email ? String(u.email) : ('ID ' + id);
+
+      item.appendChild(main);
+      item.appendChild(sub);
+
+      (function (payload) {
+        item.addEventListener('click', function (e) {
+          e.preventDefault(); e.stopPropagation();
+          __ownerSetUser(payload);
+        });
+        item.addEventListener('keydown', function (e) {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault(); e.stopPropagation();
+            __ownerSetUser(payload);
+          }
+        });
+      })({ id: id, login: login, name: name, label: label });
+
+      ownerSuggest.appendChild(item);
+    }
+
+    ownerSuggest.hidden = false;
+  }
+
+  function __ownerFetchSuggest(term) {
+    term = (term == null) ? '' : String(term).trim();
+    if (!term) { __ownerHideSuggest(); return; }
+    try {
+      fetch('/api/users/search?q=' + encodeURIComponent(term) + '&limit=8')
+        .then(function (r) { return r.json(); })
+        .then(function (x) {
+          if (!x || !x.ok) { __ownerHideSuggest(); return; }
+          __ownerRenderSuggest(x.users || []);
+        })
+        .catch(function () { __ownerHideSuggest(); });
+    } catch (_) { __ownerHideSuggest(); }
+  }
+
+  function __ownerSaveValue() {
+    var txt = (inputOwner && inputOwner.value) ? String(inputOwner.value).trim() : '';
+    var uid = (inputOwnerUserId && inputOwnerUserId.value) ? (parseInt(inputOwnerUserId.value, 10) || 0) : 0;
+    if (uid > 0 && __ownerPick && parseInt(__ownerPick.id || 0, 10) === uid) {
+      // Store as JSON string in ev.owner
+      return JSON.stringify({ t: 'user', id: uid, login: __ownerPick.login || '', name: __ownerPick.name || '', label: __ownerPick.label || txt });
+    }
+    return txt;
+  }
+
+  function __ownerInitAutocompleteOnce() {
+    if (!inputOwner) return;
+    if (inputOwner.dataset && inputOwner.dataset.ownerAutocomplete === '1') return;
+    if (inputOwner.dataset) inputOwner.dataset.ownerAutocomplete = '1';
+
+    inputOwner.addEventListener('input', function () {
+      // If user edits manually after picking a user -> clear selection
+      try {
+        if (inputOwnerUserId && inputOwnerUserId.value && __ownerPick && inputOwner.value !== __ownerPick.label) {
+          inputOwnerUserId.value = '';
+          __ownerPick = null;
+        }
+      } catch (_) { }
+
+      if (__ownerSuggestTimer) clearTimeout(__ownerSuggestTimer);
+      __ownerSuggestTimer = setTimeout(function () {
+        __ownerFetchSuggest(inputOwner.value);
+      }, 220);
+    });
+
+    inputOwner.addEventListener('blur', function () {
+      // Allow click on suggestions
+      setTimeout(function () { __ownerHideSuggest(); }, 150);
+    });
+
+    inputOwner.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') { __ownerHideSuggest(); }
+    });
+  }
 
   // Delete helpers (UI control lives in edit modal)
   function __removeEventEverywhereById(eventId) {
@@ -324,6 +472,7 @@
     if (inputSpanDays) inputSpanDays.value = '';
     if (inputTitle) inputTitle.value = '';
     if (inputOwner) inputOwner.value = '';
+    __ownerSetText('');
     if (inputType) inputType.value = 'evt';
     if (inputUrgent) inputUrgent.checked = false;
     if (inputDone) inputDone.checked = false;
@@ -335,6 +484,7 @@
     setEditModalType(inputType ? inputType.value : 'evt');
     applyUrgentClass();
     applyDoneClass();
+    __ownerInitAutocompleteOnce();
     showOverlay();
   }
 
@@ -377,7 +527,15 @@
     if (inputDate) inputDate.value = dateISO;
     if (inputTime) inputTime.value = ev.time || '';
     if (inputTitle) inputTitle.value = ev.title || '';
-    if (inputOwner) inputOwner.value = ev.owner || '';
+    (function setOwnerFromEvent() {
+      var p = __ownerParseRaw(ev.owner);
+      if (p && p.type === 'user' && (parseInt(p.user_id || 0, 10) || 0) > 0) {
+        var lbl = p.label || (p.name ? (p.name + (p.login ? (' (' + p.login + ')') : '')) : p.login);
+        __ownerSetUser({ id: p.user_id, login: p.login || '', name: p.name || '', label: lbl || '' });
+      } else {
+        __ownerSetText((p && p.text) ? p.text : (ev.owner || ''));
+      }
+    })();
     if (inputType) inputType.value = ev.type || 'evt';
     if (inputUrgent) inputUrgent.checked = !!ev.urgent;
     if (inputDone) inputDone.checked = !!ev.done;
@@ -389,6 +547,7 @@
     setEditModalType(inputType ? inputType.value : 'evt');
     applyUrgentClass();
     applyDoneClass();
+    __ownerInitAutocompleteOnce();
     showOverlay();
   }
 
@@ -633,7 +792,7 @@
         // 1st row: date(+time) + responsible
         '<div class="info-row">' +
           '<div class="info-item"><strong>Дата:</strong> ' + __dateTimeHtml + '</div>' +
-          '<div class="info-item"><strong>Відповідальний:</strong> ' + Ev.escapeHtml(ev.owner || '—') + '</div>' +
+          '<div class="info-item"><strong>Відповідальний:</strong> ' + Ev.escapeHtml((Ev && typeof Ev.ownerDisplay === 'function') ? (Ev.ownerDisplay(ev) || '—') : (ev.owner || '—')) + '</div>' +
         '</div>' +
 
         // 2nd row: end date (only for multi-day)
@@ -732,7 +891,7 @@ if (infoContent) infoContent.innerHTML = html;
       id: (overlay && overlay.dataset.id) ? overlay.dataset.id : Ev.genId(),
       time: (inputTime && inputTime.value) ? inputTime.value : '',
       title: (inputTitle && inputTitle.value) ? inputTitle.value.trim() : '',
-      owner: (inputOwner && inputOwner.value || '').trim(),
+      owner: __ownerSaveValue(),
       type: (inputType && inputType.value) ? inputType.value : 'evt',
       urgent: !!(inputUrgent && inputUrgent.checked),
       done: !!(inputDone && inputDone.checked),

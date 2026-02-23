@@ -1769,7 +1769,7 @@
             '<div><strong>Виконана:</strong> ' + (asBool(ev.done) ? 'так' : 'ні') + '</div>' +
             '</div>' +
             '<div><strong>Назва:</strong> ' + esc(ev.title || '') + '</div>' +
-            '<div><strong>Відповідальний:</strong> ' + esc(ev.owner || '—') + '</div>' +
+            '<div><strong>Відповідальний:</strong> ' + esc((window.CalendarApp && window.CalendarApp.events && typeof window.CalendarApp.events.ownerDisplay === 'function') ? (window.CalendarApp.events.ownerDisplay(ev) || '—') : (ev.owner || '—')) + '</div>' +
             '<div><strong>Власник (створив):</strong> ' + (uid > 0 ? ('<span class="user--name" data-user-id="' + escAttr(String(uid)) + '"></span>') : '—') + '</div>' +
             '<div><strong>Створено:</strong> ' + esc(createdText) + '</div>' +
             '<div><strong>Терміновість:</strong> ' + (asBool(ev.urgent) ? 'так' : 'ні') + '</div>' +

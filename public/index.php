@@ -76,6 +76,7 @@ $router->post('/api/events/backfill-authors', [\App\Controllers\ApiEventsControl
 // ---- Users API ----
 $router->get('/api/users/get'
 ,          [\App\Controllers\ApiUsersController::class, 'get']);
+$router->get('/api/users/search',      [\App\Controllers\ApiUsersController::class, 'search']);
 $router->get('/api/users/name',         [\App\Controllers\ApiUserNameController::class, 'name']);
 $router->get('/api/users/me',           [\App\Controllers\ApiUsersController::class, 'me']);
 

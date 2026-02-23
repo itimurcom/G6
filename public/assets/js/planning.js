@@ -124,6 +124,18 @@
   var MOUNT_ID = "planning-today";
   var TOOLBAR_ID = "planning-toolbar";
   var STATE = { scope: (localStorage.getItem("planning.scope") || "all"), userId: 0 };
+
+  function ownerDisplay(ev) {
+    try {
+      var E = (global.CalendarApp && global.CalendarApp.events) || {};
+      if (E && typeof E.ownerDisplay === 'function') return E.ownerDisplay(ev) || '';
+    } catch (_) { }
+    return (ev && ev.owner) ? String(ev.owner) : '';
+  }
+
+  function isClosed(ev) {
+    return !!(ev && ev.close_user_id && ev.close_time);
+  }
   function readCurrentUserId() {
     try {
       var m = document.getElementById(MOUNT_ID);
@@ -138,17 +150,38 @@
     for (var i = 0; i < inputs.length; i++) {
       inputs[i].checked = (inputs[i].value === STATE.scope);
       inputs[i].addEventListener("change", function (ev) {
-        STATE.scope = ev.target.value === "my" ? "my" : "all";
+        var v = String(ev.target.value || '').toLowerCase();
+        STATE.scope = (v === 'my' || v === 'exec') ? v : 'all';
         localStorage.setItem("planning.scope", STATE.scope);
         ensureStore(render);
       });
     }
   }
   function applyScope(list) {
-    if (STATE.scope !== "my") return list;
-    var uid = STATE.userId || 0; if (!uid) return [];
-    var out = []; for (var i = 0; i < list.length; i++) { var it = list[i] || {}; var ev = it.ev || {}; var u = parseInt(ev.user_id || 0, 10); if (u === uid) out.push(it); }
-    return out;
+    if (STATE.scope === 'my') {
+      var uid = STATE.userId || 0; if (!uid) return [];
+      var outMy = [];
+      for (var i = 0; i < list.length; i++) {
+        var it0 = list[i] || {}; var ev0 = it0.ev || {}; var u0 = parseInt(ev0.user_id || 0, 10);
+        if (u0 === uid) outMy.push(it0);
+      }
+      return outMy;
+    }
+
+    if (STATE.scope === 'exec') {
+      var outExec = [];
+      for (var j = 0; j < list.length; j++) {
+        var it1 = list[j] || {}; var ev1 = it1.ev || {};
+        var resp = ownerDisplay(ev1);
+        if (!resp) continue;
+        if (ev1.done) continue;
+        if (isClosed(ev1)) continue;
+        outExec.push(it1);
+      }
+      return outExec;
+    }
+
+    return list;
   }
 
 
@@ -434,7 +467,10 @@
       // === Added: expose meta for filters ===
       try {
         li.setAttribute("data-type", (String(ev.type || "other").toLowerCase() || "other"));
-        li.setAttribute("data-owner", (ev.owner ? String(ev.owner) : ""));
+        var __ownDisp = (global.CalendarApp && global.CalendarApp.events && typeof global.CalendarApp.events.ownerDisplay === 'function')
+          ? (global.CalendarApp.events.ownerDisplay(ev) || '')
+          : (ev.owner ? String(ev.owner) : "");
+        li.setAttribute("data-owner", __ownDisp);
         li.setAttribute("data-done", (ev.done ? "1" : "0"));
         li.setAttribute("data-urgent", (ev.urgent ? "1" : "0"));
         // event start date (best effort): prefer explicit ev.date -> startDay -> dk
@@ -512,7 +548,9 @@
 
       var owner = document.createElement("div");
       owner.className = "planning-today__owner";
-      owner.textContent = ev.owner ? String(ev.owner) : "";
+      owner.textContent = (global.CalendarApp && global.CalendarApp.events && typeof global.CalendarApp.events.ownerDisplay === 'function')
+        ? (global.CalendarApp.events.ownerDisplay(ev) || '')
+        : (ev.owner ? String(ev.owner) : "");
 
       li.setAttribute("data-type", tRaw || "other");
 
