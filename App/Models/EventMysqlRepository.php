@@ -162,6 +162,74 @@ class EventMysqlRepository implements EventRepositoryInterface {
         return $this->mapRows($stmt->fetchAll());
     }
 
+
+
+    /**
+     * Пошук підказок для поля "Відповідальний" серед уже збережених подій.
+     * Повертає лише ТЕКСТОВІ значення (legacy string або JSON {t:"text"}).
+     * JSON {t:"user"} свідомо пропускаються — для них є окремий пошук користувачів.
+     */
+    public function searchOwnerTextSuggestions(string $q, int $limit = 8): array {
+        $q = trim((string)$q);
+        if ($q === '') return [];
+
+        $limit = max(1, min(25, (int)$limit));
+        $scanLimit = max($limit * 12, 40);
+        if ($scanLimit > 250) $scanLimit = 250;
+
+        $like = '%' . $q . '%';
+        $sql = "SELECT owner, created_at FROM events
+"
+             . "WHERE owner IS NOT NULL AND TRIM(owner) <> '' AND owner LIKE ?
+"
+             . "ORDER BY created_at DESC
+"
+             . "LIMIT {$scanLimit}";
+
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute([$like]);
+        $rows = $stmt->fetchAll();
+
+        $out = [];
+        $seen = [];
+        foreach ($rows as $row) {
+            $raw = trim((string)($row['owner'] ?? ''));
+            if ($raw === '') continue;
+
+            $candidate = '';
+            if (strlen($raw) >= 2 && $raw[0] === '{' && substr($raw, -1) === '}') {
+                $parsed = json_decode($raw, true);
+                if (is_array($parsed)) {
+                    $t = strtolower((string)($parsed['t'] ?? $parsed['type'] ?? 'text'));
+                    if ($t === 'user') {
+                        continue;
+                    }
+                    $candidate = trim((string)($parsed['text'] ?? $parsed['value'] ?? ''));
+                } else {
+                    // Некоректний JSON не ламаємо: пробуємо як звичайний текст
+                    $candidate = $raw;
+                }
+            } else {
+                $candidate = $raw;
+            }
+
+            if ($candidate === '') continue;
+            if (mb_stripos($candidate, $q, 0, 'UTF-8') === false) continue;
+
+            $key = mb_strtolower(preg_replace('/\s+/u', ' ', $candidate), 'UTF-8');
+            if ($key === '' || isset($seen[$key])) continue;
+            $seen[$key] = true;
+
+            $out[] = [
+                'text' => $candidate,
+                'source' => 'events',
+            ];
+            if (count($out) >= $limit) break;
+        }
+
+        return $out;
+    }
+
     private function mapRows(array $rows): array {
         foreach ($rows as &$row) $row = $this->mapRow($row);
         return $rows;

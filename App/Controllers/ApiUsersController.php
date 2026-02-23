@@ -4,15 +4,18 @@ declare(strict_types=1);
 namespace App\Controllers;
 
 use App\Models\UserMysqlRepository;
+use App\Models\EventMysqlRepository;
 use App\Core\Auth;
 
 final class ApiUsersController
 {
     private UserMysqlRepository $users;
+    private EventMysqlRepository $events;
 
     public function __construct()
     {
         $this->users = new UserMysqlRepository();
+        $this->events = new EventMysqlRepository();
     }
 
     // --- Допоміжні методи ---
@@ -64,16 +67,46 @@ final class ApiUsersController
             $limit = (int)($_GET['limit'] ?? 10);
 
             $rows = $this->users->search($q, $limit);
-            $out = array_map(function($u) {
+            $usersOut = array_map(function($u) {
                 return [
                     'id'    => (int)($u['id'] ?? 0),
                     'login' => (string)($u['login'] ?? ''),
                     'name'  => (string)(($u['name'] ?? '') !== '' ? $u['name'] : ($u['login'] ?? '')),
                     'email' => $u['email'] ?? null,
+                    'kind'  => 'user',
                 ];
             }, is_array($rows) ? $rows : []);
 
-            $this->json(['ok' => true, 'users' => $out]);
+            $textRows = $this->events->searchOwnerTextSuggestions($q, $limit);
+            $textOut = array_map(function($row) {
+                $text = trim((string)($row['text'] ?? ''));
+                return [
+                    'kind'  => 'text',
+                    'text'  => $text,
+                    'label' => $text,
+                    'source'=> (string)($row['source'] ?? 'events'),
+                ];
+            }, is_array($textRows) ? $textRows : []);
+
+            $seen = [];
+            $items = [];
+            foreach ($usersOut as $u) {
+                $label = trim((string)(($u['name'] ?? '') !== '' ? ($u['name'] . (!empty($u['login']) ? (' (' . $u['login'] . ')') : '')) : ($u['login'] ?? '')));
+                $key = 'user:' . mb_strtolower($label, 'UTF-8');
+                if (isset($seen[$key])) continue;
+                $seen[$key] = true;
+                $items[] = $u;
+            }
+            foreach ($textOut as $trow) {
+                $label = trim((string)($trow['label'] ?? $trow['text'] ?? ''));
+                if ($label === '') continue;
+                $key = 'text:' . mb_strtolower($label, 'UTF-8');
+                if (isset($seen[$key])) continue;
+                $seen[$key] = true;
+                $items[] = $trow;
+            }
+
+            $this->json(['ok' => true, 'users' => $usersOut, 'items' => $items]);
         } catch (\Throwable $e) {
             $this->json(['ok' => false, 'error' => 'internal', 'message' => $e->getMessage()], 500);
         }

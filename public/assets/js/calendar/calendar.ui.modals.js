@@ -125,6 +125,11 @@
     __ownerPick = null;
   }
 
+  function __ownerSetTextChoice(text) {
+    __ownerSetText(text);
+    __ownerHideSuggest();
+  }
+
   function __ownerSetUser(u) {
     if (!u || !u.id) { __ownerSetText((inputOwner && inputOwner.value) ? inputOwner.value : ''); return; }
     __ownerPick = {
@@ -157,45 +162,90 @@
     }
 
     for (var i = 0; i < list.length; i++) {
-      var u = list[i] || {};
-      var id = parseInt(u.id || 0, 10) || 0;
-      if (!id) continue;
-      var login = String(u.login || '');
-      var name = String(u.name || login);
-      var label = name + (login ? (' (' + login + ')') : '');
+      var row = list[i] || {};
+      var kind = String(row.kind || row.type || (row.id ? 'user' : 'text')).toLowerCase();
 
-      var item = document.createElement('div');
-      item.className = 'owner-suggest__item';
-      item.setAttribute('role', 'button');
-      item.tabIndex = 0;
+      if (kind === 'user') {
+        var id = parseInt(row.id || 0, 10) || 0;
+        if (!id) continue;
+        var login = String(row.login || '');
+        var name = String(row.name || login);
+        var label = String(row.label || (name + (login ? (' (' + login + ')') : '')));
 
-      var main = document.createElement('div');
-      main.className = 'owner-suggest__main';
-      main.textContent = label;
+        var item = document.createElement('div');
+        item.className = 'owner-suggest__item';
+        item.setAttribute('role', 'button');
+        item.tabIndex = 0;
 
-      var sub = document.createElement('div');
-      sub.className = 'owner-suggest__sub';
-      sub.textContent = u.email ? String(u.email) : ('ID ' + id);
+        var main = document.createElement('div');
+        main.className = 'owner-suggest__main';
+        main.textContent = label;
 
-      item.appendChild(main);
-      item.appendChild(sub);
+        var sub = document.createElement('div');
+        sub.className = 'owner-suggest__sub';
+        sub.textContent = row.email ? String(row.email) : ('Користувач · ID ' + id);
 
-      (function (payload) {
-        item.addEventListener('click', function (e) {
-          e.preventDefault(); e.stopPropagation();
-          __ownerSetUser(payload);
-        });
-        item.addEventListener('keydown', function (e) {
-          if (e.key === 'Enter' || e.key === ' ') {
+        item.appendChild(main);
+        item.appendChild(sub);
+
+        (function (payload, el) {
+          el.addEventListener('click', function (e) {
             e.preventDefault(); e.stopPropagation();
             __ownerSetUser(payload);
+          });
+          el.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault(); e.stopPropagation();
+              __ownerSetUser(payload);
+            }
+          });
+        })({ id: id, login: login, name: name, label: label }, item);
+
+        ownerSuggest.appendChild(item);
+        continue;
+      }
+
+      var txt = String(row.text || row.label || '').trim();
+      if (!txt) continue;
+
+      var titem = document.createElement('div');
+      titem.className = 'owner-suggest__item';
+      titem.setAttribute('role', 'button');
+      titem.tabIndex = 0;
+
+      var tmain = document.createElement('div');
+      tmain.className = 'owner-suggest__main';
+      tmain.textContent = txt;
+
+      var tsub = document.createElement('div');
+      tsub.className = 'owner-suggest__sub';
+      tsub.textContent = 'Текст з попередніх подій';
+
+      titem.appendChild(tmain);
+      titem.appendChild(tsub);
+
+      (function (payloadText, el) {
+        el.addEventListener('click', function (e) {
+          e.preventDefault(); e.stopPropagation();
+          __ownerSetTextChoice(payloadText);
+        });
+        el.addEventListener('keydown', function (e) {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault(); e.stopPropagation();
+            __ownerSetTextChoice(payloadText);
           }
         });
-      })({ id: id, login: login, name: name, label: label });
+      })(txt, titem);
 
-      ownerSuggest.appendChild(item);
+      ownerSuggest.appendChild(titem);
     }
 
+    if (!ownerSuggest.children.length) {
+      var empty2 = document.createElement('div');
+      empty2.className = 'owner-suggest__empty';
+      empty2.textContent = 'Нічого не знайдено';
+      ownerSuggest.appendChild(empty2);
+    }
     ownerSuggest.hidden = false;
   }
 
@@ -207,7 +257,7 @@
         .then(function (r) { return r.json(); })
         .then(function (x) {
           if (!x || !x.ok) { __ownerHideSuggest(); return; }
-          __ownerRenderSuggest(x.users || []);
+          __ownerRenderSuggest(x.items || x.users || []);
         })
         .catch(function () { __ownerHideSuggest(); });
     } catch (_) { __ownerHideSuggest(); }
