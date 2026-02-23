@@ -123,7 +123,7 @@
   var Data = (global.CalendarApp && global.CalendarApp.data) || {};
   var MOUNT_ID = "planning-today";
   var TOOLBAR_ID = "planning-toolbar";
-  var STATE = { scope: (localStorage.getItem("planning.scope") || "all"), userId: 0 };
+  var STATE = { scope: (localStorage.getItem("planning.scope") || "all"), userId: 0, userLogin: '' };
 
   function ownerDisplay(ev) {
     try {
@@ -142,6 +142,13 @@
       var id = m && m.dataset ? parseInt(m.dataset.userId || "0", 10) : 0;
       return isNaN(id) ? 0 : id;
     } catch (_) { return 0; }
+  }
+  function readCurrentUserLogin() {
+    try {
+      var m = document.getElementById(MOUNT_ID);
+      var s = m && m.dataset ? String(m.dataset.userLogin || '') : '';
+      return String(s || '').trim();
+    } catch (_) { return ''; }
   }
   function ensureToolbar() {
     var t = document.getElementById(TOOLBAR_ID);
@@ -169,11 +176,40 @@
     }
 
     if (STATE.scope === 'exec') {
+      var uid2 = STATE.userId || 0;
+      var ulogin = String(STATE.userLogin || '').trim();
+      var uloginN = ulogin ? ulogin.toLowerCase() : '';
+      if (!uid2 && !uloginN) return [];
+
       var outExec = [];
       for (var j = 0; j < list.length; j++) {
         var it1 = list[j] || {}; var ev1 = it1.ev || {};
-        var resp = ownerDisplay(ev1);
-        if (!resp) continue;
+        // "На виконанні" = події/задачі, де відповідальний == поточний користувач
+        // Підтримка:
+        // 1) новий формат (owner = JSON {type:user,user_id,login,...})
+        // 2) legacy формат (owner = текст, де може бути login)
+        var ok = false;
+        try {
+          var E = (global.CalendarApp && global.CalendarApp.events) || {};
+          if (E && typeof E.parseOwnerField === 'function') {
+            var p = E.parseOwnerField(ev1.owner);
+            if (p && p.type === 'user') {
+              var rid = parseInt(p.user_id || 0, 10) || 0;
+              if (uid2 && rid === uid2) ok = true;
+              else if (uloginN && String(p.login || '').toLowerCase() === uloginN) ok = true;
+            } else if (p && p.type === 'text') {
+              if (uloginN && String(p.text || '').trim().toLowerCase() === uloginN) ok = true;
+            }
+          }
+        } catch (_) { ok = false; }
+
+        // Fallback: compare display string with login
+        if (!ok && uloginN) {
+          var resp = ownerDisplay(ev1);
+          if (resp && String(resp).trim().toLowerCase() === uloginN) ok = true;
+        }
+
+        if (!ok) continue;
         if (ev1.done) continue;
         if (isClosed(ev1)) continue;
         outExec.push(it1);
@@ -649,6 +685,7 @@
   // ---------- page render ----------
   function render(store) {
     STATE.userId = readCurrentUserId();
+    STATE.userLogin = readCurrentUserLogin();
     ensureToolbar();
     var mount = document.getElementById(MOUNT_ID);
     if (!mount) return;

@@ -17,7 +17,11 @@
     <label><input type="radio" name="planning-scope" value="my"> Мої задачі</label>
     <label><input type="radio" name="planning-scope" value="exec"> На виконанні</label>
   </div>
-  <section id="planning-today" data-user-id="<?= (int)($_SESSION['user_id'] ?? 0) ?>"></section>
+  <section
+    id="planning-today"
+    data-user-id="<?= (int)($_SESSION['user_id'] ?? 0) ?>"
+    data-user-login="<?= htmlspecialchars((string)((($_SESSION['user']['login'] ?? '') ?: ($_SESSION['user_login'] ?? ''))), ENT_QUOTES, 'UTF-8') ?>"
+  ></section>
 </section>
 <?php include __DIR__ . '/../layouts/modals/editEvent.php'; ?>
 <?php include __DIR__ . '/../layouts/modals/infoEvent.php'; ?>
