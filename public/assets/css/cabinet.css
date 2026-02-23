@@ -285,7 +285,147 @@
 }
 
 
+/* P15.15: Users table actions as text links */
+.cab-action-link{
+  color: color-mix(in oklab, var(--accent) 85%, var(--cabinet-text));
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.cab-action-link:hover{
+  color: var(--accent);
+}
+.cab-action-sep{
+  display: inline-block;
+  margin: 0 8px;
+  opacity: .55;
+}
+
+
 /* P15.6: inline alerts in Security card */
 .cab-alert-inline {
   margin-bottom: 12px;
+}
+
+/* P15.12: Admin Users editor modal (Cabinet > Users) */
+.btn--sm{
+  padding: 8px 12px;
+  font-size: var(--fs-sm);
+  border-radius: 10px;
+}
+
+.cab-grid2{
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+@media (max-width: 720px){
+  .cab-grid2{ grid-template-columns: 1fr; }
+}
+
+.cab-divider{
+  height: 1px;
+  background: var(--cabinet-border);
+  opacity: .85;
+  margin: 12px 0;
+}
+
+.cab-card__sub{
+  font-size: var(--fs-sm);
+  font-weight: 900;
+  margin: 4px 0 0 0;
+}
+
+.cab-modal{
+  position: fixed;
+  inset: 0;
+  z-index: 10050;
+}
+.cab-modal[hidden]{
+  display: none !important;
+}
+.cab-modal__backdrop{
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,.55);
+  backdrop-filter: blur(2px);
+}
+.cab-modal__dialog{
+  position: relative;
+  max-width: 760px;
+  width: calc(100% - 24px);
+  margin: 60px auto;
+  background: var(--cabinet-card-bg);
+  border: 1px solid var(--cabinet-border);
+  border-radius: 16px;
+  box-shadow: 0 30px 80px rgba(0,0,0,.35);
+  overflow: hidden;
+}
+.cab-modal__head{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--cabinet-border);
+}
+.cab-modal__title{
+  font-size: var(--fs-ui);
+  font-weight: 900;
+}
+.cab-modal__close{
+  appearance: none;
+  border: 1px solid var(--cabinet-border);
+  background: var(--cabinet-btn-bg);
+  color: var(--cabinet-btn-text);
+  border-radius: 12px;
+  padding: 6px 10px;
+  cursor: pointer;
+}
+.cab-modal__body{
+  padding: 12px 14px;
+}
+.cab-modal__actions{
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+body.cab-modal-open{
+  overflow: hidden;
+}
+
+
+/* P15.14: admin user modal meta (ID/created/updated) — display-only, not input-looking */
+.cab-modal__meta{
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  margin: 2px 0 12px;
+  font-size: 12px;
+  color: var(--cabinet-muted);
+}
+.cab-modal__metaItem .k{
+  color: var(--cabinet-muted);
+}
+.cab-modal__metaItem .v{
+  color: var(--cabinet-text);
+  font-weight: 600;
+}
+
+/* P15.13: read-only text blocks in admin user modal (ID / created / updated) */
+.cab-rotext{
+  width: 100%;
+  box-sizing: border-box;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px dashed var(--cabinet-border);
+  background: var(--cabinet-input-bg);
+  color: var(--cabinet-text);
+  min-height: 42px;
+  display: flex;
+  align-items: center;
 }

@@ -67,6 +67,16 @@ $__globalOk   = (!empty($flashSuccess) && $__pwFlashOk === '') ? (string)$flashS
 <?php if ($__pwFlashOk): ?>
   <div id="cabinetToastPayload" data-kind="success" data-message="<?= htmlspecialchars($__pwFlashOk, ENT_QUOTES) ?>" hidden></div>
 <?php endif; ?>
+<?php
+$__toastOk = \App\Core\Session::flash('toast_success');
+$__toastErr = \App\Core\Session::flash('toast_error');
+?>
+<?php if (!empty($__toastOk)): ?>
+  <div id="cabinetToastPayloadAdmin" data-kind="success" data-message="<?= htmlspecialchars((string)$__toastOk, ENT_QUOTES) ?>" hidden></div>
+<?php endif; ?>
+<?php if (!empty($__toastErr)): ?>
+  <div id="cabinetToastPayloadAdminErr" data-kind="error" data-message="<?= htmlspecialchars((string)$__toastErr, ENT_QUOTES) ?>" hidden></div>
+<?php endif; ?>
 
     <section class="cabinet-tab" data-tab="profile">
       <div class='sub-title'>Профіль</div>
@@ -164,33 +174,155 @@ $__globalOk   = (!empty($flashSuccess) && $__pwFlashOk === '') ? (string)$flashS
       <div class="cab-card">
         <div class="cab-card__title">Список користувачів</div>
         <div class="cab-card__body">
-          <table class="cab-table">
+          <table class="cab-table" id="adminUsersTable">
             <thead>
               <tr>
+                <th>ID</th>
                 <th>Логін</th>
+                <th>Імʼя</th>
                 <th>Email</th>
-                <th>Тип</th>
+                <th>Роль</th>
+                <th>Адмін</th>
+                <th></th>
               </tr>
             </thead>
             <tbody>
               <?php foreach ($users as $row):
+            $id    = (int)($row['id'] ?? 0);
             $email = (string)($row['email'] ?? '');
             $login = (string)($row['login'] ?? ($row['username'] ?? ''));
-            if ($login === '' || mb_strtolower($login) === mb_strtolower($email)) {
-                $login = '—';
-            }
-            $role  = mb_strtolower((string)($row['role'] ?? ''));
-            $isAdm = $role === 'admin' || !empty($row['is_admin']);
-            $type  = $isAdm ? 'адмін' : 'користувач';
+            $name  = (string)($row['name'] ?? '');
+            $role  = (string)($row['role'] ?? 'user');
+            $isAdm = !empty($row['is_admin']) || mb_strtolower($role) === 'admin' || mb_strtolower($role) === 'superadmin' || mb_strtolower($role) === 'root';
+            $created = (string)($row['created_at'] ?? '');
+            $updated = (string)($row['updated_at'] ?? '');
+
+            $userJson = htmlspecialchars(json_encode([
+                'id' => $id,
+                'login' => $login,
+                'name' => $name,
+                'email' => $email,
+                'role' => $role,
+                'is_admin' => $isAdm ? 1 : 0,
+                'created_at' => $created,
+                'updated_at' => $updated,
+            ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), ENT_QUOTES);
           ?>
             <tr>
+              <td class='space'><?= (int)$id ?></td>
               <td class='space'><?= htmlspecialchars($login, ENT_QUOTES) ?></td>
-              <td class='space'><?= htmlspecialchars($email, ENT_QUOTES) ?></td>
-              <td class='space'><?= $type ?></td>
+              <td class='space'><?= htmlspecialchars($name, ENT_QUOTES) ?></td>
+              <td class='space'><?= htmlspecialchars($email ?: '—', ENT_QUOTES) ?></td>
+              <td class='space'><?= htmlspecialchars($role ?: 'user', ENT_QUOTES) ?></td>
+              <td class='space'><?= $isAdm ? 'так' : 'ні' ?></td>
+              <td class='space' style='text-align:right'>
+                <a href="#" class="cab-action-link js-user-edit" data-user="<?= $userJson ?>">Редагувати</a>
+                <span class="cab-action-sep">•</span>
+                <a href="#" class="cab-action-link js-user-pass" data-user="<?= $userJson ?>">Пароль</a>
+              </td>
             </tr>
           <?php endforeach; ?>
             </tbody>
           </table>
+
+          <div class="cab-modal" id="adminUserModal" hidden>
+            <div class="cab-modal__backdrop" data-close="1"></div>
+            <div class="cab-modal__dialog" role="dialog" aria-modal="true" aria-labelledby="adminUserModalTitle">
+              <div class="cab-modal__head">
+                <div class="cab-modal__title" id="adminUserModalTitle">Редагування користувача</div>
+                <button type="button" class="cab-modal__close" data-close="1" aria-label="Закрити">✕</button>
+              </div>
+              <div class="cab-modal__body">
+                <form class="cab-form" method="post" action="/cabinet/users/update" autocomplete="off">
+                  <input type="hidden" name="user_id" id="adminUserId" value="">
+                  <input type="hidden" name="_csrf" value="<?= htmlspecialchars(\App\Security\Csrf::token(), ENT_QUOTES) ?>">
+
+                                    <!-- P15.14: meta (ID/created/updated) is display-only, not form fields -->
+                  <div class="cab-modal__meta" aria-label="Довідкова інформація">
+                    <span class="cab-modal__metaItem"><span class="k">ID:</span> <span class="v" id="adminUserIdView">—</span></span>
+                    <span class="cab-modal__metaItem"><span class="k">Створено:</span> <span class="v" id="adminUserCreated">—</span></span>
+                    <span class="cab-modal__metaItem"><span class="k">Оновлено:</span> <span class="v" id="adminUserUpdated">—</span></span>
+                  </div>
+
+                  <div class="field">
+                    <label>Роль</label>
+                    <select class="input" name="role" id="adminUserRole">
+                        <option value="user">user</option>
+                        <option value="admin">admin</option>
+                        <option value="superadmin">superadmin</option>
+                        <option value="root">root</option>
+                    </select>
+                  </div>
+
+                  <div class="field">
+                    <label>Імʼя</label>
+                    <input class="input" type="text" name="name" id="adminUserName" required>
+                  </div>
+
+                  <div class="cab-grid2">
+                    <div class="field">
+                      <label>Логін</label>
+                      <input class="input" type="text" name="login" id="adminUserLogin" required>
+                    </div>
+                    <div class="field">
+                      <label>Email</label>
+                      <input class="input" type="email" name="email" id="adminUserEmail" placeholder="(необовʼязково)">
+                    </div>
+                  </div>
+
+                  <div class="field">
+                    <label class="ui-switch">
+                      <input type="checkbox" name="is_admin" id="adminUserIsAdmin" value="1">
+                      <span class="ui-switch__track" aria-hidden="true"></span>
+                      <span class="ui-switch__label">Прапор is_admin</span>
+                    </label>
+                    <div class="hint">Право адміна визначається ролью (admin/superadmin/root) або прапором is_admin.</div>
+                  </div>
+
+                  <div class="cab-divider"></div>
+
+                  <div class="cab-modal__actions">
+                    <button class="btn" type="button" data-close="1">Скасувати</button>
+                    <button class="btn btn--primary" type="submit">Зберегти</button>
+                  </div>
+                </form>
+              </div>
+            </div>
+
+          </div>
+
+
+          <div class="cab-modal" id="adminUserPassModal" hidden>
+            <div class="cab-modal__backdrop" data-close="1"></div>
+            <div class="cab-modal__dialog" role="dialog" aria-modal="true" aria-labelledby="adminUserPassModalTitle">
+              <div class="cab-modal__head">
+                <div class="cab-modal__title" id="adminUserPassModalTitle">Зміна пароля</div>
+                <button type="button" class="cab-modal__close" data-close="1" aria-label="Закрити">✕</button>
+              </div>
+              <div class="cab-modal__body">
+                <form class="cab-form" method="post" action="/cabinet/users/password" autocomplete="off">
+                  <input type="hidden" name="user_id" id="adminUserPassId" value="">
+                  <input type="hidden" name="_csrf" value="<?= htmlspecialchars(\App\Security\Csrf::token(), ENT_QUOTES) ?>">
+
+                  <div class="cab-modal__meta" aria-label="Довідкова інформація">
+                    <span class="cab-modal__metaItem"><span class="k">Користувач:</span> <span class="v" id="adminUserPassUser">—</span></span>
+                  </div>
+
+                  <div class="field">
+                    <label>Новий пароль</label>
+                    <input class="input" type="password" name="new_password" id="adminUserPassNew" minlength="8" required autocomplete="new-password">
+                    <div class="hint">Мінімум 8 символів. Пароль буде змінено одразу після збереження.</div>
+                  </div>
+
+                  <div class="cab-modal__actions">
+                    <button class="btn" type="button" data-close="1">Скасувати</button>
+                    <button class="btn btn--primary" type="submit">Змінити пароль</button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </div>
+          </div>
         </div>
       </div>
     </div>

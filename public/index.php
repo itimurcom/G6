@@ -91,6 +91,9 @@ $router->post('/api/backup/import',         [\App\Controllers\ApiBackupControlle
 
 $router->post('/cabinet/profile/update',    [\App\Controllers\CabinetController::class, 'updateProfile']);
 $router->post('/cabinet/password/change',   [\App\Controllers\CabinetController::class, 'changePassword']);
+// Admin: manage users from Cabinet
+$router->post('/cabinet/users/update',      [\App\Controllers\CabinetController::class, 'adminUpdateUser']);
+$router->post('/cabinet/users/password',   [\App\Controllers\CabinetController::class, 'adminChangeUserPassword']);
 
 $router->get('/logout',                    [\App\Controllers\AuthController::class, 'logout']);
 

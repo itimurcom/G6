@@ -282,4 +282,264 @@ class CabinetController extends Controller
             header('Location: /cabinet', true, 302); return '';
         }
     
+
+        public function adminUpdateUser(\App\Core\Request $r): string {
+            if (!\App\Core\Auth::check()) { header('Location: /login', true, 302); return ''; }
+            if (!\App\Security\Csrf::validate($r->input('_csrf'))) { http_response_code(403); return 'Forbidden'; }
+
+            $me = \App\Core\Auth::user();
+            $isAdmin = false;
+            if (is_array($me)) {
+                $role = mb_strtolower((string)($me['role'] ?? ''));
+                $isAdmin = (($me['is_admin'] ?? false) === true) || ((int)($me['is_admin'] ?? 0) === 1) || in_array($role, ['admin','superadmin','root'], true);
+            }
+            if (!$isAdmin) { http_response_code(403); return 'Forbidden'; }
+
+            $targetId = (int)$r->input('user_id');
+            if ($targetId <= 0) {
+                if (method_exists(\App\Core\Session::class, 'flash')) {
+                    \App\Core\Session::flash('error', 'Не вказано користувача для редагування.');
+                }
+                header('Location: /cabinet?tab=users', true, 302);
+                return '';
+            }
+
+            $repo = new \App\Models\UserMysqlRepository();
+            $logger = new \App\Services\Audit\ActionLogger();
+
+            try {
+                $target = $repo->findById($targetId);
+            } catch (\Throwable $e) {
+                $target = null;
+            }
+
+            if (!is_array($target)) {
+                if (method_exists(\App\Core\Session::class, 'flash')) {
+                    \App\Core\Session::flash('error', 'Користувача не знайдено.');
+                }
+                $logger->log('cabinet.admin_user_update', 'error', [
+                    'admin_id'  => (int)($me['id'] ?? 0),
+                    'target_id' => $targetId,
+                    'reason'    => 'not_found',
+                ]);
+                header('Location: /cabinet?tab=users', true, 302);
+                return '';
+            }
+
+            $name  = trim((string)$r->input('name'));
+            $login = trim((string)$r->input('login'));
+            $emailRaw = trim((string)$r->input('email'));
+            $email = ($emailRaw !== '') ? mb_strtolower($emailRaw) : '';
+            $role  = trim((string)$r->input('role'));
+            if ($role === '') $role = 'user';
+            $isAdminFlag = !empty($r->input('is_admin')) ? 1 : 0;
+
+            $errors = [];
+            if ($name === '') $errors[] = 'Ім’я не може бути порожнім.';
+            if ($login === '') $errors[] = 'Логін не може бути порожнім.';
+            if ($email !== '' && !filter_var($email, FILTER_VALIDATE_EMAIL)) $errors[] = 'Некоректний e-mail.';
+
+            // Uniqueness: login
+            if ($login !== '') {
+                try { $existing = $repo->findByLogin($login); } catch (\Throwable $e) { $existing = null; }
+                if (is_array($existing) && (int)($existing['id'] ?? 0) !== $targetId) {
+                    $errors[] = 'Цей логін вже використовується іншим користувачем.';
+                }
+            }
+
+            // Uniqueness: email
+            if ($email !== '') {
+                try { $existingEmail = $repo->findByEmail($email); } catch (\Throwable $e) { $existingEmail = null; }
+                if (is_array($existingEmail) && (int)($existingEmail['id'] ?? 0) !== $targetId) {
+                    $errors[] = 'Цей e-mail вже використовується іншим користувачем.';
+                }
+            }
+
+            // Password change moved to a separate admin dialog (P15.15).
+
+            if (!empty($errors)) {
+                if (method_exists(\App\Core\Session::class, 'flash')) {
+                    \App\Core\Session::flash('error', implode(' ', $errors));
+                }
+                $logger->log('cabinet.admin_user_update', 'error', [
+                    'admin_id'  => (int)($me['id'] ?? 0),
+                    'target_id' => $targetId,
+                    'errors'    => $errors,
+                ]);
+                header('Location: /cabinet?tab=users', true, 302);
+                return '';
+            }
+
+            $update = [
+                'name'     => $name,
+                'login'    => $login,
+                'email'    => ($email === '') ? null : $email,
+                'role'     => $role,
+                'is_admin' => $isAdminFlag,
+            ];
+
+            $changed = [];
+            foreach ($update as $k => $v) {
+                if ($k === 'password_hash') { $changed[] = 'password'; continue; }
+                $before = $target[$k] ?? null;
+                if ((string)$before !== (string)$v) $changed[] = $k;
+            }
+
+            try {
+                $ok = false;
+                if (method_exists($repo, 'updateById')) {
+                    $ok = $repo->updateById($targetId, $update);
+                }
+
+                if (!$ok) {
+                    if (method_exists(\App\Core\Session::class, 'flash')) {
+                        \App\Core\Session::flash('error', 'Не вдалося зберегти дані користувача.');
+                    }
+                    $logger->log('cabinet.admin_user_update', 'error', [
+                        'admin_id'  => (int)($me['id'] ?? 0),
+                        'target_id' => $targetId,
+                        'reason'    => 'update_failed',
+                    ]);
+                    header('Location: /cabinet?tab=users', true, 302);
+                    return '';
+                }
+
+                // If admin updated their own account, refresh session
+                if ((int)($me['id'] ?? 0) === $targetId) {
+                    try {
+                        $fresh = $repo->findById($targetId);
+                        if (is_array($fresh)) {
+                            $roleFresh = (string)($fresh['role'] ?? '');
+                            $isAdmFresh = (mb_strtolower($roleFresh) === 'admin') || !empty($fresh['is_admin']);
+                            \App\Core\Session::set('user', [
+                                'id'       => (int)($fresh['id'] ?? $targetId),
+                                'name'     => (string)($fresh['name'] ?? ''),
+                                'login'    => $fresh['login'] ?? null,
+                                'email'    => $fresh['email'] ?? null,
+                                'role'     => $roleFresh,
+                                'is_admin' => $isAdmFresh,
+                            ]);
+                        }
+                    } catch (\Throwable $e) { /* ignore */ }
+                }
+
+                if (method_exists(\App\Core\Session::class, 'flash')) {
+                    \App\Core\Session::flash('toast_success', 'Дані користувача оновлено.');
+                }
+
+                $logger->log('cabinet.admin_user_update', 'success', [
+                    'admin_id'  => (int)($me['id'] ?? 0),
+                    'target_id' => $targetId,
+                    'changed'   => $changed,
+                ]);
+            } catch (\Throwable $e) {
+                if (method_exists(\App\Core\Session::class, 'flash')) {
+                    \App\Core\Session::flash('error', 'Не вдалося зберегти дані користувача.');
+                }
+                $logger->log('cabinet.admin_user_update', 'error', [
+                    'admin_id'  => (int)($me['id'] ?? 0),
+                    'target_id' => $targetId,
+                    'exception' => $e->getMessage(),
+                ]);
+            }
+
+            header('Location: /cabinet?tab=users', true, 302);
+            return '';
+        }
+
+
+        public function adminChangeUserPassword(\App\Core\Request $r): string {
+            if (!\App\Core\Auth::check()) { header('Location: /login', true, 302); return ''; }
+            if (!\App\Security\Csrf::validate($r->input('_csrf'))) { http_response_code(403); return 'Forbidden'; }
+
+            $me = \App\Core\Auth::user();
+            $isAdmin = false;
+            if (is_array($me)) {
+                $role = mb_strtolower((string)($me['role'] ?? ''));
+                $isAdmin = (($me['is_admin'] ?? false) === true) || ((int)($me['is_admin'] ?? 0) === 1) || in_array($role, ['admin','superadmin','root'], true);
+            }
+            if (!$isAdmin) { http_response_code(403); return 'Forbidden'; }
+
+            $targetId = (int)$r->input('user_id');
+            $newPass  = (string)$r->input('new_password');
+
+            if ($targetId <= 0) {
+                \App\Core\Session::flash('toast_error', 'Не вказано користувача для зміни пароля.');
+                header('Location: /cabinet?tab=users', true, 302);
+                return '';
+            }
+
+            $errors = [];
+            if (\strlen($newPass) < 8) $errors[] = 'Новий пароль має містити щонайменше 8 символів.';
+
+            $repo = new \App\Models\UserMysqlRepository();
+            $logger = new \App\Services\Audit\ActionLogger();
+
+            try {
+                $target = $repo->findById($targetId);
+            } catch (\Throwable $e) {
+                $target = null;
+            }
+
+            if (!is_array($target)) {
+                \App\Core\Session::flash('toast_error', 'Користувача не знайдено.');
+                $logger->log('cabinet.admin_user_password', 'error', [
+                    'admin_id'  => (int)($me['id'] ?? 0),
+                    'target_id' => $targetId,
+                    'reason'    => 'not_found',
+                ]);
+                header('Location: /cabinet?tab=users', true, 302);
+                return '';
+            }
+
+            if (!empty($errors)) {
+                \App\Core\Session::flash('toast_error', implode(' ', $errors));
+                $logger->log('cabinet.admin_user_password', 'error', [
+                    'admin_id'  => (int)($me['id'] ?? 0),
+                    'target_id' => $targetId,
+                    'errors'    => $errors,
+                ]);
+                header('Location: /cabinet?tab=users', true, 302);
+                return '';
+            }
+
+            try {
+                $ok = false;
+                if (method_exists($repo, 'updateById')) {
+                    $ok = $repo->updateById($targetId, ['password_hash' => password_hash($newPass, PASSWORD_DEFAULT)]);
+                }
+
+                if (!$ok) {
+                    \App\Core\Session::flash('toast_error', 'Не вдалося змінити пароль користувача.');
+                    $logger->log('cabinet.admin_user_password', 'error', [
+                        'admin_id'  => (int)($me['id'] ?? 0),
+                        'target_id' => $targetId,
+                        'reason'    => 'update_failed',
+                    ]);
+                    header('Location: /cabinet?tab=users', true, 302);
+                    return '';
+                }
+
+                $login = (string)($target['login'] ?? ($target['username'] ?? ''));
+                $label = $login !== '' ? ('"' . $login . '"') : ('ID ' . $targetId);
+                \App\Core\Session::flash('toast_success', 'Пароль користувача ' . $label . ' змінено.');
+
+                $logger->log('cabinet.admin_user_password', 'success', [
+                    'admin_id'  => (int)($me['id'] ?? 0),
+                    'target_id' => $targetId,
+                    'changed'   => ['password'],
+                ]);
+            } catch (\Throwable $e) {
+                \App\Core\Session::flash('toast_error', 'Не вдалося змінити пароль користувача.');
+                $logger->log('cabinet.admin_user_password', 'error', [
+                    'admin_id'  => (int)($me['id'] ?? 0),
+                    'target_id' => $targetId,
+                    'exception' => $e->getMessage(),
+                ]);
+            }
+
+            header('Location: /cabinet?tab=users', true, 302);
+            return '';
+        }
+
 }

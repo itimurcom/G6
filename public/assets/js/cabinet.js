@@ -26,13 +26,36 @@
     var defaultTab = tabs.length ? (tabs[0].dataset.tab || 'profile') : 'profile';
     var allowed = Array.prototype.map.call(tabs, function (t) { return t.dataset.tab; });
 
+    function getDeepLinkTab() {
+        try {
+            var u = new URL(window.location.href);
+            var q = (u.searchParams.get('tab') || '').toLowerCase();
+            if (q && allowed.indexOf(q) !== -1) return q;
+        } catch (e) { /* no-op */ }
+
+        try {
+            var h = (window.location.hash || '').replace(/^#/, '').toLowerCase();
+            if (!h) return null;
+            if (h.indexOf('tab=') === 0) h = h.slice(4);
+            if (h && allowed.indexOf(h) !== -1) return h;
+        } catch (e2) { /* no-op */ }
+
+        return null;
+    }
+
     var initialTab = defaultTab;
-    try {
-        var saved = localStorage.getItem(STORAGE_KEY);
-        if (saved && allowed.indexOf(saved) !== -1) {
-            initialTab = saved;
-        }
-    } catch (e) { /* no-op */ }
+    // P15.9: deep-link tab via ?tab=settings or #settings (priority over saved)
+    var deep = getDeepLinkTab();
+    if (deep) {
+        initialTab = deep;
+    } else {
+        try {
+            var saved = localStorage.getItem(STORAGE_KEY);
+            if (saved && allowed.indexOf(saved) !== -1) {
+                initialTab = saved;
+            }
+        } catch (e) { /* no-op */ }
+    }
 
     setTab(initialTab);
 })();
@@ -126,5 +149,176 @@
         var ms = (kind === 'success') ? 1200 : 1800;
         window.UiToast.show(msg, kind, ms);
     }
+})();
+
+
+
+// P15.12: cabinet toast payloads (admin user update)
+(function () {
+    var ids = ['cabinetToastPayloadAdmin', 'cabinetToastPayloadAdminErr'];
+    ids.forEach(function (id) {
+        var el = document.getElementById(id);
+        if (!el) return;
+
+        var kind = (el.getAttribute('data-kind') || 'info').toLowerCase();
+        var msg = el.getAttribute('data-message') || '';
+        if (!msg) return;
+
+        if (window.UiToast && typeof window.UiToast.show === 'function') {
+            var ms = (kind === 'success') ? 1200 : 2200;
+            window.UiToast.show(msg, kind, ms);
+        }
+    });
+})();
+
+// P15.12: Admin Users — edit modal (Cabinet > Users)
+(function () {
+    var modal = document.getElementById('adminUserModal');
+    if (!modal) return;
+
+    var idEl = document.getElementById('adminUserId');
+    var idViewEl = document.getElementById('adminUserIdView');
+    var nameEl = document.getElementById('adminUserName');
+    var loginEl = document.getElementById('adminUserLogin');
+    var emailEl = document.getElementById('adminUserEmail');
+    var roleEl = document.getElementById('adminUserRole');
+    var isAdminEl = document.getElementById('adminUserIsAdmin');
+    var createdEl = document.getElementById('adminUserCreated');
+    var updatedEl = document.getElementById('adminUserUpdated');
+
+    function ensureRoleOption(value) {
+        if (!roleEl) return;
+        var v = String(value || '').trim();
+        if (!v) v = 'user';
+        var found = false;
+        for (var i = 0; i < roleEl.options.length; i++) {
+            if (String(roleEl.options[i].value) === v) { found = true; break; }
+        }
+        if (!found) {
+            var opt = document.createElement('option');
+            opt.value = v;
+            opt.textContent = v;
+            roleEl.insertBefore(opt, roleEl.firstChild);
+        }
+        roleEl.value = v;
+    }
+
+    function openModal(user) {
+        try { document.body.classList.add('cab-modal-open'); } catch (e) { /* no-op */ }
+        modal.hidden = false;
+
+        if (idEl) idEl.value = String(user.id || '');
+        if (idViewEl) idViewEl.textContent = String(user.id || "—");
+        if (nameEl) nameEl.value = String(user.name || '');
+        if (loginEl) loginEl.value = String(user.login || '');
+        if (emailEl) emailEl.value = String(user.email || '');
+        ensureRoleOption(user.role || 'user');
+        if (isAdminEl) isAdminEl.checked = !!(user.is_admin && String(user.is_admin) !== '0');
+        if (createdEl) createdEl.textContent = String(user.created_at || "—");
+        if (updatedEl) updatedEl.textContent = String(user.updated_at || "—");
+
+        // focus first editable field
+        setTimeout(function () {
+            try { if (nameEl) nameEl.focus(); } catch (e) { /* no-op */ }
+        }, 0);
+    }
+
+    function closeModal() {
+        modal.hidden = true;
+        try { document.body.classList.remove('cab-modal-open'); } catch (e) { /* no-op */ }
+    }
+
+    document.addEventListener('click', function (e) {
+        var btn = e.target && e.target.closest ? e.target.closest('.js-user-edit') : null;
+        if (btn) {
+            e.preventDefault();
+            var raw = btn.getAttribute('data-user') || '';
+            if (!raw) return;
+            var user = null;
+            try { user = JSON.parse(raw); } catch (err) { user = null; }
+            if (!user) return;
+            openModal(user);
+            return;
+        }
+
+        var closeBtn = e.target && e.target.closest ? e.target.closest('[data-close="1"]') : null;
+        if (closeBtn && closeBtn.closest && closeBtn.closest('#adminUserModal')) {
+            e.preventDefault();
+            closeModal();
+        }
+    });
+
+    document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape' && modal && !modal.hidden) {
+            closeModal();
+        }
+    });
+})();
+
+// P15.15: Admin Users — password modal (Cabinet > Users)
+(function () {
+    var modal = document.getElementById('adminUserPassModal');
+    if (!modal) return;
+
+    var idEl = document.getElementById('adminUserPassId');
+    var userEl = document.getElementById('adminUserPassUser');
+    var passEl = document.getElementById('adminUserPassNew');
+
+    function openModal(user) {
+        try { document.body.classList.add('cab-modal-open'); } catch (e) { /* no-op */ }
+        modal.hidden = false;
+
+        var id = String(user.id || '');
+        var login = String(user.login || '');
+        var name = String(user.name || '');
+
+        if (idEl) idEl.value = id;
+        if (userEl) {
+            var label = '';
+            if (login) label += login;
+            if (name) label += (label ? ' — ' : '') + name;
+            if (!label) label = 'ID ' + (id || '—');
+            else label += ' (ID ' + (id || '—') + ')';
+            userEl.textContent = label;
+        }
+
+        if (passEl) passEl.value = '';
+
+        setTimeout(function () {
+            try { if (passEl) passEl.focus(); } catch (e) { /* no-op */ }
+        }, 0);
+    }
+
+    function closeModal() {
+        modal.hidden = true;
+        try { document.body.classList.remove('cab-modal-open'); } catch (e) { /* no-op */ }
+        if (passEl) passEl.value = '';
+    }
+
+    document.addEventListener('click', function (e) {
+        var btn = e.target && e.target.closest ? e.target.closest('.js-user-pass') : null;
+        if (btn) {
+            e.preventDefault();
+            var raw = btn.getAttribute('data-user') || '';
+            if (!raw) return;
+            var user = null;
+            try { user = JSON.parse(raw); } catch (err) { user = null; }
+            if (!user) return;
+            openModal(user);
+            return;
+        }
+
+        var closeBtn = e.target && e.target.closest ? e.target.closest('[data-close="1"]') : null;
+        if (closeBtn && closeBtn.closest && closeBtn.closest('#adminUserPassModal')) {
+            e.preventDefault();
+            closeModal();
+        }
+    });
+
+    document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape' && modal && !modal.hidden) {
+            closeModal();
+        }
+    });
 })();
 
