@@ -318,6 +318,8 @@ class CabinetController extends Controller
                     \App\Core\Session::flash('error', 'Користувача не знайдено.');
                 }
                 $logger->log('cabinet.admin_user_update', 'error', [
+                    'entity_type' => 'user',
+                    'entity_id'   => $targetId,
                     'admin_id'  => (int)($me['id'] ?? 0),
                     'target_id' => $targetId,
                     'reason'    => 'not_found',
@@ -362,6 +364,8 @@ class CabinetController extends Controller
                     \App\Core\Session::flash('error', implode(' ', $errors));
                 }
                 $logger->log('cabinet.admin_user_update', 'error', [
+                    'entity_type' => 'user',
+                    'entity_id'   => $targetId,
                     'admin_id'  => (int)($me['id'] ?? 0),
                     'target_id' => $targetId,
                     'errors'    => $errors,
@@ -406,6 +410,8 @@ class CabinetController extends Controller
                         \App\Core\Session::flash('error', 'Не вдалося зберегти дані користувача.');
                     }
                     $logger->log('cabinet.admin_user_update', 'error', [
+                        'entity_type' => 'user',
+                        'entity_id'   => $targetId,
                         'admin_id'  => (int)($me['id'] ?? 0),
                         'target_id' => $targetId,
                         'reason'    => 'update_failed',
@@ -454,6 +460,8 @@ class CabinetController extends Controller
                 }
 
                 $logger->log('cabinet.admin_user_update', 'success', [
+                    'entity_type' => 'user',
+                    'entity_id'   => $targetId,
                     'admin_id'     => (int)($me['id'] ?? 0),
                     'target_id'    => $targetId,
                     'target_login' => (string)$login,
@@ -467,6 +475,8 @@ class CabinetController extends Controller
                     \App\Core\Session::flash('error', 'Не вдалося зберегти дані користувача.');
                 }
                 $logger->log('cabinet.admin_user_update', 'error', [
+                    'entity_type' => 'user',
+                    'entity_id'   => $targetId,
                     'admin_id'  => (int)($me['id'] ?? 0),
                     'target_id' => $targetId,
                     'exception' => $e->getMessage(),
@@ -514,6 +524,8 @@ class CabinetController extends Controller
             if (!is_array($target)) {
                 \App\Core\Session::flash('toast_error', 'Користувача не знайдено.');
                 $logger->log('cabinet.admin_user_password', 'error', [
+                    'entity_type' => 'user',
+                    'entity_id'   => $targetId,
                     'admin_id'  => (int)($me['id'] ?? 0),
                     'target_id' => $targetId,
                     'reason'    => 'not_found',
@@ -525,6 +537,8 @@ class CabinetController extends Controller
             if (!empty($errors)) {
                 \App\Core\Session::flash('toast_error', implode(' ', $errors));
                 $logger->log('cabinet.admin_user_password', 'error', [
+                    'entity_type' => 'user',
+                    'entity_id'   => $targetId,
                     'admin_id'  => (int)($me['id'] ?? 0),
                     'target_id' => $targetId,
                     'errors'    => $errors,
@@ -542,6 +556,8 @@ class CabinetController extends Controller
                 if (!$ok) {
                     \App\Core\Session::flash('toast_error', 'Не вдалося змінити пароль користувача.');
                     $logger->log('cabinet.admin_user_password', 'error', [
+                        'entity_type' => 'user',
+                        'entity_id'   => $targetId,
                         'admin_id'  => (int)($me['id'] ?? 0),
                         'target_id' => $targetId,
                         'reason'    => 'update_failed',
@@ -555,6 +571,8 @@ class CabinetController extends Controller
                 \App\Core\Session::flash('toast_success', 'Пароль користувача ' . $label . ' змінено.');
 
                 $logger->log('cabinet.admin_user_password', 'success', [
+                    'entity_type' => 'user',
+                    'entity_id'   => $targetId,
                     'admin_id'     => (int)($me['id'] ?? 0),
                     'target_id'    => $targetId,
                     'target_login' => (string)$login,
@@ -564,6 +582,8 @@ class CabinetController extends Controller
             } catch (\Throwable $e) {
                 \App\Core\Session::flash('toast_error', 'Не вдалося змінити пароль користувача.');
                 $logger->log('cabinet.admin_user_password', 'error', [
+                    'entity_type' => 'user',
+                    'entity_id'   => $targetId,
                     'admin_id'  => (int)($me['id'] ?? 0),
                     'target_id' => $targetId,
                     'exception' => $e->getMessage(),

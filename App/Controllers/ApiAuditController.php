@@ -102,9 +102,16 @@ final class ApiAuditController extends Controller
                 $payloadTmp = json_decode($row['payload'] ?? '{}', true);
                 if (!is_array($payloadTmp)) $payloadTmp = [];
                 $tid = $payloadTmp['target_id'] ?? ($row['entity_id'] ?? null);
-                $tlogin = $payloadTmp['target_login'] ?? null;
-                if ($tid !== null && $tid !== '' && ($tlogin === null || trim((string)$tlogin) === '')) {
-                    $needUserIds[(int)$tid] = true;
+                $tidInt = (int)$tid;
+                if ($tid !== null && $tid !== '' && $tidInt > 0) {
+                    $tlogin = $payloadTmp['target_login'] ?? null;
+                    $ua = $payloadTmp['user_after'] ?? null;
+                    $needs = false;
+                    if ($tlogin === null || trim((string)$tlogin) === '') $needs = true;
+                    if ($ua === null || $ua === '' || (is_array($ua) && empty($ua))) $needs = true;
+                    if ($needs) {
+                        $needUserIds[$tidInt] = true;
+                    }
                 }
             }
 
@@ -112,15 +119,18 @@ final class ApiAuditController extends Controller
             if (!empty($needUserIds)) {
                 $ids = array_keys($needUserIds);
                 $placeholders = implode(',', array_fill(0, count($ids), '?'));
-                $stmtU = $this->db->prepare("SELECT id, login, name FROM users WHERE id IN ($placeholders)");
+                $stmtU = $this->db->prepare("SELECT id, login, name, email, role, is_admin FROM users WHERE id IN ($placeholders)");
                 $stmtU->execute($ids);
                 $uRows = $stmtU->fetchAll(PDO::FETCH_ASSOC);
                 foreach ($uRows as $u) {
                     $uid2 = (int)($u['id'] ?? 0);
                     if ($uid2 > 0) {
                         $usersMap[$uid2] = [
-                            'login' => (string)($u['login'] ?? ''),
-                            'name'  => (string)($u['name'] ?? ''),
+                            'login'    => (string)($u['login'] ?? ''),
+                            'name'     => (string)($u['name'] ?? ''),
+                            'email'    => $u['email'] ?? null,
+                            'role'     => (string)($u['role'] ?? ''),
+                            'is_admin' => (int)($u['is_admin'] ?? 0),
                         ];
                     }
                 }
@@ -145,6 +155,56 @@ final class ApiAuditController extends Controller
                     }
                 }
                 
+                
+
+                    // Hydrate missing user snapshots for legacy admin-user records.
+                    // If an old log did not store user_before/user_after, we still want the Journal details
+                    // to show actual values instead of a placeholder like "оновлено".
+                    if (in_array($act, $adminUserActions, true)) {
+                        $tid = $payload['target_id'] ?? ($row['entity_id'] ?? null);
+                        $tidInt = (int)$tid;
+                        if ($tidInt > 0 && isset($usersMap[$tidInt])) {
+                            $hasAfter = array_key_exists('user_after', $payload) && $payload['user_after'] !== null && $payload['user_after'] !== '' && !(is_array($payload['user_after']) && empty($payload['user_after']));
+
+                            if (!$hasAfter) {
+                                $ua = null;
+
+                                // 1) If payload contains the new values (legacy shapes: update/data/after), use them.
+                                foreach (['update', 'data', 'after'] as $k) {
+                                    if (isset($payload[$k]) && is_array($payload[$k])) {
+                                        $tmp = $payload[$k];
+                                        $ua = [
+                                            'name'     => isset($tmp['name']) ? (string)$tmp['name'] : null,
+                                            'login'    => isset($tmp['login']) ? (string)$tmp['login'] : (isset($tmp['username']) ? (string)$tmp['username'] : null),
+                                            'email'    => $tmp['email'] ?? null,
+                                            'role'     => isset($tmp['role']) ? (string)$tmp['role'] : null,
+                                            'is_admin' => isset($tmp['is_admin']) ? (int)$tmp['is_admin'] : null,
+                                        ];
+                                        // Normalize empty strings to null
+                                        foreach ($ua as $kk => $vv) {
+                                            if (is_string($vv) && trim($vv) === '') $ua[$kk] = null;
+                                        }
+                                        break;
+                                    }
+                                }
+
+                                // 2) Fallback to current DB state (better than showing no data).
+                                if ($ua === null) {
+                                    $um = $usersMap[$tidInt];
+                                    $ua = [
+                                        'name'     => (string)($um['name'] ?? ''),
+                                        'login'    => (string)($um['login'] ?? ''),
+                                        'email'    => $um['email'] ?? null,
+                                        'role'     => (string)($um['role'] ?? ''),
+                                        'is_admin' => (int)($um['is_admin'] ?? 0),
+                                    ];
+                                }
+
+                                $payload['user_after'] = $ua;
+                            }
+                        }
+                    }
+
                 return array_merge($payload, [
                     'ts'          => $row['created_at'],
                     'user_id'     => $row['user_id'],

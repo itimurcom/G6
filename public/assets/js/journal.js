@@ -597,6 +597,91 @@
         return changes;
     }
 
+    function parseChangedKeys(changed) {
+        var chArr = [];
+        if (!changed) return chArr;
+        try {
+            if (Object.prototype.toString.call(changed) === '[object Array]') {
+                chArr = changed.slice(0);
+            } else if (typeof changed === 'string') {
+                var s = changed.trim();
+                if (s) {
+                    try {
+                        var o = JSON.parse(s);
+                        if (Object.prototype.toString.call(o) === '[object Array]') chArr = o;
+                        else chArr = s.split(/[\s,]+/).filter(Boolean);
+                    } catch (e) {
+                        chArr = s.split(/[\s,]+/).filter(Boolean);
+                    }
+                }
+            } else if (typeof changed === 'object') {
+                try { chArr = Object.keys(changed); } catch (e2) { chArr = []; }
+            }
+        } catch (e3) { chArr = []; }
+
+        // uniq
+        var out = [];
+        chArr.forEach(function (k) {
+            var kk = (k === undefined || k === null) ? '' : String(k);
+            if (!kk) return;
+            if (out.indexOf(kk) === -1) out.push(kk);
+        });
+        return out;
+    }
+
+    function diffUserFlexible(it) {
+        // P15.22: older records may not contain user_before/user_after.
+        // If only "user_after" exists (or we can infer changed keys), show at least the new values.
+        // Some records may store snapshots under event_before/event_after (legacy) even for user actions.
+        var before = it ? (it.user_before || it.before || it.prev || it.event_before || null) : null;
+        var after  = it ? (it.user_after  || it.after  || it.next || it.event_after  || null) : null;
+
+        var changes = diffUser(before, after);
+        if (changes && changes.length) return changes;
+
+        var aObj = asObj(after) || after;
+        var keys = parseChangedKeys(it ? it.changed : null);
+
+        if (aObj && keys && keys.length) {
+            var out = [];
+            keys.forEach(function (k) {
+                var lbl = uaUserFieldLabel(k) || String(k);
+                var vToRaw = (aObj && aObj[k] !== undefined) ? aObj[k] : null;
+                var vTo = (vToRaw === undefined || vToRaw === null || String(vToRaw) === '') ? '—' : String(vToRaw);
+                out.push({ key: k, label: lbl, from: '—', to: vTo });
+            });
+            return out;
+        }
+
+        // If we only know the list of changed fields (legacy records), show a confirmation table without values.
+        if (!aObj && keys && keys.length) {
+            var out2 = [];
+            keys.forEach(function (k) {
+                var lbl2 = uaUserFieldLabel(k) || String(k);
+                out2.push({ key: k, label: lbl2, from: '—', to: '—' });
+            });
+            return out2;
+        }
+
+        return [];
+    }
+
+    function isAdminUserAction(action) {
+        var a = (action || '').toString();
+        return a === 'cabinet.admin_user_update' || a === 'cabinet.admin_user_password' || a === 'user.update' || a === 'user.password';
+    }
+
+    function isAdminUserPasswordAction(action) {
+        var a = (action || '').toString();
+        return a === 'cabinet.admin_user_password' || a === 'user.password';
+    }
+
+    function diffPasswordPlaceholder(it) {
+        // We never show the old password. This row confirms the change.
+        if (String((it && it.result) || '') !== 'success') return [];
+        return [{ key: 'password', label: 'Пароль', from: '—', to: 'змінено' }];
+    }
+
     function buildHumanSummary(it) {
         var action = (it.action || '').toString();
         var label = uaActionLabel(action);
@@ -1773,8 +1858,10 @@
         var evWhen = formatEventWhen(ev) || (it.date ? String(it.date) : '');
 
         var diff = [];
-        if ((it.action || '') === 'cabinet.admin_user_update') {
-            diff = diffUser(it.user_before, it.user_after);
+        var actKey = (it.action || '').toString();
+        if (isAdminUserAction(actKey)) {
+            if (isAdminUserPasswordAction(actKey)) diff = diffPasswordPlaceholder(it);
+            else diff = diffUserFlexible(it);
         } else {
             diff = diffEvent(it.event_before, it.event_after);
         }
