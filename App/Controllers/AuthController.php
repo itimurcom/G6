@@ -70,7 +70,15 @@ final class AuthController extends Controller
         if ($ok) {
             $u = $_SESSION['user'] ?? null; // AUDIT: ADD ONLY
             $___audit->logAuth('auth.login', isset($u['id'])?(int)$u['id']:null, $u['name']??null, 'success'); // AUDIT: ADD ONLY
-            header('Location: /cabinet', true, 302);
+            // P15.8: Redirect after login to last main page (planning or calendar)
+            $dest = '/calendar';
+            try {
+                $last = (string)($_COOKIE['last_main_page'] ?? '');
+                if ($last === 'planning') { $dest = '/'; }
+                elseif ($last === 'calendar') { $dest = '/calendar'; }
+            } catch (\Throwable $e) { /* ignore */ }
+
+            header('Location: ' . $dest, true, 302);
             return '';
         }
 
@@ -109,7 +117,14 @@ final class AuthController extends Controller
             return '';
         }
 
-        header('Location: /cabinet', true, 302);
+        // P15.8: After registration go to default start page (calendar) or planning if remembered
+        $dest = '/calendar';
+        try {
+            $last = (string)($_COOKIE['last_main_page'] ?? '');
+            if ($last === 'planning') { $dest = '/'; }
+        } catch (\Throwable $e) { /* ignore */ }
+
+        header('Location: ' . $dest, true, 302);
         return '';
     }
 

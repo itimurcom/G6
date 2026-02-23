@@ -128,6 +128,9 @@
   <!-- If you still need CSRF bootstrap, keep it inside <body> -->
   <script src="/assets/js/services/bootstrap.csrf.js" defer></script>
 
+  <!-- P15.8: remember last main page for post-login redirect -->
+  <script src="/assets/js/services/ui.last_start_page.js" defer></script>
+
   <!-- Optional: modules block (commented) -->
   <!--
   <?php if (!empty($modules_js)): ?>
