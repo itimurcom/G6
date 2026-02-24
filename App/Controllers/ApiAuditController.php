@@ -38,9 +38,14 @@ final class ApiAuditController extends Controller
             $scope  = (string)($r->input('scope') ?? 'me'); 
             $q      = trim((string)($r->input('q') ?? ''));
             $action = trim((string)($r->input('action') ?? ''));
+            $entityType = trim((string)($r->input('entity_type') ?? ''));
+            $entityId   = trim((string)($r->input('entity_id') ?? ''));
 
             $isAdmin = $this->isAdmin();
-            if ($scope !== 'me' && !$isAdmin) $scope = 'me';
+            $hasExactEntityFilter = ($entityType !== '' && $entityId !== '');
+            // For event timeline in the event info modal we allow exact entity filtering to bypass
+            // the admin-only 'scope=all' restriction (still limited to one конкретний entity).
+            if ($scope !== 'me' && !$isAdmin && !$hasExactEntityFilter) $scope = 'me';
 
             $uid = (int)($_SESSION['user']['id'] ?? 0);
 
@@ -55,6 +60,15 @@ final class ApiAuditController extends Controller
             if ($action !== '') {
                 $where[] = "action = :action";
                 $params['action'] = $action;
+            }
+
+            if ($entityType !== '') {
+                $where[] = "entity_type = :entity_type";
+                $params['entity_type'] = $entityType;
+            }
+            if ($entityId !== '') {
+                $where[] = "entity_id = :entity_id";
+                $params['entity_id'] = $entityId;
             }
 
             // === ВИПРАВЛЕНИЙ ПОШУК ===

@@ -189,3 +189,256 @@ body.light #infoContent .info-seen-head,
     grid-template-columns: 1fr;
   }
 }
+
+
+/* P15.32: info modal width aligned with edit modal (works even if modal id is missing) */
+#infoOverlay .modal {
+  width: min(680px, 96vw);
+}
+
+/* Event history block inside info modal */
+.info-history-wrap {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+.info-history-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+.info-history-head strong {
+  font-size: 14px;
+}
+/* P15.34: collapse whole history block by default (details/summary) */
+.info-history-wrap > summary.info-history-head {
+  cursor: pointer;
+  margin-bottom: 0;
+  user-select: none;
+  list-style: none;
+}
+.info-history-wrap > summary.info-history-head::-webkit-details-marker {
+  display: none;
+}
+.info-history-wrap > summary.info-history-head::before {
+  content: '▸';
+  display: inline-block;
+  margin-right: 8px;
+  color: var(--muted);
+  transform: translateY(-1px);
+}
+.info-history-wrap[open] > summary.info-history-head::before {
+  content: '▾';
+}
+.info-history-wrap[open] > summary.info-history-head {
+  margin-bottom: 8px;
+}
+.info-history-list {
+  max-height: 220px;
+  overflow: auto;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--card) 92%, transparent);
+}
+.info-history-item {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+}
+.info-history-item:last-child { border-bottom: 0; }
+.info-history-line {
+  line-height: 1.35;
+  font-size: 13px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+.info-history-text {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.info-history-ts {
+  color: var(--muted);
+  white-space: nowrap;
+  margin-right: 6px;
+  font-variant-numeric: tabular-nums;
+}
+.info-history-sub {
+  margin-top: 5px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.35;
+}
+.info-history-empty, .info-history-error, .info-history-loading {
+  padding: 12px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+
+.info-history-raw {
+  margin-top: 6px;
+  border: 1px dashed var(--border);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--card) 86%, transparent);
+}
+.info-history-raw > summary {
+  cursor: pointer;
+  padding: 7px 10px;
+  color: var(--muted);
+  font-size: 12px;
+  user-select: none;
+  list-style: none;
+}
+.info-history-raw > summary::-webkit-details-marker { display: none; }
+.info-history-raw > summary::before {
+  content: '▸';
+  display: inline-block;
+  color: var(--muted);
+}
+.info-history-raw[open] > summary::before {
+  content: '▾';
+}
+.info-history-raw[open] > summary {
+  border-bottom: 1px dashed var(--border);
+}
+.info-history-raw > pre {
+  margin: 0;
+  padding: 10px;
+  max-height: 180px;
+  overflow: auto;
+  font-size: 11px;
+  line-height: 1.35;
+  color: var(--muted);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+/* P15.35: raw JSON toggle inline after line, expands below */
+.info-history-raw-inline {
+  margin-top: 0;
+  display: inline-block;
+  vertical-align: middle;
+  border: 0;
+  background: transparent;
+}
+.info-history-raw-inline > summary {
+  padding: 0 2px;
+  line-height: 1;
+}
+.info-history-raw-inline > summary::before {
+  font-size: 12px;
+}
+.info-history-raw-inline[open] {
+  display: block;
+  flex: 1 0 100%;
+  margin-top: 6px;
+  border: 1px dashed var(--border);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--card) 86%, transparent);
+}
+.info-history-raw-inline[open] > summary {
+  padding: 7px 10px;
+}
+.info-history-raw-inline[open] > summary::before {
+  margin-right: 0;
+}
+
+
+/* P15.36: fix history header marker alignment and inline raw toggle placement */
+.info-history-wrap > summary.info-history-head {
+  justify-content: flex-start;
+  align-items: center;
+}
+.info-history-wrap > summary.info-history-head strong {
+  margin: 0;
+}
+.info-history-line {
+  display: block;
+}
+.info-history-ts {
+  display: inline-block;
+  vertical-align: baseline;
+}
+.info-history-text {
+  display: inline;
+}
+.info-history-raw-inline {
+  margin-left: 4px;
+}
+.info-history-raw-inline > summary {
+  display: inline-block;
+  vertical-align: baseline;
+}
+.info-history-raw-inline[open] > summary {
+  display: block;
+}
+
+/* P15.38: keep raw-toggle triangle inline on open + show pointer cursor for whole history row */
+.info-history-item.has-raw .info-history-line,
+.info-history-item.has-raw .info-history-ts,
+.info-history-item.has-raw .info-history-text {
+  cursor: pointer;
+}
+
+/* Row looks clickable, but JSON keeps text cursor for copy */
+.info-history-item.has-raw .info-history-raw > pre {
+  cursor: text;
+}
+
+/* Prevent triangle from jumping to a new line when raw JSON is opened */
+.info-history-item.has-raw .info-history-raw-inline[open] {
+  display: inline;
+  border: 0;
+  background: transparent;
+  margin-top: 0;
+}
+.info-history-item.has-raw .info-history-raw-inline[open] > summary {
+  display: inline-block;
+  vertical-align: baseline;
+  padding: 0 2px;
+  line-height: 1;
+  border: 0;
+}
+
+/* Move dashed frame from <details> to <pre> in inline-open mode */
+.info-history-item.has-raw .info-history-raw-inline[open] > pre {
+  margin-top: 6px;
+  border: 1px dashed var(--border);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--card) 86%, transparent);
+}
+
+/* P15.39: bigger triangles (x2-ish) and tighter spacing; move history-block triangle after label */
+.info-history-wrap > summary.info-history-head::before {
+  display: none;
+  content: '';
+}
+.info-history-wrap > summary.info-history-head::after {
+  content: '▸';
+  display: inline-block;
+  margin-left: 4px;
+  color: var(--muted);
+  transform: translateY(-1px);
+  font-size: 18px;
+  line-height: 1;
+}
+.info-history-wrap[open] > summary.info-history-head::after {
+  content: '▾';
+}
+
+/* Raw JSON toggles (inline + block) — bigger and more visible */
+.info-history-raw > summary::before,
+.info-history-raw-inline > summary::before {
+  font-size: 18px;
+  line-height: 1;
+}
+
+/* Slightly tighter spacing for inline raw triangle after the text line */
+.info-history-raw-inline {
+  margin-left: 2px;
+}
+.info-history-raw-inline > summary {
+  padding: 0 1px;
+}

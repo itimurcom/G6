@@ -770,6 +770,280 @@
       }
     }
 
+
+
+    function __historyAsObj(v) {
+      if (!v) return null;
+      if (typeof v === 'object') return v;
+      if (typeof v !== 'string') return null;
+      try {
+        var o = JSON.parse(v);
+        return (o && typeof o === 'object') ? o : null;
+      } catch (_) {
+        return null;
+      }
+    }
+
+    function __historyPickEvent(it) {
+      if (!it || typeof it !== 'object') return null;
+      var a = __historyAsObj(it.event_after) || it.event_after;
+      if (a && typeof a === 'object') return a;
+      var b = __historyAsObj(it.event_before) || it.event_before;
+      if (b && typeof b === 'object') return b;
+      var p = __historyAsObj(it.payload) || it.payload;
+      if (p && typeof p === 'object') {
+        if (p.event && typeof p.event === 'object') return p.event;
+        return p;
+      }
+      return null;
+    }
+
+    function __historyDiffEvent(before, after) {
+      var out = [];
+      before = __historyAsObj(before) || before;
+      after = __historyAsObj(after) || after;
+      if (!before || !after || typeof before !== 'object' || typeof after !== 'object') return out;
+      var fields = [
+        ['title', 'назва'],
+        ['description', 'опис'],
+        ['time', 'час'],
+        ['start_date', 'дата початку'],
+        ['end_date', 'дата завершення'],
+        ['owner', 'відповідальний'],
+        ['type', 'тип'],
+        ['urgent', 'терміновість'],
+        ['done', 'виконана'],
+        ['incoming_no', 'вхідний №'],
+        ['outgoing_no', 'вихідний №']
+      ];
+      for (var i = 0; i < fields.length; i++) {
+        var k = fields[i][0], label = fields[i][1];
+        var a = (before[k] === undefined || before[k] === null) ? '' : String(before[k]);
+        var b = (after[k] === undefined || after[k] === null) ? '' : String(after[k]);
+        if (a !== b) out.push({ key: k, label: label, from: a, to: b });
+      }
+      return out;
+    }
+
+    function __historyBool(v) {
+      if (v === true || v === 1) return true;
+      var s = String(v == null ? '' : v).toLowerCase();
+      return s === '1' || s === 'true' || s === 'yes' || s === 'on';
+    }
+
+    function __historyActor(it) {
+      if (it && it.user_name && String(it.user_name).trim() !== '') return String(it.user_name).trim();
+      var uid = parseInt((it && it.user_id) || 0, 10) || 0;
+      return uid > 0 ? ('ID ' + uid) : 'система';
+    }
+
+    function __historyTs(it) {
+      var raw = String((it && (it.ts || it.created_at)) || '');
+      if (!raw) return '—';
+      return raw.replace('T', ' ').slice(0, 16);
+    }
+
+
+    function __historyRawData(it) {
+      if (!it || typeof it !== 'object') return null;
+      function parsed(v) { return __historyAsObj(v) || v || null; }
+      var out = {
+        action: String(it.action || ''),
+        ts: String(it.ts || it.created_at || ''),
+        user_id: (it.user_id == null ? null : it.user_id),
+        user_name: (it.user_name == null ? null : it.user_name),
+        entity_type: (it.entity_type == null ? null : it.entity_type),
+        entity_id: (it.entity_id == null ? null : it.entity_id),
+        payload: parsed(it.payload),
+        event_before: parsed(it.event_before),
+        event_after: parsed(it.event_after)
+      };
+      if (it.done !== undefined) out.done = __historyBool(it.done);
+      if (it.urgent !== undefined) out.urgent = __historyBool(it.urgent);
+      return out;
+    }
+
+    function __historyRawHtml(it) {
+      var raw = __historyRawData(it);
+      if (!raw) return '';
+      try {
+        var jsonText = JSON.stringify(raw, null, 2) || '';
+        if (!jsonText) return '';
+        return '<details class="info-history-raw info-history-raw-inline"><summary title="Сирі дані (JSON)" aria-label="Сирі дані (JSON)"></summary><pre>' + Ev.escapeHtml(jsonText) + '</pre></details>';
+      } catch (_) {
+        return '';
+      }
+    }
+
+    function __historyFieldLabelList(diff, maxCount) {
+      var labels = [];
+      var seen = {};
+      for (var i = 0; i < diff.length; i++) {
+        var label = String((diff[i] && diff[i].label) || '').trim();
+        if (!label) continue;
+        if (seen[label]) continue;
+        seen[label] = true;
+        labels.push(label);
+        if (labels.length >= (maxCount || 4)) break;
+      }
+      return labels;
+    }
+
+    function __historyVal(v, key) {
+      var s = (v === undefined || v === null || v === '') ? '—' : String(v);
+      if (key === 'owner') {
+        try {
+          if (Ev && typeof Ev.parseOwnerField === 'function') {
+            var p = Ev.parseOwnerField(v);
+            if (p && p.type === 'user') {
+              if (p.label) return p.label;
+              if (p.name && p.login) return p.name + ' (' + p.login + ')';
+              if (p.login) return p.login;
+              if (p.user_id) return 'ID ' + p.user_id;
+              return '—';
+            }
+            if (p && p.type === 'text') {
+              return (p.text && String(p.text).trim()) ? String(p.text).trim() : '—';
+            }
+          }
+        } catch (_) { }
+      }
+      if (key === 'type' && s !== '—') {
+        try { s = Ev.labelForType(s); } catch (_) { }
+      }
+      if (key === 'urgent' || key === 'done') {
+        s = __historyBool(v) ? 'так' : 'ні';
+      }
+      return s;
+    }
+
+
+function __historyBuildLine(it, currentEvent) {
+  var action = String((it && it.action) || '');
+  var ev = __historyPickEvent(it) || currentEvent || {};
+  var title = (ev && ev.title) ? String(ev.title) : '';
+  var actor = __historyActor(it);
+  var line = 'Зміна події';
+  var diff = [];
+  var titleChange = null;
+
+  if (action === 'calendar.event.create') {
+    line = 'Користувач "' + actor + '" створив подію' + (title ? (' "' + title + '"') : '');
+  } else if (action === 'calendar.event.delete') {
+    line = 'Користувач "' + actor + '" видалив подію' + (title ? (' "' + title + '"') : '');
+  } else if (action === 'calendar.event.done') {
+    var done = __historyBool(it && it.done);
+    line = 'Користувач "' + actor + '" ' + (done ? 'відмітив подію як "Виконана"' : 'зняв ознаку "Виконана"');
+  } else if (action === 'calendar.event.urgent') {
+    var urg = __historyBool(it && it.urgent);
+    line = 'Користувач "' + actor + '" ' + (urg ? 'позначив подію як "Термінова"' : 'зняв позначку "Термінова"');
+  } else if (action === 'calendar.event.update') {
+    diff = __historyDiffEvent(it && it.event_before, it && it.event_after);
+    for (var di = 0; di < diff.length; di++) {
+      if (diff[di].key === 'title') { titleChange = diff[di]; break; }
+    }
+    if (titleChange && diff.length === 1) {
+      line = 'Користувач "' + actor + '" змінив назву на "' + (titleChange.to || '') + '" ('
+        + '"' + __historyVal(titleChange.from, titleChange.key) + '" → "' + __historyVal(titleChange.to, titleChange.key) + '"' + ')';
+    } else if (diff.length === 1) {
+      line = 'Користувач "' + actor + '" змінив поле "' + diff[0].label + '" ('
+        + '"' + __historyVal(diff[0].from, diff[0].key) + '" → "' + __historyVal(diff[0].to, diff[0].key) + '"' + ')';
+    } else if (diff.length > 1) {
+      var labels = __historyFieldLabelList(diff, 4);
+      line = 'Користувач "' + actor + '" змінив поля: ' + labels.join(', ');
+      if (diff.length > labels.length) line += ' …';
+    } else {
+      line = 'Користувач "' + actor + '" оновив подію';
+    }
+  } else if (action === 'calendar.event.close') {
+    line = 'Користувач "' + actor + '" закрив подію';
+  } else {
+    line = (action || 'Подія');
+  }
+
+  return { line: line, rawHtml: __historyRawHtml(it) };
+}
+
+function __bindEventHistoryRowToggle(host) {
+      if (!host || host.__eventHistoryRowToggleBound) return;
+      host.__eventHistoryRowToggleBound = true;
+      host.addEventListener('click', function (ev) {
+        var t = ev && ev.target ? ev.target : null;
+        if (!t) return;
+        // Let native <summary> click work as-is.
+        if (t.closest && t.closest('.info-history-raw summary')) return;
+        // Do not toggle when clicking opened JSON block.
+        if (t.closest && t.closest('.info-history-raw pre')) return;
+        // Avoid accidental toggle while selecting text.
+        try {
+          var sel = (window.getSelection && String(window.getSelection() || '')) || '';
+          if (sel && sel.trim() !== '') return;
+        } catch (_) { }
+        var line = t.closest ? t.closest('.info-history-item.has-raw .info-history-line') : null;
+        if (!line || (host.contains && !host.contains(line))) return;
+        var raw = line.querySelector ? line.querySelector('.info-history-raw') : null;
+        if (!raw) return;
+        raw.open = !raw.open;
+        ev.preventDefault();
+      });
+    }
+
+function __renderEventHistory(host, items, currentEvent) {
+      if (!host) return;
+      __bindEventHistoryRowToggle(host);
+      var rows = Array.isArray(items) ? items.slice() : [];
+      rows = rows.filter(function (it) {
+        return it && String(it.entity_type || '') === 'event';
+      });
+      if (!rows.length) {
+        host.innerHTML = '<div class="info-history-empty">Історія змін поки відсутня.</div>';
+        return;
+      }
+      // API returns DESC, show old -> new for readable timeline.
+      rows.reverse();
+      var html = '';
+      for (var i = 0; i < rows.length; i++) {
+        var it = rows[i];
+        var h = __historyBuildLine(it, currentEvent || null);
+        var hasRaw = !!(h && h.rawHtml);
+        html += '<div class="info-history-item' + (hasRaw ? ' has-raw' : '') + '">'
+          + '<div class="info-history-line"><span class="info-history-ts">' + Ev.escapeHtml(__historyTs(it)) + '</span><span class="info-history-text">' + Ev.escapeHtml(h.line || '') + '</span>' + (h.rawHtml || '') + '</div>'
+          + '</div>';
+      }
+      host.innerHTML = html;
+    }
+
+    function __loadEventHistory(eventId, currentEvent) {
+      var host = $id('infoHistoryList');
+      if (!host) return;
+      host.innerHTML = '<div class="info-history-loading">Завантаження історії…</div>';
+      try {
+        var qs = new URLSearchParams();
+        qs.set('scope', 'all');
+        qs.set('limit', '100');
+        qs.set('entity_type', 'event');
+        qs.set('entity_id', String(eventId || ''));
+        fetch('/api/audit/list?' + qs.toString(), {
+          method: 'GET',
+          headers: { 'Accept': 'application/json' },
+          credentials: 'same-origin'
+        })
+          .then(function (r) { return r.json(); })
+          .then(function (j) {
+            if (!j || j.ok !== true) {
+              var msg = (j && (j.message || j.error)) ? String(j.message || j.error) : 'Помилка';
+              host.innerHTML = '<div class="info-history-error">Історія: ' + Ev.escapeHtml(msg) + '</div>';
+              return;
+            }
+            __renderEventHistory(host, j.items || [], currentEvent || null);
+          })
+          .catch(function () {
+            host.innerHTML = '<div class="info-history-error">Історія: помилка завантаження</div>';
+          });
+      } catch (_) {
+        host.innerHTML = '<div class="info-history-error">Історія: недоступно</div>';
+      }
+    }
     var infoContent = $id('infoContent');
 
     var arr = Data.getEventsFor(dateISO) || [];
@@ -873,11 +1147,16 @@
       '</div>' +
 
       '<div class="info-seen-divider"></div>' +
-      '<div id="infoSeenBlock" class="info-seen-block"><div class="muted">Завантаження переглядів…</div></div>';
+      '<div id="infoSeenBlock" class="info-seen-block"><div class="muted">Завантаження переглядів…</div></div>' +
+      '<details class="info-history-wrap">' +
+        '<summary class="info-history-head"><strong>Історія змін</strong></summary>' + // P15.34: whole block collapsible by triangle
+        '<div id="infoHistoryList" class="info-history-list"><div class="info-history-loading">Завантаження історії…</div></div>' +
+      '</details>';
 if (infoContent) infoContent.innerHTML = html;
     setInfoModalType(ev.type);
 
     try { __loadSeenByEvent(ev.id); } catch (_) { }
+    try { __loadEventHistory(ev.id, ev); } catch (_) { }
 
 
     if (infoOverlay) {
