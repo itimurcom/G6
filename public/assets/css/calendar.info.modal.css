@@ -442,3 +442,9 @@ body.light #infoContent .info-seen-head,
 .info-history-raw-inline > summary {
   padding: 0 1px;
 }
+
+
+/* P15.40: remove gap between history title and triangle */
+.info-history-wrap > summary.info-history-head {
+  gap: 0;
+}
