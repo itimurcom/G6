@@ -10,7 +10,7 @@
   $me = \App\Core\Auth::user();
   $me_id = (int)($me['id'] ?? 0);
   $role = strtolower((string)($me['role'] ?? ''));
-  $is_admin = ($role === 'admin') || !empty($me['is_admin']);
+  $is_admin = in_array($role, ['admin','superadmin','root'], true) || !empty($me['is_admin']);
 ?>
         <button type="button" id="infoClose" class="event-btn" aria-label="Закрити">×</button>
       </div>

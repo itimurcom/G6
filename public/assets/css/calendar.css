@@ -1362,3 +1362,13 @@ body.light .ev--multi,
   color: var(--muted);
   font-size: 12px;
 }
+
+
+/* P15.42: increase popup/modal widths by ~10% */
+.modal {
+  width: min(572px, 94vw);
+}
+
+#eventModal.modal {
+  width: min(748px, 96vw);
+}

@@ -429,3 +429,9 @@ body.cab-modal-open{
   display: flex;
   align-items: center;
 }
+
+
+/* P15.42: increase cabinet modal dialog width by ~10% */
+.cab-modal__dialog{
+  max-width: 836px;
+}

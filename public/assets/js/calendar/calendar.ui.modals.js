@@ -56,7 +56,8 @@
         .then(function (x) {
           if (x && x.ok && x.user) {
             __me.role = x.user.role || null;
-            __me.isAdmin = String(__me.role || '').toLowerCase() === 'admin';
+            var __rl = String(__me.role || '').toLowerCase();
+            __me.isAdmin = (__rl === 'admin' || __rl === 'superadmin' || __rl === 'root' || !!x.user.is_admin);
             var __id = parseInt((x.user.id || '0'), 10) || 0;
             if (__id > 0) { __me.id = __id; }
           }
@@ -988,6 +989,17 @@ function __bindEventHistoryRowToggle(host) {
       });
     }
 
+function __setEventHistoryTitleCount(host, count) {
+      try {
+        var wrap = host && host.closest ? host.closest('.info-history-wrap') : null;
+        var strong = wrap && wrap.querySelector ? wrap.querySelector('.info-history-head strong') : null;
+        if (!strong) return;
+        var n = parseInt(count, 10);
+        if (!isFinite(n) || n < 0) n = 0;
+        strong.textContent = 'Історія змін (' + String(n) + ')';
+      } catch (_) { }
+    }
+
 function __renderEventHistory(host, items, currentEvent) {
       if (!host) return;
       __bindEventHistoryRowToggle(host);
@@ -995,6 +1007,7 @@ function __renderEventHistory(host, items, currentEvent) {
       rows = rows.filter(function (it) {
         return it && String(it.entity_type || '') === 'event';
       });
+      __setEventHistoryTitleCount(host, rows.length);
       if (!rows.length) {
         host.innerHTML = '<div class="info-history-empty">Історія змін поки відсутня.</div>';
         return;
@@ -1017,6 +1030,7 @@ function __renderEventHistory(host, items, currentEvent) {
       var host = $id('infoHistoryList');
       if (!host) return;
       host.innerHTML = '<div class="info-history-loading">Завантаження історії…</div>';
+      __setEventHistoryTitleCount(host, 0);
       try {
         var qs = new URLSearchParams();
         qs.set('scope', 'all');
@@ -1033,16 +1047,30 @@ function __renderEventHistory(host, items, currentEvent) {
             if (!j || j.ok !== true) {
               var msg = (j && (j.message || j.error)) ? String(j.message || j.error) : 'Помилка';
               host.innerHTML = '<div class="info-history-error">Історія: ' + Ev.escapeHtml(msg) + '</div>';
+              __setEventHistoryTitleCount(host, 0);
               return;
             }
             __renderEventHistory(host, j.items || [], currentEvent || null);
           })
           .catch(function () {
             host.innerHTML = '<div class="info-history-error">Історія: помилка завантаження</div>';
+            __setEventHistoryTitleCount(host, 0);
           });
       } catch (_) {
         host.innerHTML = '<div class="info-history-error">Історія: недоступно</div>';
+        __setEventHistoryTitleCount(host, 0);
       }
+    }
+
+    function __canShowEventHistory() {
+      try {
+        if (infoOverlay && infoOverlay.dataset) {
+          var v = String(infoOverlay.dataset.isAdmin || '').trim().toLowerCase();
+          if (v === '1' || v === 'true' || v === 'yes') return true;
+          if (v === '0' || v === 'false' || v === 'no') return false;
+        }
+      } catch (_) { }
+      return (__me && __me.isAdmin === true);
     }
     var infoContent = $id('infoContent');
 
@@ -1148,15 +1176,19 @@ function __renderEventHistory(host, items, currentEvent) {
 
       '<div class="info-seen-divider"></div>' +
       '<div id="infoSeenBlock" class="info-seen-block"><div class="muted">Завантаження переглядів…</div></div>' +
-      '<details class="info-history-wrap">' +
-        '<summary class="info-history-head"><strong>Історія змін</strong></summary>' + // P15.34: whole block collapsible by triangle
-        '<div id="infoHistoryList" class="info-history-list"><div class="info-history-loading">Завантаження історії…</div></div>' +
-      '</details>';
+      (__canShowEventHistory() ? (
+        '<details class="info-history-wrap">' +
+          '<summary class="info-history-head"><strong>Історія змін</strong></summary>' + // P15.34: whole block collapsible by triangle
+          '<div id="infoHistoryList" class="info-history-list"><div class="info-history-loading">Завантаження історії…</div></div>' +
+        '</details>'
+      ) : '');
 if (infoContent) infoContent.innerHTML = html;
     setInfoModalType(ev.type);
 
     try { __loadSeenByEvent(ev.id); } catch (_) { }
-    try { __loadEventHistory(ev.id, ev); } catch (_) { }
+    if (__canShowEventHistory()) {
+      try { __loadEventHistory(ev.id, ev); } catch (_) { }
+    }
 
 
     if (infoOverlay) {

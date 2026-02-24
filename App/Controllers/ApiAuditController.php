@@ -21,7 +21,7 @@ final class ApiAuditController extends Controller
         $u = $_SESSION['user'] ?? null;
         if (!is_array($u)) return false;
         $role = isset($u['role']) ? (string)$u['role'] : '';
-        if (mb_strtolower($role) === 'admin') return true;
+        if (in_array(mb_strtolower($role), ['admin','superadmin','root'], true)) return true;
         return !empty($u['is_admin']);
     }
 
@@ -42,10 +42,9 @@ final class ApiAuditController extends Controller
             $entityId   = trim((string)($r->input('entity_id') ?? ''));
 
             $isAdmin = $this->isAdmin();
-            $hasExactEntityFilter = ($entityType !== '' && $entityId !== '');
-            // For event timeline in the event info modal we allow exact entity filtering to bypass
-            // the admin-only 'scope=all' restriction (still limited to one конкретний entity).
-            if ($scope !== 'me' && !$isAdmin && !$hasExactEntityFilter) $scope = 'me';
+            // Non-admin users can view only their own audit records (scope=me).
+            // Event history in the info modal is now rendered only for admin-level users.
+            if ($scope !== 'me' && !$isAdmin) $scope = 'me';
 
             $uid = (int)($_SESSION['user']['id'] ?? 0);
 

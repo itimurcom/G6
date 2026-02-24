@@ -448,3 +448,9 @@ body.light #infoContent .info-seen-head,
 .info-history-wrap > summary.info-history-head {
   gap: 0;
 }
+
+
+/* P15.42: keep view-event popup width aligned (+10%) */
+#infoModal.modal {
+  width: min(748px, 96vw);
+}
