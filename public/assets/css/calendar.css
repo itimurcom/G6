@@ -376,8 +376,13 @@ select,
 /* Badge: assigned to current user (in progress) */
 .event-assignee-badge {
   right: 38px;
-  color: color-mix(in oklab, #ffffff 90%, var(--type-evt) 10%);
-  background: color-mix(in oklab, var(--accent) 48%, transparent);
+  color: #111;
+  background: rgba(255, 220, 64, .94);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, .20), inset 0 0 0 1px rgba(0, 0, 0, .12);
+}
+
+.event-assignee-badge.is-solo {
+  right: 6px;
 }
 
 .event-user-badge svg,
@@ -394,9 +399,9 @@ select,
 }
 
 :root[data-theme="light"] .event-assignee-badge {
-  color: color-mix(in oklab, var(--accent) 55%, var(--fg));
-  background: color-mix(in oklab, var(--accent) 16%, white);
-  box-shadow: 0 4px 10px rgba(0, 0, 0, .12), inset 0 0 0 1px rgba(0, 0, 0, .05);
+  color: #111;
+  background: rgba(255, 220, 64, .94);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, .12), inset 0 0 0 1px rgba(0, 0, 0, .10);
 }
 
 .event-btn {
@@ -1295,6 +1300,49 @@ body.light .ev--multi,
   font-weight: 900;
   line-height: 1.15;
   margin: 6px 0 10px 0;
+}
+
+#infoContent .info-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: -2px 0 10px 0;
+}
+
+#infoContent .info-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  line-height: 1;
+  background: rgba(255, 255, 255, .03);
+}
+
+#infoContent .info-badge svg {
+  width: 16px;
+  height: 16px;
+  display: block;
+  flex: 0 0 auto;
+}
+
+#infoContent .info-badge--my {
+  color: var(--muted);
+}
+
+#infoContent .info-badge--assigned {
+  color: #111;
+  border-color: rgba(0, 0, 0, .14);
+  background: rgba(255, 220, 64, .86);
+}
+
+:root[data-theme="dark"] #infoContent .info-badge--assigned {
+  color: #111;
+  border-color: rgba(0, 0, 0, .16);
+  background: rgba(255, 220, 64, .90);
 }
 
 #infoContent .info-grid {

@@ -44,6 +44,21 @@
   gap: 8px;
 }
 
+#notifStack .notif-title-word {
+  cursor: grab;
+  user-select: none;
+  touch-action: none;
+}
+
+#notifStack .notif-title-word:active,
+body.notif-dragging #notifStack .notif-title-word {
+  cursor: grabbing;
+}
+
+body.notif-dragging {
+  user-select: none;
+}
+
 #notifStack .notif-actions {
   display: inline-flex;
   align-items: center;

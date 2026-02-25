@@ -1100,8 +1100,11 @@
       }
       title.appendChild(document.createTextNode(ev.title || ''));
 
+      var __showAssignedBadge = __isAssignedToMe(ev);
+      var __showUserBadge = (!__showAssignedBadge && __isMyEvent(ev));
+
       // "My" marker (created by current user)
-      if (__isMyEvent(ev)) {
+      if (__showUserBadge) {
         try { item.classList.add('has-user-badge'); } catch (_) { item.className += ' has-user-badge'; }
         var ub = document.createElement('span');
         ub.className = 'event-user-badge';
@@ -1111,10 +1114,10 @@
       }
 
       // "Assigned to me / in progress" marker (responsible = current user, not done)
-      if (__isAssignedToMe(ev)) {
+      if (__showAssignedBadge) {
         try { item.classList.add('has-assignee-badge'); } catch (_) { item.className += ' has-assignee-badge'; }
         var ab = document.createElement('span');
-        ab.className = 'event-assignee-badge';
+        ab.className = 'event-assignee-badge' + (__showUserBadge ? '' : ' is-solo');
         ab.title = 'На виконанні у мене';
         ab.innerHTML = ''
           + '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">'

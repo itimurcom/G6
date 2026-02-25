@@ -838,7 +838,6 @@
 
   // встановлюємо обробку змін
   setInterval(() => {
-    console.log('refresh planning');
     refreshPlanning();
   }, 10_000);
 

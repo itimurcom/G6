@@ -72,6 +72,66 @@
     var meId = __me.id || getCurrentUserId() || 0;
     return (__me.isAdmin === true) || (uid > 0 && meId > 0 && uid === meId);
   }
+
+  function __isMyEventForInfo(ev) {
+    if (!ev) return false;
+    var meId = (__me && __me.id) || getCurrentUserId() || 0;
+    if (!meId) return false;
+    var uid = parseInt((ev && ev.user_id) || 0, 10) || 0;
+    return (uid > 0 && uid === meId);
+  }
+
+  function __ownerUserIdForInfo(ev) {
+    try {
+      if (Ev && typeof Ev.ownerUserId === 'function') {
+        return parseInt(Ev.ownerUserId(ev) || 0, 10) || 0;
+      }
+    } catch (_) { }
+    try {
+      if (Ev && typeof Ev.parseOwnerField === 'function') {
+        var p = Ev.parseOwnerField(ev && ev.owner);
+        return (p && p.type === 'user') ? (parseInt(p.user_id || 0, 10) || 0) : 0;
+      }
+    } catch (_) { }
+    return 0;
+  }
+
+  function __isAssignedToMeForInfo(ev) {
+    if (!ev || ev.done) return false;
+    var meId = (__me && __me.id) || getCurrentUserId() || 0;
+    if (!meId) return false;
+    var ownerId = __ownerUserIdForInfo(ev);
+    return (ownerId > 0 && ownerId === meId);
+  }
+
+  function __infoStatusBadgesHtml(ev) {
+    var showAssigned = __isAssignedToMeForInfo(ev);
+    var showMy = (!showAssigned && __isMyEventForInfo(ev));
+    if (!showAssigned && !showMy) return '';
+
+    var parts = [];
+    if (showAssigned) {
+      parts.push(''
+        + '<span class="info-badge info-badge--assigned" title="На виконанні у мене">'
+        +   '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">'
+        +     '<path d="M15.5 13a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z" fill="currentColor" opacity=".95"></path>'
+        +     '<path d="M9.5 20.5c.5-2.8 2.8-4.8 5.9-4.8 3 0 5.2 1.8 5.8 4.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path>'
+        +     '<path d="M3.5 12.5h6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path>'
+        +     '<path d="M6.5 9.5l3 3-3 3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>'
+        +   '</svg>'
+        +   '<span>На виконанні</span>'
+        + '</span>');
+    }
+    if (showMy) {
+      parts.push(''
+        + '<span class="info-badge info-badge--my" title="Подія створена мною">'
+        +   '<svg aria-hidden="true" focusable="false"><use href="#i-user"></use></svg>'
+        +   '<span>Моя подія</span>'
+        + '</span>');
+    }
+
+    return '<div class="info-badges">' + parts.join('') + '</div>';
+  }
   // === /permissions ===
 
   // Inputs
@@ -1139,6 +1199,7 @@ function __renderEventHistory(host, items, currentEvent) {
 
     var html = '' +
       '<div class="info-title">' + Ev.escapeHtml(ev.title || '') + '</div>' +
+      __infoStatusBadgesHtml(ev) +
 
       '<div class="info-grid">' +
         // 1st row: date(+time) + responsible
