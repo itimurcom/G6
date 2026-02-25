@@ -673,6 +673,18 @@
       } catch (e) { }
       var ul = tmp.querySelector(".planning-today__list");
 
+      // In overdue grouped view the day header is already shown above the list,
+      // so remove duplicated short date prefix from row time cells (e.g. "15.02 16:00" -> "16:00").
+      try {
+        if (ul) {
+          var __times = ul.querySelectorAll(".planning-today__time");
+          for (var __ti = 0; __ti < __times.length; __ti++) {
+            var __txt = String(__times[__ti].textContent || "").trim();
+            __times[__ti].textContent = __txt.replace(/^\d{1,2}\.\d{1,2}\s+/, "");
+          }
+        }
+      } catch (e) { }
+
       if (th) wrap.appendChild(th);
       if (ul) wrap.appendChild(ul);
     }
