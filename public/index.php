@@ -1,4 +1,12 @@
 <?php
+
+$autoload = __DIR__ . '/../vendor/autoload.php';
+if (!is_file($autoload)) {
+    http_response_code(500);
+    error_log('[bootstrap] vendor/autoload.php not found: ' . $autoload);
+    exit('Application bootstrap error.');
+}
+require_once $autoload;
             
 // === ROLE REGISTRATION LOGIC (sanitizer for /register) ===
 if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
@@ -20,8 +28,16 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
                 $final = 'admin';
             }
         } elseif ($mode === 'bootstrap') {
-            if ($requested === 'admin' && !\App\Core\Auth::adminsExist()) {
-                $final = 'admin';
+            if ($requested === 'admin') {
+                try {
+                    if (!\App\Core\Auth::adminsExist()) {
+                        $final = 'admin';
+                    }
+                } catch (\Throwable $e) {
+                    // Fail closed: keep role as user, do not crash request
+                    error_log('[register/bootstrap] adminsExist() failed: ' . $e->getMessage());
+                    $final = 'user';
+                }
             }
         }
         $_POST['role'] = $final;
@@ -31,7 +47,6 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
 }
 // === /ROLE REGISTRATION LOGIC ===
 
-require_once __DIR__ . '/../vendor/autoload.php';
 
 use App\Core\Request;
 use App\Core\Router;
