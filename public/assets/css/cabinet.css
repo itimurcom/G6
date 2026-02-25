@@ -353,7 +353,7 @@
 }
 .cab-modal__dialog{
   position: relative;
-  max-width: 760px;
+  max-width: 836px;
   width: calc(100% - 24px);
   margin: 60px auto;
   background: var(--cabinet-card-bg);
@@ -430,8 +430,3 @@ body.cab-modal-open{
   align-items: center;
 }
 
-
-/* P15.42: increase cabinet modal dialog width by ~10% */
-.cab-modal__dialog{
-  max-width: 836px;
-}

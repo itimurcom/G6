@@ -883,7 +883,7 @@ select,
 }
 
 .modal {
-  width: min(520px, 94vw);
+  width: min(686px, 94vw);
   /* background: var(--bg); */
   color: var(--fg);
   border: 1px solid var(--border);
@@ -898,7 +898,7 @@ select,
 
 /* Edit event modal layout tweaks (controls fit better in footer) */
 #eventModal.modal {
-  width: min(680px, 96vw);
+  width: min(898px, 96vw);
 }
 
 #eventModal footer {
@@ -1307,7 +1307,7 @@ body.light .ev--multi,
 
 /* Info modal: width + grid layout + seen-by block */
 #infoModal.modal {
-  width: min(680px, 96vw);
+  width: min(898px, 96vw);
 }
 
 #infoContent .info-title {
@@ -1504,22 +1504,3 @@ body.light .ev--multi,
   font-size: 12px;
 }
 
-
-/* P15.42: increase popup/modal widths by ~10% */
-.modal {
-  width: min(572px, 94vw);
-}
-
-#eventModal.modal {
-  width: min(748px, 96vw);
-}
-
-/* P15.49: increase popup/modal widths by +20% from current baseline (strong override) */
-.modal {
-  width: min(686px, 94vw) !important;
-}
-
-#eventModal.modal,
-#infoModal.modal {
-  width: min(898px, 96vw) !important;
-}

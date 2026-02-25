@@ -4,7 +4,7 @@
 */
 
 #infoModal.modal {
-  width: min(680px, 96vw);
+  width: min(898px, 96vw);
 }
 
 #infoContent .info-title {
@@ -193,7 +193,7 @@ body.light #infoContent .info-seen-head,
 
 /* P15.32: info modal width aligned with edit modal (works even if modal id is missing) */
 #infoOverlay .modal {
-  width: min(680px, 96vw);
+  width: min(898px, 96vw);
 }
 
 /* Event history block inside info modal */
@@ -218,16 +218,16 @@ body.light #infoContent .info-seen-head,
   margin-bottom: 0;
   user-select: none;
   list-style: none;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 0;
 }
 .info-history-wrap > summary.info-history-head::-webkit-details-marker {
   display: none;
 }
 .info-history-wrap > summary.info-history-head::before {
-  content: '▸';
-  display: inline-block;
-  margin-right: 8px;
-  color: var(--muted);
-  transform: translateY(-1px);
+  display: none;
+  content: '';
 }
 .info-history-wrap[open] > summary.info-history-head::before {
   content: '▾';
@@ -250,20 +250,15 @@ body.light #infoContent .info-seen-head,
 .info-history-line {
   line-height: 1.35;
   font-size: 13px;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px;
-}
-.info-history-text {
-  flex: 1 1 auto;
-  min-width: 0;
+  display: block;
 }
 .info-history-ts {
   color: var(--muted);
   white-space: nowrap;
   margin-right: 6px;
   font-variant-numeric: tabular-nums;
+  display: inline-block;
+  vertical-align: baseline;
 }
 .info-history-sub {
   margin-top: 5px;
@@ -322,9 +317,12 @@ body.light #infoContent .info-seen-head,
   vertical-align: middle;
   border: 0;
   background: transparent;
+  margin-left: 2px;
 }
 .info-history-raw-inline > summary {
-  padding: 0 2px;
+  display: inline-block;
+  vertical-align: baseline;
+  padding: 0 1px;
   line-height: 1;
 }
 .info-history-raw-inline > summary::before {
@@ -339,6 +337,7 @@ body.light #infoContent .info-seen-head,
   background: color-mix(in srgb, var(--card) 86%, transparent);
 }
 .info-history-raw-inline[open] > summary {
+  display: block;
   padding: 7px 10px;
 }
 .info-history-raw-inline[open] > summary::before {
@@ -346,33 +345,8 @@ body.light #infoContent .info-seen-head,
 }
 
 
-/* P15.36: fix history header marker alignment and inline raw toggle placement */
-.info-history-wrap > summary.info-history-head {
-  justify-content: flex-start;
-  align-items: center;
-}
 .info-history-wrap > summary.info-history-head strong {
   margin: 0;
-}
-.info-history-line {
-  display: block;
-}
-.info-history-ts {
-  display: inline-block;
-  vertical-align: baseline;
-}
-.info-history-text {
-  display: inline;
-}
-.info-history-raw-inline {
-  margin-left: 4px;
-}
-.info-history-raw-inline > summary {
-  display: inline-block;
-  vertical-align: baseline;
-}
-.info-history-raw-inline[open] > summary {
-  display: block;
 }
 
 /* P15.38: keep raw-toggle triangle inline on open + show pointer cursor for whole history row */
@@ -410,11 +384,6 @@ body.light #infoContent .info-seen-head,
   background: color-mix(in srgb, var(--card) 86%, transparent);
 }
 
-/* P15.39: bigger triangles (x2-ish) and tighter spacing; move history-block triangle after label */
-.info-history-wrap > summary.info-history-head::before {
-  display: none;
-  content: '';
-}
 .info-history-wrap > summary.info-history-head::after {
   content: '▸';
   display: inline-block;
@@ -428,6 +397,8 @@ body.light #infoContent .info-seen-head,
   content: '▾';
 }
 
+/* Consolidated history-header and raw-toggle tweaks (P15.34/P15.36/P15.39/P15.40) */
+
 /* Raw JSON toggles (inline + block) — bigger and more visible */
 .info-history-raw > summary::before,
 .info-history-raw-inline > summary::before {
@@ -435,28 +406,5 @@ body.light #infoContent .info-seen-head,
   line-height: 1;
 }
 
-/* Slightly tighter spacing for inline raw triangle after the text line */
-.info-history-raw-inline {
-  margin-left: 2px;
-}
-.info-history-raw-inline > summary {
-  padding: 0 1px;
-}
 
 
-/* P15.40: remove gap between history title and triangle */
-.info-history-wrap > summary.info-history-head {
-  gap: 0;
-}
-
-
-/* P15.42: keep view-event popup width aligned (+10%) */
-#infoModal.modal {
-  width: min(748px, 96vw);
-}
-
-/* P15.49: keep view-event popup widths aligned (+20%, strong override) */
-#infoOverlay .modal,
-#infoModal.modal {
-  width: min(898px, 96vw) !important;
-}

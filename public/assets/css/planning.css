@@ -56,12 +56,6 @@
   line-height: 1.2;
 }
 
-.planning-today__details {
-  display: grid;
-  grid-template-rows: auto auto;
-  gap: 2px;
-}
-
 /* one-line row: chip (left) + title; owner переноситься вниз за потреби */
 .planning-today__details {
   display: flex;
@@ -116,15 +110,12 @@
   gap: .5rem;
 }
 
+/* === v10 Planning UI tweaks === */
+/* More spacious chip on Planning page */
 .planning-today__head .chip {
   margin-left: auto;
   /* push chip to the right edge */
   white-space: nowrap;
-}
-
-/* === v10 Planning UI tweaks === */
-/* More spacious chip on Planning page */
-.planning-today__head .chip {
   padding: 4px 10px;
   border-radius: 999px;
   line-height: 1.2;

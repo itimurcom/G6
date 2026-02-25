@@ -75,7 +75,9 @@
 }
 
 * {
-  box-sizing: border-box
+  box-sizing: border-box;
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
 }
 
 html,
@@ -92,10 +94,6 @@ body {
 }
 
 /* Scrollbars (global) */
-* {
-  scrollbar-width: thin;
-  scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
-}
 
 *::-webkit-scrollbar {
   width: var(--scrollbar-size);
@@ -243,12 +241,6 @@ body {
   display: grid;
 }
 
-.auth-modal {
-  max-width: 480px;
-  width: 92%;
-  border-radius: 14px;
-  overflow: hidden;
-}
 
 .auth-modal__header {
   background: var(--green-700, #166534);
@@ -259,47 +251,6 @@ body {
   padding: 10px 14px;
 }
 
-.auth-modal .content {
-  padding: 14px;
-}
-
-.auth-modal .field {
-  display: block;
-  margin: 10px 0 12px;
-}
-
-.auth-modal .hint {
-  opacity: .85;
-  margin-bottom: 6px;
-}
-
-.auth-modal .input {
-  width: 100%;
-}
-
-.auth-modal footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 12px 14px;
-  border-top: 1px solid rgba(255, 255, 255, .06);
-}
-
-.auth-modal .actions {
-  display: flex;
-  gap: 10px;
-}
-
-.alert {
-  border-radius: 10px;
-  padding: 10px 12px;
-}
-
-.alert--error {
-  background: #2b1b1b;
-  border: 1px solid #7f1d1d;
-  color: #fecaca;
-}
 
 .alert--success {
   background: rgba(34, 197, 94, 0.12);
@@ -327,67 +278,13 @@ body {
   color: var(--blue-300, #93C5FD);
 }
 
-/* === Auth centered forms (modal look, no overlay) === */
+
+/* === Auth centered forms (modal look, no overlay) / refined (.container) === */
 .auth-center {
-  display: grid;
-  place-items: center;
-  min-height: 80vh;
-  padding: 12px;
-}
-
-.auth-modal {
-  max-width: 520px;
-  width: 92%;
-  border-radius: 14px;
-  overflow: hidden;
-}
-
-.auth-modal .content {
-  padding: 14px;
-}
-
-.auth-modal .field {
-  display: block;
-  margin: 10px 0 12px;
-}
-
-.auth-modal .hint {
-  opacity: .85;
-  margin-bottom: 6px;
-}
-
-.auth-modal .input {
-  width: 100%;
-}
-
-.auth-modal footer {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 12px 14px;
-  border-top: 1px solid rgba(255, 255, 255, .06);
-}
-
-.auth-modal .actions {
-  display: flex;
-  gap: 10px;
-}
-
-.alert {
-  border-radius: 10px;
-  padding: 10px 12px;
-}
-
-.alert--error {
-  background: #2b1b1b;
-  border: 1px solid #7f1d1d;
-  color: #fecaca;
-}
-
-/* === Auth forms refined (center in .container) === */
-.auth-center {
-  display: flex;
   justify-content: center;
+  min-height: 80vh;
   padding: 24px 0;
 }
 
