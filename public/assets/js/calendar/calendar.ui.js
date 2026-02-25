@@ -12,6 +12,14 @@
     return (ev && ev.owner) ? String(ev.owner) : '';
   }
 
+
+  function __ownerUserId(ev) {
+    try {
+      if (Ev && typeof Ev.ownerUserId === 'function') return parseInt(Ev.ownerUserId(ev) || 0, 10) || 0;
+    } catch (_) { }
+    return 0;
+  }
+
   /* ===== Стан інтерфейсу ===== */
   var locale = 'uk-UA';
   var today = new Date();
@@ -65,6 +73,16 @@
     if (!__ME_ID) return false;
     var uid = parseInt(ev.user_id || 0, 10) || 0;
     return (uid > 0 && uid === __ME_ID);
+  }
+
+
+  function __isAssignedToMe(ev) {
+    if (!ev) return false;
+    if (!__ME_READY) return false;
+    if (!__ME_ID) return false;
+    if (ev && ev.done) return false;
+    var ownerUid = __ownerUserId(ev);
+    return (ownerUid > 0 && ownerUid === __ME_ID);
   }
 
 
@@ -233,7 +251,7 @@
     var store = Data.readStore();
 
     // Keep the same type/overdue filtering logic, but handle text matching locally (OR)
-    var typeMatcher = Ev.buildMatcher ? Ev.buildMatcher(currentType, '') : null;
+    var typeMatcher = Ev.buildMatcher ? Ev.buildMatcher(currentType, '', { meId: __ME_ID }) : null;
     if (!typeMatcher) return [];
 
     var qNormRaw = (Ev.norm ? Ev.norm(qRaw) : String(qRaw).toLowerCase());
@@ -459,6 +477,8 @@
     var btnTypeEvt = $('btnTypeEvt');
     var btnTypeOther = $('btnTypeOther');
     var btnTypeOverdue = $('btnTypeOverdue');
+    var btnTypeAssigned = $('btnTypeAssigned');
+    var btnTypeMyTasks = $('btnTypeMyTasks');
     var btnTypeReset = $('btnTypeReset');
 
 
@@ -473,6 +493,14 @@
     btnTypeOther.style.cursor = 'pointer';
     btnTypeOverdue.classList.toggle('active', currentType === 'overdue');
     btnTypeOverdue.style.cursor = 'pointer';
+    if (btnTypeAssigned) {
+      btnTypeAssigned.classList.toggle('active', currentType === 'assigned');
+      btnTypeAssigned.style.cursor = 'pointer';
+    }
+    if (btnTypeMyTasks) {
+      btnTypeMyTasks.classList.toggle('active', currentType === 'my');
+      btnTypeMyTasks.style.cursor = 'pointer';
+    }
     if (btnTypeReset) {
       btnTypeReset.style.display = (currentType === 'all') ? 'none' : 'inline-grid';
       btnTypeReset.style.cursor = 'pointer';
@@ -495,6 +523,8 @@
   var btnTypeEvt = $('btnTypeEvt');
   var btnTypeOther = $('btnTypeOther');
   var btnTypeOverdue = $('btnTypeOverdue');
+  var btnTypeAssigned = $('btnTypeAssigned');
+  var btnTypeMyTasks = $('btnTypeMyTasks');
   var btnTypeReset = $('btnTypeReset');
 
   if (btnTypeMi) btnTypeMi.addEventListener('click', function () { setTypeFilter('mi'); });
@@ -502,6 +532,8 @@
   if (btnTypeEvt) btnTypeEvt.addEventListener('click', function () { setTypeFilter('evt'); });
   if (btnTypeOther) btnTypeOther.addEventListener('click', function () { setTypeFilter('other'); });
   if (btnTypeOverdue) btnTypeOverdue.addEventListener('click', function () { setTypeFilter('overdue'); });
+  if (btnTypeAssigned) btnTypeAssigned.addEventListener('click', function () { setTypeFilter('assigned'); });
+  if (btnTypeMyTasks) btnTypeMyTasks.addEventListener('click', function () { setTypeFilter('my'); });
   if (btnTypeReset) btnTypeReset.addEventListener('click', function () { setTypeFilter('all'); });
   if (filterText) filterText.addEventListener('input', function () {
     if (__fullSearchActive) return;
@@ -1021,7 +1053,7 @@
     var dateISO = cell.dataset.date; var list = cell.querySelector('.events'); list.innerHTML = '';
     var events = getEventsForDayExpanded(dateISO);
 
-    var matcher = Ev.buildMatcher(currentType, filterText ? filterText.value : '');
+    var matcher = Ev.buildMatcher(currentType, filterText ? filterText.value : '', { meId: __ME_ID });
     var filtered = events.filter(matcher);
 
     var openInfo = global.CalendarApp.ui.openInfo;
@@ -1073,8 +1105,25 @@
         try { item.classList.add('has-user-badge'); } catch (_) { item.className += ' has-user-badge'; }
         var ub = document.createElement('span');
         ub.className = 'event-user-badge';
+        ub.title = 'Моя подія';
         ub.innerHTML = '<svg aria-hidden="true"><use href="#i-user"></use></svg>';
         item.appendChild(ub);
+      }
+
+      // "Assigned to me / in progress" marker (responsible = current user, not done)
+      if (__isAssignedToMe(ev)) {
+        try { item.classList.add('has-assignee-badge'); } catch (_) { item.className += ' has-assignee-badge'; }
+        var ab = document.createElement('span');
+        ab.className = 'event-assignee-badge';
+        ab.title = 'На виконанні у мене';
+        ab.innerHTML = ''
+          + '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">'
+          +   '<path d="M15.5 13a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z" fill="currentColor" opacity=".95"></path>'
+          +   '<path d="M9.5 20.5c.5-2.8 2.8-4.8 5.9-4.8 3 0 5.2 1.8 5.8 4.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path>'
+          +   '<path d="M3.5 12.5h6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path>'
+          +   '<path d="M6.5 9.5l3 3-3 3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>'
+          + '</svg>';
+        item.appendChild(ab);
       }
 
 
@@ -1154,7 +1203,7 @@
     var todayISO = Ev.toISODate(now);
     var nextISO = Ev.toISODate(new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1));
 
-    var matcher = Ev.buildMatcher(currentType, filterText ? filterText.value : '');
+    var matcher = Ev.buildMatcher(currentType, filterText ? filterText.value : '', { meId: __ME_ID });
     var allToday = getEventsForDayExpanded(todayISO)
       .filter(matcher)
       .sort(function (a, b) { function toM(t) { var p = String(t || '00:00').split(':'); var h = +p[0] || 0, m = +p[1] || 0; return h * 60 + m; } var am = toM(a.time), bm = toM(b.time); if (am !== bm) return am - bm; var u = (b.urgent | 0) - (a.urgent | 0); if (u) return u; return (a.title || '').localeCompare(b.title || ''); });

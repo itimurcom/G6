@@ -129,9 +129,13 @@
   }
 
   // Побудова предикату фільтру за типом і текстом
-  function buildMatcher(currentType, query) {
+  function buildMatcher(currentType, query, opts) {
     var q = norm(query || '');
     var t = currentType || 'all';
+    var meId = 0;
+    try {
+      meId = parseInt(opts && opts.meId || 0, 10) || 0;
+    } catch (_) { meId = 0; }
 
     // Multi-word search: split into tokens and match all (order-independent)
     var qTokens = [];
@@ -212,6 +216,12 @@
       if (t === 'overdue') {
         var fn = overdueFn || isOverdueLocal;
         pass = !!fn(ev, todayISO, nowHM);
+      } else if (t === 'my') {
+        var createdBy = parseInt((ev && ev.user_id) || 0, 10) || 0;
+        pass = !!(meId > 0 && createdBy > 0 && createdBy === meId);
+      } else if (t === 'assigned') {
+        var responsibleUid = ownerUserId(ev);
+        pass = !!(meId > 0 && responsibleUid > 0 && responsibleUid === meId && !(ev && ev.done));
       } else {
         pass = (t === 'all') || (ev.type === t);
       }

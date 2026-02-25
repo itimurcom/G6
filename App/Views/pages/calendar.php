@@ -21,6 +21,19 @@
           <span id="btnTypeNas"   class="lg"><i style="background:var(--type-nas)"></i>ТЛГ: НАС</span>
           <span id="btnTypeOther" class="lg"><i style="background:var(--type-other)"></i>Інше</span>
           <span id="btnTypeOverdue" class="lg ev--overdue-flash"><i style="background:var(--type-overdue);"></i>Прострочені</span>
+          <span id="btnTypeAssigned" class="lg lg-scope lg-scope-assigned" title="Показати події на виконанні у мене">
+            <svg class="lg-ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <path d="M15.5 13a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z" fill="currentColor" opacity=".95"></path>
+              <path d="M9.5 20.5c.5-2.8 2.8-4.8 5.9-4.8 3 0 5.2 1.8 5.8 4.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path>
+              <path d="M3.5 12.5h6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path>
+              <path d="M6.5 9.5l3 3-3 3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
+            </svg>
+            На виконанні
+          </span>
+          <span id="btnTypeMyTasks" class="lg lg-scope lg-scope-my" title="Показати мої завдання (створені мною)">
+            <svg class="lg-ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><use href="#i-user"></use></svg>
+            Мої завдання
+          </span>
           <span id="btnTypeReset" class="lg reset-type" title="Скинути" style="display:none">×</span>
         </div>
 
