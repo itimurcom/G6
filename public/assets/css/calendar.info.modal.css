@@ -454,3 +454,56 @@ body.light #infoContent .info-seen-head,
 #infoModal.modal {
   width: min(748px, 96vw);
 }
+
+
+/* P15.43: Info modal typography/spacing normalization */
+#infoModal.modal,
+#infoOverlay .modal {
+  border-radius: 18px;
+}
+
+#infoContent .info-title {
+  line-height: 1.22;
+  margin: 0 0 14px 0;
+}
+
+#infoContent .info-grid {
+  gap: 12px;
+}
+
+#infoContent .info-row {
+  column-gap: 20px;
+  row-gap: 12px;
+}
+
+#infoContent .info-item {
+  font-size: var(--fs-md);
+  line-height: 1.4;
+}
+
+#infoContent .info-done {
+  padding: 3px 9px;
+}
+
+#infoContent .info-seen-head {
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+#infoContent .info-seen-head .notif-iconbtn {
+  width: 40px;
+  height: 36px;
+  border-radius: 12px;
+}
+
+#infoContent .info-seen-list {
+  gap: 10px;
+  margin-top: 10px;
+}
+
+#infoContent .info-seen-chip {
+  gap: 8px;
+  padding: 7px 11px;
+  font-size: var(--fs-sm);
+}
+

@@ -435,3 +435,82 @@ body.cab-modal-open{
 .cab-modal__dialog{
   max-width: 836px;
 }
+
+
+/* P15.43: Cabinet UI spacing/typography normalization (no color changes) */
+.cab-shell,
+.cab-wrap {
+  gap: 14px;
+}
+
+.cab-card,
+.cab-panel,
+.cab-block {
+  border-radius: 18px;
+}
+
+.cab-card__head,
+.cab-panel__head,
+.cab-block__head {
+  padding: 14px 16px;
+}
+
+.cab-card__body,
+.cab-panel__body,
+.cab-block__body {
+  padding: 16px;
+}
+
+.cab-btn,
+.cab-chip,
+.cab-pill,
+.cab-modal__close {
+  line-height: 1.15;
+}
+
+.cab-btn,
+.cab-chip,
+.cab-pill {
+  min-height: 36px;
+  border-radius: 12px;
+}
+
+.cab-btn {
+  padding: 8px 12px;
+}
+
+.cab-input,
+.cab-select,
+.cab-textarea,
+.cab-modal__body input,
+.cab-modal__body select,
+.cab-modal__body textarea {
+  min-height: 40px;
+  border-radius: 12px;
+  padding: 10px 12px;
+  font-size: var(--fs-md);
+  line-height: 1.35;
+}
+
+.cab-modal__dialog {
+  border-radius: 18px;
+}
+
+.cab-modal__head {
+  padding: 14px 16px;
+}
+
+.cab-modal__body {
+  padding: 16px;
+}
+
+.cab-modal__actions {
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.cab-modal__meta {
+  font-size: var(--fs-sm);
+  gap: 10px 16px;
+}
+

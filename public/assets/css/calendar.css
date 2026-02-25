@@ -1513,3 +1513,114 @@ body.light .ev--multi,
 #eventModal.modal {
   width: min(748px, 96vw);
 }
+
+
+/* P15.43: Calendar UI rhythm normalization (sizes/spacing only) */
+.layout {
+  gap: 18px;
+}
+
+.cal-header {
+  gap: 14px 20px;
+  margin-bottom: 12px;
+  padding-bottom: 12px;
+}
+
+.nav-filters,
+.nav,
+.type-filters,
+.quick-filters {
+  gap: 10px;
+}
+
+.filters {
+  gap: 10px;
+}
+
+.btn,
+.tbtn,
+.fold .pill,
+.icon-btn,
+.chat-btn {
+  line-height: 1.15;
+}
+
+.btn {
+  min-height: 38px;
+  padding: 8px 14px;
+  border-radius: 12px;
+}
+
+.tbtn {
+  min-height: 34px;
+  padding: 6px 12px;
+}
+
+.fold .pill {
+  min-height: 34px;
+  padding: 7px 12px;
+}
+
+.chip {
+  min-height: 28px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  line-height: 1.1;
+}
+
+.input,
+.modal textarea,
+.modal input,
+select,
+.modal select {
+  min-height: 40px;
+  border-radius: 12px;
+  padding: 10px 12px;
+  font-size: var(--fs-md);
+  line-height: 1.35;
+}
+
+.overlay {
+  padding: 18px;
+}
+
+.modal {
+  border-radius: 18px;
+}
+
+.modal header {
+  padding: 14px 18px;
+  gap: 12px;
+}
+
+.modal .content {
+  padding: 18px;
+  gap: 14px;
+}
+
+.modal .row {
+  gap: 14px;
+}
+
+.modal footer {
+  gap: 12px;
+  padding: 14px 18px 18px;
+}
+
+.urgent-switch,
+.done-switch {
+  min-height: 34px;
+  padding: 6px 10px;
+}
+
+.owner-suggest {
+  border-radius: 14px;
+}
+
+.owner-suggest .owner-suggest__item {
+  min-height: 38px;
+  padding: 9px 12px;
+}
+

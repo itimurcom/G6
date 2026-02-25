@@ -797,3 +797,216 @@ body.sidebar-open .ui-fab.menu {
   border-color: rgba(239, 68, 68, .65);
 }
 
+
+/* P15.43: UI rhythm / typography normalization (sizes & spacing only; colors/scrollbars untouched) */
+:root {
+  /* Slightly larger base text for better readability (ChatGPT-like density) */
+  --font-size: var(--fs-md);
+  --fs-md-raw: 14px;
+  --fs-ui-raw: 15px;
+
+  /* Unified spacing/radius tokens */
+  --ui-space-1: 4px;
+  --ui-space-2: 8px;
+  --ui-space-3: 10px;
+  --ui-space-4: 12px;
+  --ui-space-5: 14px;
+  --ui-space-6: 16px;
+  --ui-space-7: 20px;
+  --ui-radius-sm: 10px;
+  --ui-radius-md: 12px;
+  --ui-radius-lg: 16px;
+  --ui-radius-xl: 18px;
+  --ui-control-h-sm: 32px;
+  --ui-control-h: 38px;
+  --ui-control-h-lg: 42px;
+
+  /* Page rhythm */
+  --gap: 14px;
+  --fab-size: 38px;
+}
+
+body {
+  line-height: 1.45;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.container {
+  border-radius: var(--ui-radius-xl);
+  padding: clamp(16px, 1.2vw, 20px);
+}
+
+.ui-fab {
+  width: var(--fab-size);
+  height: var(--fab-size);
+}
+
+.ui-fab.menu,
+.ui-fab.theme {
+  top: 14px;
+}
+
+.ui-fab.menu { left: 14px; }
+.ui-fab.theme { right: 14px; }
+
+.ui-fab.menu svg,
+.ui-fab.theme svg {
+  width: 18px;
+  height: 18px;
+}
+
+.btn,
+.tbtn,
+.input,
+select,
+textarea,
+.modal input,
+.modal select,
+.modal textarea,
+.auth-modal .input {
+  font-size: var(--fs-md);
+}
+
+.btn,
+.tbtn {
+  min-height: var(--ui-control-h);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  line-height: 1.15;
+}
+
+.btn {
+  border-radius: var(--ui-radius-md);
+  padding: 8px 14px;
+}
+
+.tbtn,
+.fold .pill {
+  min-height: 34px;
+  padding: 6px 12px;
+}
+
+.tbtn {
+  border-radius: 999px;
+}
+
+.input,
+.modal textarea,
+.modal input,
+select,
+.modal select,
+textarea {
+  min-height: 40px;
+  border-radius: var(--ui-radius-md);
+  padding: 10px 12px;
+  line-height: 1.35;
+}
+
+textarea,
+.modal textarea {
+  min-height: 84px;
+  resize: vertical;
+}
+
+.auth-center {
+  padding: 28px 0;
+}
+
+.auth-modal {
+  border-radius: var(--ui-radius-lg);
+}
+
+.auth-modal__header {
+  padding: 12px 16px;
+}
+
+.auth-modal .content {
+  padding: 16px;
+}
+
+.auth-modal .field {
+  margin: 12px 0 14px;
+}
+
+.auth-modal .hint {
+  margin-bottom: 7px;
+  font-size: var(--fs-sm);
+}
+
+.auth-modal footer {
+  padding: 14px 16px;
+}
+
+.alert {
+  border-radius: 12px;
+  padding: 12px 14px;
+  line-height: 1.35;
+}
+
+.planning-toolbar,
+.audit-toolbar {
+  gap: 10px;
+  margin: 10px 0 14px;
+}
+
+.planning-toolbar {
+  align-items: center;
+}
+
+.planning-toolbar label {
+  min-height: 38px;
+  padding: 8px 14px;
+  border-radius: 12px;
+  gap: 8px;
+  line-height: 1.12;
+  letter-spacing: .01em;
+}
+
+.planning-toolbar .planning-scope-ico {
+  width: 20px;
+  height: 20px;
+  padding: 2px;
+  margin-right: 6px;
+}
+
+.sidebar {
+  padding: 14px;
+}
+
+.sidebar-panel {
+  height: calc(100svh - 28px);
+  border-radius: 18px;
+  padding: 16px;
+  gap: 14px;
+}
+
+.sidebar-title {
+  font-size: var(--fs-md);
+}
+
+.sidebar-close {
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
+}
+
+.sidebar-close svg {
+  width: 17px;
+  height: 17px;
+}
+
+.sidebar-menu {
+  gap: 10px;
+}
+
+.sidebar-link {
+  min-height: 42px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  line-height: 1.2;
+}
+
