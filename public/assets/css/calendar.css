@@ -628,13 +628,18 @@ select,
 .layout.today-panel-collapsed {
   gap: 0;
   margin: 0;
+  grid-template-columns: minmax(0, 1fr) 0;
 }
 
 .layout.today-panel-collapsed .today-panel {
   padding: 0;
   border: 0;
   width: 0;
-  right: -14px;
+  right: 0;
+}
+
+.layout.today-panel-collapsed .today-panel-inner {
+  display: none;
 }
 
 @media (max-width:1100px) {
