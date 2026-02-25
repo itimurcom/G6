@@ -104,14 +104,14 @@
     return (ownerId > 0 && ownerId === meId);
   }
 
-  function __isOverdueForInfo(ev) {
+  function __isOverdueForInfo(ev, fallbackDateISO) {
     try {
       if (UI && typeof UI.isEventOverdueStrict === 'function') return !!UI.isEventOverdueStrict(ev);
     } catch (_) { }
 
     try {
       if (!ev || !!ev.done) return false;
-      var iso = String((ev && ev.date) || '').trim();
+      var iso = String((ev && (ev.date || ev.start_date || ev.end_date)) || (fallbackDateISO || '')).trim();
       if (!/^\d{4}-\d{2}-\d{2}$/.test(iso)) return false;
 
       var now = new Date();
@@ -133,10 +133,10 @@
     return false;
   }
 
-  function __infoStatusBadgesHtml(ev) {
+  function __infoStatusBadgesHtml(ev, fallbackDateISO) {
     var showAssigned = __isAssignedToMeForInfo(ev);
     var showMy = (!showAssigned && __isMyEventForInfo(ev));
-    var showOverdue = __isOverdueForInfo(ev);
+    var showOverdue = __isOverdueForInfo(ev, fallbackDateISO);
     if (!showAssigned && !showMy && !showOverdue) return '';
 
     var parts = [];
@@ -1241,7 +1241,7 @@ function __renderEventHistory(host, items, currentEvent) {
 
     var html = '' +
       '<div class="info-title">' + Ev.escapeHtml(ev.title || '') + '</div>' +
-      __infoStatusBadgesHtml(ev) +
+      __infoStatusBadgesHtml(ev, dateISO) +
 
       '<div class="info-grid">' +
         // 1st row: date(+time) + responsible
