@@ -113,6 +113,27 @@ $__toastErr = \App\Core\Session::flash('toast_error');
         </div>
 
         <div class="cab-card">
+          <div class="cab-card__title">Шрифт</div>
+          <div class="cab-card__body">
+            <div class="ui-seg ui-seg--font" role="group" aria-label="Шрифт інтерфейсу">
+              <button type="button" class="ui-seg__btn" data-font-family="inter" title="Inter (локально)">
+                <span class="ui-font-chip ui-font-chip--inter" aria-hidden="true">Aa</span>
+                <span>Inter</span>
+              </button>
+              <button type="button" class="ui-seg__btn" data-font-family="sfpro" title="SF Pro (локально)">
+                <span class="ui-font-chip ui-font-chip--sfpro" aria-hidden="true">Aa</span>
+                <span>SF Pro</span>
+              </button>
+              <button type="button" class="ui-seg__btn" data-font-family="arial" title="Arial (системний)">
+                <span class="ui-font-chip ui-font-chip--arial" aria-hidden="true">Aa</span>
+                <span>Arial</span>
+              </button>
+            </div>
+            <div class="hint">Перемикає базовий шрифт інтерфейсу. Зберігається в браузері (Local Storage).</div>
+          </div>
+        </div>
+
+        <div class="cab-card">
           <div class="cab-card__title">Розмір шрифта</div>
           <div class="cab-card__body">
             <div class="ui-seg" role="group" aria-label="Розмір шрифта">

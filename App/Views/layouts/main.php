@@ -19,6 +19,12 @@
         var v = localStorage.getItem('ui-font-scale');
         if (v) document.documentElement.style.setProperty('--font-scale', v);
       } catch (e) { /* no-op */ }
+
+      try {
+        var f = (localStorage.getItem('ui-font-family') || 'inter').toLowerCase();
+        if (['inter','sfpro','arial'].indexOf(f) === -1) f = 'inter';
+        document.documentElement.setAttribute('data-ui-font', f);
+      } catch (e) { /* no-op */ }
     })();
   </script>
   <link rel="stylesheet" href="/assets/css/style.css">

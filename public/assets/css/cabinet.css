@@ -248,6 +248,39 @@
 }
 
 
+/* Font selector segmented buttons */
+.ui-seg--font{
+  gap: 10px;
+}
+.ui-seg--font .ui-seg__btn{
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+  min-height: 38px;
+  padding-right: 12px;
+}
+.ui-font-chip{
+  display:inline-grid;
+  place-items:center;
+  min-width: 28px;
+  height: 22px;
+  padding: 0 6px;
+  border-radius: 999px;
+  border: 1px solid var(--cabinet-border);
+  background: color-mix(in oklab, var(--cabinet-btn-bg) 74%, var(--cabinet-primary-bg));
+  color: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.01em;
+  flex: 0 0 auto;
+}
+.ui-font-chip--inter{ font-family: "InterLocal", "Segoe UI", Arial, sans-serif; }
+.ui-font-chip--sfpro{ font-family: "SFProDisplayLocal", "SFProTextLocal", -apple-system, "Segoe UI", Arial, sans-serif; letter-spacing: -0.02em; }
+.ui-font-chip--arial{ font-family: Arial, "Segoe UI", sans-serif; letter-spacing: 0; }
+
+
 /* Cabinet cards: helpers for Profile/Security/Users */
 .cab-form { margin: 0; }
 
@@ -353,7 +386,7 @@
 }
 .cab-modal__dialog{
   position: relative;
-  max-width: 836px;
+  max-width: 760px;
   width: calc(100% - 24px);
   margin: 60px auto;
   background: var(--cabinet-card-bg);
@@ -430,3 +463,8 @@ body.cab-modal-open{
   align-items: center;
 }
 
+
+/* P15.42: increase cabinet modal dialog width by ~10% */
+.cab-modal__dialog{
+  max-width: 836px;
+}

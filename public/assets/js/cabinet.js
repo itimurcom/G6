@@ -136,6 +136,46 @@
     });
 })();
 
+
+// Cabinet Settings: Font family (ui-font-family) — ADD ONLY
+(function () {
+    var KEY = 'ui-font-family';
+    var buttons = document.querySelectorAll('[data-font-family]');
+    if (!buttons || !buttons.length) return;
+
+    function normalize(v) {
+        v = String(v || '').toLowerCase().trim();
+        return (['inter','sfpro','arial'].indexOf(v) !== -1) ? v : 'inter';
+    }
+    function read() {
+        try { return normalize(localStorage.getItem(KEY) || 'inter'); }
+        catch (e) { return 'inter'; }
+    }
+    function write(v) {
+        try { localStorage.setItem(KEY, normalize(v)); } catch (e) { /* no-op */ }
+    }
+    function apply(v) {
+        var val = normalize(v);
+        document.documentElement.setAttribute('data-ui-font', val);
+        buttons.forEach(function (b) {
+            b.classList.toggle('is-active', String(b.dataset.fontFamily || '') === val);
+        });
+        try {
+            window.dispatchEvent(new CustomEvent('uifontchange', { detail: { font: val } }));
+        } catch (e) { /* no-op */ }
+    }
+
+    apply(read());
+
+    buttons.forEach(function (b) {
+        b.addEventListener('click', function () {
+            var v = String(b.dataset.fontFamily || 'inter');
+            write(v);
+            apply(v);
+        });
+    });
+})();
+
 // P15.7: cabinet toast payload (password change success)
 (function () {
     var el = document.getElementById('cabinetToastPayload');

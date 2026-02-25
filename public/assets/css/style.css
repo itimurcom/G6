@@ -83,8 +83,127 @@
   font-display: swap;
 }
 
+
+@font-face {
+  font-family: 'SFProTextLocal';
+  src: url('../fonts/sf/SFUIText-Regular.woff') format('woff');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'SFProTextLocal';
+  src: url('../fonts/sf/SFUIText-Italic.woff') format('woff');
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'SFProTextLocal';
+  src: url('../fonts/sf/SFUIText-Medium.woff') format('woff');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'SFProTextLocal';
+  src: url('../fonts/sf/SFUIText-MediumItalic.woff') format('woff');
+  font-weight: 500;
+  font-style: italic;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'SFProTextLocal';
+  src: url('../fonts/sf/SFUIText-Semibold.woff') format('woff');
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'SFProTextLocal';
+  src: url('../fonts/sf/SFUIText-SemiboldItalic.woff') format('woff');
+  font-weight: 600;
+  font-style: italic;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'SFProTextLocal';
+  src: url('../fonts/sf/SFUIText-Bold.woff') format('woff');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'SFProTextLocal';
+  src: url('../fonts/sf/SFUIText-BoldItalic.woff') format('woff');
+  font-weight: 700;
+  font-style: italic;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'SFProTextLocal';
+  src: url('../fonts/sf/SFUIText-Heavy.woff') format('woff');
+  font-weight: 800;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'SFProTextLocal';
+  src: url('../fonts/sf/SFUIText-HeavyItalic.woff') format('woff');
+  font-weight: 800;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'SFProDisplayLocal';
+  src: url('../fonts/sf/SFUIDisplay-Regular.woff') format('woff');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'SFProDisplayLocal';
+  src: url('../fonts/sf/SFUIDisplay-Medium.woff') format('woff');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'SFProDisplayLocal';
+  src: url('../fonts/sf/SFUIDisplay-Semibold.woff') format('woff');
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'SFProDisplayLocal';
+  src: url('../fonts/sf/SFUIDisplay-Bold.woff') format('woff');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'SFProDisplayLocal';
+  src: url('../fonts/sf/SFUIDisplay-Heavy.woff') format('woff');
+  font-weight: 800;
+  font-style: normal;
+  font-display: swap;
+}
+
 :root {
   --font-size: var(--fs-sm);
+
+/* UI font family preset (Cabinet > Налаштування > Шрифт) */
+--ui-font-key: "inter";
+--font-family-ui: "InterLocal", system-ui, -apple-system, "Segoe UI", Roboto, Ubuntu, Cantarell, "Noto Sans", Helvetica, Arial, sans-serif;
+--font-family-display: var(--font-family-ui);
+--font-ui-weight: 500;
+--font-ui-line: 1.52;
+--font-ui-letter-spacing: -0.002em;
+--font-ui-size-mul: 1;
+--font-display-letter-spacing: -0.01em;
+--font-display-weight: 700;
 /* Typography scale (single source of truth) */
 --font-scale: 1;        /* 0.75 / 1 / 1.25 / 1.5 (set via Cabinet > Налаштування) */
 
@@ -159,6 +278,54 @@
   --scrollbar-thumb-hover: color-mix(in oklab, var(--muted) 60%, var(--border));
 }
 
+
+/* Typography presets by selected UI font */
+:root[data-ui-font="inter"] {
+  --ui-font-key: "inter";
+  --font-family-ui: "InterLocal", system-ui, -apple-system, "Segoe UI", Roboto, Ubuntu, Cantarell, "Noto Sans", Helvetica, Arial, sans-serif;
+  --font-family-display: "InterLocal", system-ui, -apple-system, "Segoe UI", Roboto, Ubuntu, Cantarell, "Noto Sans", Helvetica, Arial, sans-serif;
+  --font-ui-weight: 500;
+  --font-ui-line: 1.52;
+  --font-ui-letter-spacing: -0.002em;
+  --font-ui-size-mul: 1;
+  --font-display-letter-spacing: -0.012em;
+  --font-display-weight: 700;
+}
+
+:root[data-ui-font="sfpro"] {
+  --ui-font-key: "sfpro";
+  --font-family-ui: "SFProTextLocal", "SF Pro Text", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-family-display: "SFProDisplayLocal", "SFProTextLocal", "SF Pro Display", "SF Pro Text", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-ui-weight: 500;
+  --font-ui-line: 1.48;
+  --font-ui-letter-spacing: -0.004em;
+  --font-ui-size-mul: 1;
+  --font-display-letter-spacing: -0.016em;
+  --font-display-weight: 700;
+}
+
+:root[data-ui-font="arial"] {
+  --ui-font-key: "arial";
+  --font-family-ui: Arial, "Segoe UI", Tahoma, Helvetica, sans-serif;
+  --font-family-display: Arial, "Segoe UI", Tahoma, Helvetica, sans-serif;
+  --font-ui-weight: 400;
+  --font-ui-line: 1.56;
+  --font-ui-letter-spacing: 0;
+  --font-ui-size-mul: 0.98;
+  --font-display-letter-spacing: -0.004em;
+  --font-display-weight: 700;
+}
+
+html {
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* {
+  font-kerning: normal;
+}
+
 * {
   box-sizing: border-box
 }
@@ -173,7 +340,36 @@ body {
   min-height: 100svh;
   background: var(--bg);
   color: var(--fg);
-  font: 500 var(--font-size)/1.5 'InterLocal', system-ui, -apple-system, 'Segoe UI', Roboto, Ubuntu, Cantarell, 'Noto Sans', Helvetica, Arial, sans-serif;
+  font-family: var(--font-family-ui);
+  font-size: calc(var(--font-size) * var(--font-ui-size-mul));
+  font-weight: var(--font-ui-weight);
+  line-height: var(--font-ui-line);
+  letter-spacing: var(--font-ui-letter-spacing);
+}
+
+button,
+input,
+select,
+textarea {
+  font-family: inherit;
+  font-size: inherit;
+  line-height: inherit;
+  letter-spacing: inherit;
+}
+
+h1, h2, h3,
+.title,
+.sub-title,
+.cab-card__title {
+  font-family: var(--font-family-display);
+  font-weight: var(--font-display-weight);
+  letter-spacing: var(--font-display-letter-spacing);
+}
+
+.hint,
+.muted {
+  letter-spacing: normal;
+  line-height: 1.45;
 }
 
 /* Scrollbars (global) */
