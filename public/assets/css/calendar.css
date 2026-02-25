@@ -1513,3 +1513,13 @@ body.light .ev--multi,
 #eventModal.modal {
   width: min(748px, 96vw);
 }
+
+/* P15.49: increase popup/modal widths by +20% from current baseline (strong override) */
+.modal {
+  width: min(686px, 94vw) !important;
+}
+
+#eventModal.modal,
+#infoModal.modal {
+  width: min(898px, 96vw) !important;
+}

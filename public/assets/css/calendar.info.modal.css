@@ -454,3 +454,9 @@ body.light #infoContent .info-seen-head,
 #infoModal.modal {
   width: min(748px, 96vw);
 }
+
+/* P15.49: keep view-event popup widths aligned (+20%, strong override) */
+#infoOverlay .modal,
+#infoModal.modal {
+  width: min(898px, 96vw) !important;
+}
