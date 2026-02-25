@@ -666,6 +666,9 @@ var Data = (global.CalendarApp && global.CalendarApp.data) || null;
     });
 
     btnCollapse.addEventListener('click', function () {
+      var prevRect = null;
+      try { if (stackRoot) prevRect = stackRoot.getBoundingClientRect(); } catch (_) { prevRect = null; }
+
       var isCollapsed = (listEl.style.display === 'none');
       if (isCollapsed) {
         listEl.style.display = '';
@@ -679,6 +682,17 @@ var Data = (global.CalendarApp && global.CalendarApp.data) || null;
         safeSet(KEY_COLLAPSED, '1');
       }
       btnCollapse.setAttribute('aria-label', btnCollapse.title);
+
+      try {
+        if (prevRect && stackRoot) {
+          global.requestAnimationFrame(function () {
+            try {
+              var nextRect = stackRoot.getBoundingClientRect();
+              applyStackPos({ left: prevRect.left, top: (prevRect.bottom - nextRect.height) }, true);
+            } catch (_) { }
+          });
+        }
+      } catch (_) { }
     });
 
     updateCount();

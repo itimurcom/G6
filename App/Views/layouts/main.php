@@ -26,6 +26,7 @@
     // compute path and calendar flag (preserve your logic)
     $path = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?? '/';
     $isCalendar = ($path === '/calendar' || $path === '/calendar/');
+    $isAuthPage = in_array($path, ['/login', '/login/', '/register', '/register/'], true);
   ?>
 
   <?php if (!empty($extra_css)): ?>
@@ -85,6 +86,7 @@
   if (is_file($icons)) { include $icons; }
   ?>
 
+  <?php if (!$isAuthPage): ?>
   <!-- Hamburger menu toggle (top-left) -->
   <button id="sidebarToggle" class="ui-fab menu" type="button" title="Меню"
           aria-label="Меню" aria-controls="sidebar" aria-expanded="false">
@@ -103,6 +105,8 @@
      if (is_file($side_menu)) { include $side_menu; } 
     ?>
   </aside>
+  <?php endif; ?>
+
 
   <!-- Page content -->
   <main class="page<?= $isCalendar ? ' calendar-page' : '' ?>">
@@ -123,7 +127,9 @@
       <?php } endforeach; ?>
   <?php endif; ?>
 
+  <?php if (!$isAuthPage): ?>
   <script src="/assets/js/ui.sidebar.js" defer></script>
+  <?php endif; ?>
 
   <!-- If you still need CSRF bootstrap, keep it inside <body> -->
   <script src="/assets/js/services/bootstrap.csrf.js" defer></script>

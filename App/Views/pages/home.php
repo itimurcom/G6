@@ -14,8 +14,19 @@
 <section>
   <div class="planning-toolbar" id="planning-toolbar">
     <label><input type="radio" name="planning-scope" value="all" checked> Всі задачі</label>
-    <label><input type="radio" name="planning-scope" value="my"> Мої задачі</label>
-    <label><input type="radio" name="planning-scope" value="exec"> На виконанні</label>
+    <label><input type="radio" name="planning-scope" value="my">
+      <svg class="planning-scope-ico planning-scope-ico--my" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><use href="#i-user"></use></svg>
+      Мої задачі
+    </label>
+    <label><input type="radio" name="planning-scope" value="exec">
+      <svg class="planning-scope-ico planning-scope-ico--assigned" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+        <path d="M15.5 13a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z" fill="currentColor" opacity=".95"></path>
+        <path d="M9.5 20.5c.5-2.8 2.8-4.8 5.9-4.8 3 0 5.2 1.8 5.8 4.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path>
+        <path d="M3.5 12.5h6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path>
+        <path d="M6.5 9.5l3 3-3 3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
+      </svg>
+      На виконанні
+    </label>
   </div>
   <section
     id="planning-today"

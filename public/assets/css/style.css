@@ -588,6 +588,28 @@ html[data-theme="dark"] .g6-auth-logo--dark {
   accent-color: #4b9;
 }
 
+.planning-toolbar .planning-scope-ico {
+  width: 15px;
+  height: 15px;
+  display: inline-block;
+  flex: 0 0 auto;
+  color: currentColor;
+}
+
+.planning-toolbar .planning-scope-ico--my {
+  color: var(--muted);
+}
+
+.planning-toolbar .planning-scope-ico--assigned {
+  width: 18px;
+  height: 18px;
+  color: #111;
+  background: rgba(255, 220, 64, .95);
+  border-radius: 999px;
+  padding: 2px;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .10);
+}
+
 /* ------------------------------------------------------------------ */
 /* Off-canvas sidebar (hamburger menu)                                 */
 /* ------------------------------------------------------------------ */
