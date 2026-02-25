@@ -1,3 +1,88 @@
+@font-face {
+  font-family: 'InterLocal';
+  src: url('../fonts/inter/Inter-Regular.otf') format('opentype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'InterLocal';
+  src: url('../fonts/inter/Inter-Italic.otf') format('opentype');
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'InterLocal';
+  src: url('../fonts/inter/Inter-Medium.otf') format('opentype');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'InterLocal';
+  src: url('../fonts/inter/Inter-MediumItalic.otf') format('opentype');
+  font-weight: 500;
+  font-style: italic;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'InterLocal';
+  src: url('../fonts/inter/Inter-SemiBold.otf') format('opentype');
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'InterLocal';
+  src: url('../fonts/inter/Inter-SemiBoldItalic.otf') format('opentype');
+  font-weight: 600;
+  font-style: italic;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'InterLocal';
+  src: url('../fonts/inter/Inter-Bold.otf') format('opentype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'InterLocal';
+  src: url('../fonts/inter/Inter-BoldItalic.otf') format('opentype');
+  font-weight: 700;
+  font-style: italic;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'InterLocal';
+  src: url('../fonts/inter/Inter-ExtraBold.otf') format('opentype');
+  font-weight: 800;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'InterLocal';
+  src: url('../fonts/inter/Inter-ExtraBoldItalic.otf') format('opentype');
+  font-weight: 800;
+  font-style: italic;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'InterLocal';
+  src: url('../fonts/inter/Inter-Black.otf') format('opentype');
+  font-weight: 900;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'InterLocal';
+  src: url('../fonts/inter/Inter-BlackItalic.otf') format('opentype');
+  font-weight: 900;
+  font-style: italic;
+  font-display: swap;
+}
+
 :root {
   --font-size: var(--fs-sm);
 /* Typography scale (single source of truth) */
@@ -75,9 +160,7 @@
 }
 
 * {
-  box-sizing: border-box;
-  scrollbar-width: thin;
-  scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+  box-sizing: border-box
 }
 
 html,
@@ -90,10 +173,14 @@ body {
   min-height: 100svh;
   background: var(--bg);
   color: var(--fg);
-  font: 500 var(--font-size)/1.5 system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Helvetica, Arial;
+  font: 500 var(--font-size)/1.5 'InterLocal', system-ui, -apple-system, 'Segoe UI', Roboto, Ubuntu, Cantarell, 'Noto Sans', Helvetica, Arial, sans-serif;
 }
 
 /* Scrollbars (global) */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+}
 
 *::-webkit-scrollbar {
   width: var(--scrollbar-size);
@@ -241,6 +328,12 @@ body {
   display: grid;
 }
 
+.auth-modal {
+  max-width: 480px;
+  width: 92%;
+  border-radius: 14px;
+  overflow: hidden;
+}
 
 .auth-modal__header {
   background: var(--green-700, #166534);
@@ -251,6 +344,47 @@ body {
   padding: 10px 14px;
 }
 
+.auth-modal .content {
+  padding: 14px;
+}
+
+.auth-modal .field {
+  display: block;
+  margin: 10px 0 12px;
+}
+
+.auth-modal .hint {
+  opacity: .85;
+  margin-bottom: 6px;
+}
+
+.auth-modal .input {
+  width: 100%;
+}
+
+.auth-modal footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  border-top: 1px solid rgba(255, 255, 255, .06);
+}
+
+.auth-modal .actions {
+  display: flex;
+  gap: 10px;
+}
+
+.alert {
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+
+.alert--error {
+  background: #2b1b1b;
+  border: 1px solid #7f1d1d;
+  color: #fecaca;
+}
 
 .alert--success {
   background: rgba(34, 197, 94, 0.12);
@@ -278,13 +412,67 @@ body {
   color: var(--blue-300, #93C5FD);
 }
 
-
-/* === Auth centered forms (modal look, no overlay) / refined (.container) === */
+/* === Auth centered forms (modal look, no overlay) === */
 .auth-center {
+  display: grid;
+  place-items: center;
+  min-height: 80vh;
+  padding: 12px;
+}
+
+.auth-modal {
+  max-width: 520px;
+  width: 92%;
+  border-radius: 14px;
+  overflow: hidden;
+}
+
+.auth-modal .content {
+  padding: 14px;
+}
+
+.auth-modal .field {
+  display: block;
+  margin: 10px 0 12px;
+}
+
+.auth-modal .hint {
+  opacity: .85;
+  margin-bottom: 6px;
+}
+
+.auth-modal .input {
+  width: 100%;
+}
+
+.auth-modal footer {
   display: flex;
   align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  border-top: 1px solid rgba(255, 255, 255, .06);
+}
+
+.auth-modal .actions {
+  display: flex;
+  gap: 10px;
+}
+
+.alert {
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+
+.alert--error {
+  background: #2b1b1b;
+  border: 1px solid #7f1d1d;
+  color: #fecaca;
+}
+
+/* === Auth forms refined (center in .container) === */
+.auth-center {
+  display: flex;
   justify-content: center;
-  min-height: 80vh;
   padding: 24px 0;
 }
 
