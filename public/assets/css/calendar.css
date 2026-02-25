@@ -1360,6 +1360,32 @@ body.light .ev--multi,
   background: rgba(255, 220, 64, .90);
 }
 
+#infoContent .info-badge--overdue {
+  color: #fff;
+  border-color: color-mix(in oklab, var(--type-overdue) 62%, var(--border));
+  background: color-mix(in oklab, var(--type-overdue) 78%, var(--event-bg));
+}
+
+#infoContent .info-badge--overdue.ev--overdue-flash {
+  overflow: hidden;
+  isolation: isolate;
+}
+
+#infoContent .info-badge--overdue.ev--overdue-flash > * {
+  position: relative;
+  z-index: 2;
+}
+
+#infoContent .info-badge--overdue.ev--overdue-flash::after {
+  z-index: 1;
+}
+
+:root[data-theme="light"] #infoContent .info-badge--overdue {
+  color: #fff;
+  border-color: color-mix(in oklab, var(--type-overdue) 55%, var(--border));
+  background: color-mix(in oklab, var(--type-overdue) 82%, white);
+}
+
 #infoContent .info-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;

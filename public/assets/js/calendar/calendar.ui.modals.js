@@ -104,12 +104,54 @@
     return (ownerId > 0 && ownerId === meId);
   }
 
+  function __isOverdueForInfo(ev) {
+    try {
+      if (UI && typeof UI.isEventOverdueStrict === 'function') return !!UI.isEventOverdueStrict(ev);
+    } catch (_) { }
+
+    try {
+      if (!ev || !!ev.done) return false;
+      var iso = String((ev && ev.date) || '').trim();
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(iso)) return false;
+
+      var now = new Date();
+      var todayISO = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
+      if (iso < todayISO) return true;
+      if (iso > todayISO) return false;
+
+      var tm = String((ev && ev.time) || '').trim();
+      var m = /^(\d{1,2}):(\d{2})$/.exec(tm);
+      if (!m) return false;
+
+      var hh = Math.max(0, Math.min(23, parseInt(m[1], 10) || 0));
+      var mm = Math.max(0, Math.min(59, parseInt(m[2], 10) || 0));
+      var evHM = String(hh).padStart(2, '0') + ':' + String(mm).padStart(2, '0');
+      var nowHM = String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
+      return evHM < nowHM;
+    } catch (_) { }
+
+    return false;
+  }
+
   function __infoStatusBadgesHtml(ev) {
     var showAssigned = __isAssignedToMeForInfo(ev);
     var showMy = (!showAssigned && __isMyEventForInfo(ev));
-    if (!showAssigned && !showMy) return '';
+    var showOverdue = __isOverdueForInfo(ev);
+    if (!showAssigned && !showMy && !showOverdue) return '';
 
     var parts = [];
+    if (showOverdue) {
+      parts.push(''
+        + '<span class="info-badge info-badge--overdue ev--overdue-flash" title="Подія прострочена">'
+        +   '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">'
+        +     '<path d="M12 2.5c5.25 0 9.5 4.25 9.5 9.5s-4.25 9.5-9.5 9.5S2.5 17.25 2.5 12 6.75 2.5 12 2.5Z" fill="currentColor" opacity=".16"></path>'
+        +     '<path d="M12 6.25v6.1" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path>'
+        +     '<circle cx="12" cy="16.9" r="1.1" fill="currentColor"></circle>'
+        +     '<path d="M12 2.75a9.25 9.25 0 1 1 0 18.5a9.25 9.25 0 0 1 0-18.5Z" fill="none" stroke="currentColor" stroke-width="1.7"></path>'
+        +   '</svg>'
+        +   '<span>Подія прострочена</span>'
+        + '</span>');
+    }
     if (showAssigned) {
       parts.push(''
         + '<span class="info-badge info-badge--assigned" title="На виконанні у мене">'
