@@ -183,3 +183,76 @@
   border-top-right-radius: 999px;
   border-bottom-right-radius: 999px;
 }
+/* === P4.3 Planning scope tabs: outlined style like Cabinet header tabs === */
+.planning-toolbar {
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.planning-toolbar label {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  margin: 0;
+  padding: 6px 10px;
+  min-height: 34px;
+  border: 1px dashed var(--border);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted);
+  opacity: 1;
+  cursor: pointer;
+  line-height: 1.15;
+  font-weight: 700;
+  transition:
+    border-color .16s ease,
+    color .16s ease,
+    background-color .16s ease,
+    box-shadow .16s ease;
+}
+
+.planning-toolbar label:hover {
+  color: var(--fg);
+  border-color: color-mix(in oklab, var(--border) 45%, var(--accent));
+  background: color-mix(in oklab, var(--panel) 88%, var(--accent));
+}
+
+.planning-toolbar label:focus-within {
+  outline: none;
+  border-color: color-mix(in oklab, var(--accent) 75%, var(--border));
+  box-shadow: 0 0 0 1px color-mix(in oklab, var(--accent) 55%, transparent);
+}
+
+.planning-toolbar label:has(input[type="radio"]:checked) {
+  color: var(--fg);
+  border-color: color-mix(in oklab, var(--accent) 85%, var(--border));
+  background: color-mix(in oklab, var(--panel) 78%, var(--accent));
+  box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--accent) 35%, transparent);
+}
+
+.planning-toolbar label input[type="radio"] {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  border: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+  accent-color: var(--accent);
+}
+
+@media (max-width: 640px) {
+  .planning-toolbar {
+    gap: 6px;
+  }
+  .planning-toolbar label {
+    padding: 6px 9px;
+    min-height: 32px;
+  }
+}
