@@ -281,36 +281,3 @@ body.light #notifStack,
     width: calc(100vw - 20px);
   }
 }
-
-
-/* P15.43: Notification panel spacing/typography normalization */
-#notifStack .notif-item,
-#notifStack .notif-card {
-  border-radius: 16px;
-}
-
-#notifStack .notif-head {
-  gap: 10px;
-}
-
-#notifStack .notif-title {
-  line-height: 1.2;
-}
-
-#notifStack .notif-body {
-  margin-top: 10px;
-  line-height: 1.4;
-}
-
-#notifStack .notif-meta {
-  margin-top: 8px;
-  gap: 10px;
-}
-
-#notifStack .notif-btn {
-  min-height: 34px;
-  border-radius: 12px;
-  padding: 7px 12px;
-  line-height: 1.15;
-}
-

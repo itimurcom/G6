@@ -33,18 +33,3 @@ body {
 #notifStack {
   display: none !important;
 }
-
-
-/* P15.43: /today shell spacing normalization */
-.today-only-shell {
-  padding: 20px;
-}
-
-.today-panel.today-only {
-  width: min(560px, 96vw);
-}
-
-.today-panel.today-only .today-panel-inner {
-  height: min(880px, 92vh);
-}
-
