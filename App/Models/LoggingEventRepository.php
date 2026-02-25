@@ -132,6 +132,7 @@ final class LoggingEventRepository
             'event_docs_changed',
             'event_owner_changed',
             'event_date_changed',
+            'event_end_date_changed',
         ];
         if (in_array($kind, $repeatableKinds, true)) {
             $ts = date('His');
@@ -451,6 +452,35 @@ final class LoggingEventRepository
                         'from_date' => $beforeDate,
                         'to_date'   => $afterDate,
                         'event'     => $this->snapshotEvent($after, $id),
+                    ]);
+                }
+
+                // Activity notifications: end date (completion/due date) changed
+                $beforeEndDate = is_array($before) ? trim((string)($before['end_date'] ?? '')) : '';
+                $afterEndDate  = is_array($after)  ? trim((string)($after['end_date']  ?? '')) : '';
+
+                // Suppress duplicate activity when moving a multi-day event by start date:
+                // if start_date and end_date shifted by the same number of days, treat it as one date move.
+                $skipEndDateActivityAsDateShift = false;
+                if ($beforeDate !== '' && $afterDate !== '' && $beforeDate !== $afterDate && $beforeEndDate !== '' && $afterEndDate !== '') {
+                    try {
+                        $startDiff = (new \DateTimeImmutable($beforeDate))->diff(new \DateTimeImmutable($afterDate));
+                        $endDiff   = (new \DateTimeImmutable($beforeEndDate))->diff(new \DateTimeImmutable($afterEndDate));
+                        $startShiftDays = (int)$startDiff->format('%r%a');
+                        $endShiftDays   = (int)$endDiff->format('%r%a');
+                        if ($startShiftDays === $endShiftDays) {
+                            $skipEndDateActivityAsDateShift = true;
+                        }
+                    } catch (\Throwable $__) {
+                        // Ignore parse issues and fall back to regular end_date activity.
+                    }
+                }
+
+                if ($beforeEndDate !== $afterEndDate && !$skipEndDateActivityAsDateShift) {
+                    $this->notifyFanout('event_end_date_changed', $id, [
+                        'from_end_date' => $beforeEndDate,
+                        'to_end_date'   => $afterEndDate,
+                        'event'         => $this->snapshotEvent($after, $id),
                     ]);
                 }
 

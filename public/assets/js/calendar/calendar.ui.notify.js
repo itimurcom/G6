@@ -322,6 +322,7 @@ var Data = (global.CalendarApp && global.CalendarApp.data) || null;
     if (kind === 'event_new') return 'Додано нову подію.';
     if (kind === 'event_deleted') return 'Подію видалено.';
     if (kind === 'event_date_changed') return 'Змінено дату події.';
+    if (kind === 'event_end_date_changed') return 'Змінено дату завершення.';
 
     if (kind === 'event_time_changed') {
       var pt = parsePayloadMaybe(notif && notif.payload) || null;
@@ -765,18 +766,43 @@ ttl.appendChild(subtitle);
       links.appendChild(openLink);
     }
 
-    // Optional extra line for date change
+    // Optional extra line for date changes (event date / end date)
     try {
-      if (baseKind === 'event_date_changed') {
+      if (baseKind === 'event_date_changed' || baseKind === 'event_end_date_changed') {
         var p = parsePayloadMaybe(notif && notif.payload) || null;
-        var b = p && p.before ? p.before : null;
-        var a = p && p.after ? p.after : null;
-        var bDate = b ? String(b.start_date || b._date || '') : '';
-        var aDate = a ? String(a.start_date || a._date || '') : '';
-        if (bDate && aDate && bDate !== aDate) {
+        var fromDate = '';
+        var toDate = '';
+
+        if (baseKind === 'event_date_changed') {
+          fromDate = p ? String(p.from_date || '') : '';
+          toDate = p ? String(p.to_date || '') : '';
+
+          if ((!fromDate || !toDate) && p) {
+            var b = p.before && typeof p.before === 'object' ? p.before : null;
+            var a = p.after && typeof p.after === 'object' ? p.after : null;
+            fromDate = fromDate || (b ? String(b.start_date || b._date || '') : '');
+            toDate = toDate || (a ? String(a.start_date || a._date || '') : '');
+          }
+        } else {
+          fromDate = p ? String(p.from_end_date || '') : '';
+          toDate = p ? String(p.to_end_date || '') : '';
+
+          if ((!fromDate && !toDate) && p) {
+            var b2 = p.before && typeof p.before === 'object' ? p.before : null;
+            var a2 = p.after && typeof p.after === 'object' ? p.after : null;
+            fromDate = fromDate || (b2 ? String(b2.end_date || '') : '');
+            toDate = toDate || (a2 ? String(a2.end_date || '') : '');
+          }
+        }
+
+        if (fromDate !== toDate) {
           var extra = document.createElement('div');
           extra.className = 'notif-body-sub';
-          extra.textContent = 'Було: ' + fmtDate(bDate) + ' → Стало: ' + fmtDate(aDate);
+
+          var fromLabel = fromDate ? fmtDate(fromDate) : 'не вказано';
+          var toLabel = toDate ? fmtDate(toDate) : 'не вказано';
+
+          extra.textContent = 'Було: ' + fromLabel + ' → Стало: ' + toLabel;
           body.appendChild(document.createElement('br'));
           body.appendChild(extra);
         }
