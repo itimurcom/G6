@@ -1,0 +1,292 @@
+/* Event sheet (Patch 1: page + passport + messages placeholder) */
+.event-sheet {
+  display: grid;
+  gap: 18px;
+}
+
+.event-sheet__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+.event-sheet__eyebrow {
+  color: var(--muted);
+  font-size: var(--fs-xs);
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  margin-bottom: 4px;
+}
+
+.event-sheet__title {
+  margin: 0;
+  font-size: clamp(28px, 4vw, 38px);
+  line-height: 1.08;
+}
+
+.event-sheet__meta-line {
+  margin-top: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  color: var(--muted);
+  font-size: var(--fs-sm);
+}
+
+.event-sheet__dot { opacity: .65; }
+
+.event-sheet__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.event-card {
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background: color-mix(in oklab, var(--event-bg) 88%, transparent);
+  padding: 18px;
+  box-shadow: 0 14px 32px rgba(0,0,0,.14);
+}
+
+.event-card--missing {
+  padding: 24px;
+}
+
+.event-card__head {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 14px;
+}
+
+.event-card__title {
+  margin: 0;
+  font-size: clamp(18px, 2.1vw, 24px);
+}
+
+.event-card__hint,
+.event-card__text,
+.event-thread__empty-text,
+.event-thread__prep-note {
+  color: var(--muted);
+}
+
+.event-card__hint {
+  margin: 8px 0 0;
+  font-size: var(--fs-sm);
+}
+
+.event-card__summary-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.event-sheet__badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.event-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 32px;
+  padding: 0 12px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: color-mix(in oklab, var(--event-bg) 90%, transparent);
+  font-size: var(--fs-sm);
+  font-weight: 700;
+}
+
+.event-badge--urgent {
+  color: #fff;
+  background: color-mix(in oklab, var(--urgent) 60%, var(--event-bg));
+  border-color: color-mix(in oklab, var(--urgent) 50%, var(--border));
+}
+
+.event-badge--done {
+  color: #fff;
+  background: color-mix(in oklab, var(--done) 62%, var(--event-bg));
+  border-color: color-mix(in oklab, var(--done) 50%, var(--border));
+}
+
+.event-badge--mine {
+  background: color-mix(in oklab, var(--accent) 18%, var(--event-bg));
+}
+
+.event-badge--assigned {
+  color: #111;
+  background: rgba(250, 214, 55, .92);
+  border-color: rgba(250, 214, 55, .88);
+}
+
+.event-badge--overdue {
+  background: color-mix(in oklab, var(--type-overdue) 28%, var(--event-bg));
+  border-color: color-mix(in oklab, var(--type-overdue) 36%, var(--border));
+}
+
+.event-sheet__identity {
+  color: var(--muted);
+  font-size: var(--fs-sm);
+}
+
+.event-sheet__identity code {
+  color: var(--fg);
+  background: color-mix(in oklab, var(--bg) 84%, var(--border));
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 3px 8px;
+}
+
+.event-card__description {
+  white-space: pre-wrap;
+  line-height: 1.6;
+}
+
+.event-passport {
+  overflow-x: auto;
+}
+
+.event-passport__table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 680px;
+}
+
+.event-passport__table th,
+.event-passport__table td {
+  padding: 13px 14px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+}
+
+.event-passport__table th {
+  width: 240px;
+  color: var(--muted);
+  text-align: left;
+  font-weight: 700;
+}
+
+.event-passport__table tr:last-child th,
+.event-passport__table tr:last-child td {
+  border-bottom: 0;
+}
+
+.event-thread__placeholder {
+  display: grid;
+  gap: 18px;
+}
+
+.event-thread__empty {
+  border: 1px dashed color-mix(in oklab, var(--accent) 34%, var(--border));
+  border-radius: 16px;
+  padding: 16px;
+  background: color-mix(in oklab, var(--accent) 5%, transparent);
+}
+
+.event-thread__empty-title {
+  font-weight: 800;
+  margin-bottom: 6px;
+}
+
+.event-thread__composer {
+  display: grid;
+  grid-template-columns: 56px minmax(0, 1fr);
+  gap: 14px;
+  align-items: start;
+}
+
+.event-thread__composer.is-disabled {
+  opacity: .86;
+}
+
+.event-thread__avatar {
+  width: 56px;
+  height: 56px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--border);
+  background: color-mix(in oklab, var(--accent) 18%, var(--event-bg));
+  font-weight: 800;
+}
+
+.event-thread__composer-main {
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 16px;
+  background: color-mix(in oklab, var(--bg) 78%, var(--event-bg));
+}
+
+.event-thread__composer-head {
+  font-weight: 800;
+  margin-bottom: 10px;
+}
+
+.event-thread__textarea {
+  width: 100%;
+  min-height: 120px;
+  resize: vertical;
+}
+
+.event-thread__composer-actions {
+  margin-top: 12px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.event-thread__prep-note {
+  margin-top: 10px;
+  font-size: var(--fs-sm);
+}
+
+@media (max-width: 900px) {
+  .event-sheet__header {
+    flex-direction: column;
+  }
+
+  .event-passport__table {
+    min-width: 0;
+  }
+
+  .event-passport__table,
+  .event-passport__table tbody,
+  .event-passport__table tr,
+  .event-passport__table th,
+  .event-passport__table td {
+    display: block;
+    width: 100%;
+  }
+
+  .event-passport__table th {
+    padding-bottom: 6px;
+    border-bottom: 0;
+  }
+
+  .event-passport__table td {
+    padding-top: 0;
+  }
+}
+
+@media (max-width: 640px) {
+  .event-sheet__title {
+    font-size: clamp(24px, 8vw, 32px);
+  }
+
+  .event-card {
+    padding: 14px;
+  }
+
+  .event-thread__composer {
+    grid-template-columns: 1fr;
+  }
+}
