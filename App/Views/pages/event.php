@@ -34,8 +34,8 @@ $currentUserIsAdmin = !empty($threadCurrentUser['is_admin']);
     </div>
 
     <div class="event-sheet__actions">
-      <a class="btn" href="/calendar">Календар</a>
-      <a class="btn" href="/">Планування</a>
+      <a class="btn btn--ghost" href="/calendar"><svg class="event-ui-icon" aria-hidden="true"><use href="#i-calendar"></use></svg><span>Календар</span></a>
+      <a class="btn btn--ghost" href="/"><svg class="event-ui-icon" aria-hidden="true"><use href="#i-list"></use></svg><span>Планування</span></a>
     </div>
   </header>
 
@@ -99,11 +99,11 @@ $currentUserIsAdmin = !empty($threadCurrentUser['is_admin']);
           <p class="event-card__hint">Робоча переписка по задачі: повідомлення, редагування, видалення та позначка «відредаговано». Вкладення поки на підготовчій стадії.</p>
         </div>
         <div class="event-sheet__thread-meta">
-          <span class="event-badge event-badge--neutral" id="eventThreadCountBadge">Повідомлень: <?= (int)$messageTotal ?></span>
+          <span class="event-badge event-badge--neutral" id="eventThreadCountBadge"><span class="event-badge__icon"><svg class="event-ui-icon" aria-hidden="true"><use href="#i-message"></use></svg></span><span>Повідомлень: <?= (int)$messageTotal ?></span></span>
           <?php if ($threadBackendReady): ?>
-            <span class="event-badge event-badge--mine">Backend API готовий</span>
-            <span class="event-badge event-badge--neutral">Аудит / Активність інтегровано</span>
-            <span class="event-badge event-badge--neutral">Вкладення: схема підготовлена</span>
+            <span class="event-badge event-badge--mine"><span class="event-badge__icon"><svg class="event-ui-icon" aria-hidden="true"><use href="#i-check"></use></svg></span><span>Backend API готовий</span></span>
+            <span class="event-badge event-badge--neutral"><span class="event-badge__icon"><svg class="event-ui-icon" aria-hidden="true"><use href="#i-edit-square"></use></svg></span><span>Аудит / Активність інтегровано</span></span>
+            <span class="event-badge event-badge--neutral"><span class="event-badge__icon"><svg class="event-ui-icon" aria-hidden="true"><use href="#i-paperclip"></use></svg></span><span>Вкладення: схема підготовлена</span></span>
           <?php endif; ?>
         </div>
       </div>
@@ -134,8 +134,8 @@ $currentUserIsAdmin = !empty($threadCurrentUser['is_admin']);
               placeholder="Напишіть повідомлення по задачі..."
             ></textarea>
             <div class="event-thread__composer-actions">
-              <button type="button" class="btn" id="eventThreadAttachmentBtn" disabled>Додати файл</button>
-              <button type="button" class="btn" id="eventThreadSubmitBtn">Надіслати</button>
+              <button type="button" class="btn btn--ghost" id="eventThreadAttachmentBtn" disabled><svg class="event-ui-icon" aria-hidden="true"><use href="#i-paperclip"></use></svg><span>Додати файл</span></button>
+              <button type="button" class="btn btn--primary" id="eventThreadSubmitBtn"><svg class="event-ui-icon" aria-hidden="true"><use href="#i-send"></use></svg><span>Надіслати</span></button>
             </div>
             <div class="event-thread__prep-note">Вкладення (зображення / файли) — підготовчий етап. Кнопка вже є як точка розширення, але поки недоступна.</div>
           </div>

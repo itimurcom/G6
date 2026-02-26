@@ -44,6 +44,106 @@
   gap: 10px;
 }
 
+
+.event-ui-icon {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 16px;
+  display: inline-block;
+}
+
+.event-sheet .btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 0 14px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: color-mix(in oklab, var(--bg) 84%, var(--event-bg));
+  color: var(--fg);
+  font-weight: 800;
+  line-height: 1;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background-color .18s ease, border-color .18s ease, transform .18s ease, box-shadow .18s ease;
+}
+
+.event-sheet .btn:hover {
+  background: color-mix(in oklab, var(--accent) 10%, var(--event-bg));
+  border-color: color-mix(in oklab, var(--accent) 36%, var(--border));
+}
+
+.event-sheet .btn:active {
+  transform: translateY(1px);
+}
+
+.event-sheet .btn:disabled {
+  opacity: .56;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.event-sheet .btn--ghost {
+  background: color-mix(in oklab, var(--event-bg) 92%, transparent);
+}
+
+.event-sheet .btn--primary {
+  background: color-mix(in oklab, var(--accent) 22%, var(--event-bg));
+  border-color: color-mix(in oklab, var(--accent) 46%, var(--border));
+  box-shadow: 0 10px 22px rgba(0,0,0,.12);
+}
+
+.event-sheet .btn--primary:hover {
+  background: color-mix(in oklab, var(--accent) 28%, var(--event-bg));
+}
+
+.event-sheet .btn--danger {
+  background: color-mix(in oklab, var(--urgent) 14%, var(--event-bg));
+  border-color: color-mix(in oklab, var(--urgent) 34%, var(--border));
+}
+
+.event-sheet .btn--danger:hover {
+  background: color-mix(in oklab, var(--urgent) 20%, var(--event-bg));
+}
+
+.event-badge__icon {
+  width: 20px;
+  height: 20px;
+  display: inline-grid;
+  place-items: center;
+  border-radius: 999px;
+  background: color-mix(in oklab, var(--bg) 74%, var(--event-bg));
+  border: 1px solid color-mix(in oklab, var(--border) 86%, transparent);
+}
+
+.event-badge--assigned .event-badge__icon {
+  background: rgba(255,255,255,.35);
+  border-color: rgba(17,17,17,.16);
+}
+
+.event-sheet .event-thread__textarea,
+.event-sheet .event-message__editor textarea {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: color-mix(in oklab, var(--bg) 88%, var(--event-bg));
+  color: var(--fg);
+  line-height: 1.55;
+}
+
+.event-sheet .event-thread__textarea:focus,
+.event-sheet .event-message__editor textarea:focus {
+  outline: none;
+  border-color: color-mix(in oklab, var(--accent) 48%, var(--border));
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--accent) 14%, transparent);
+}
+
+
+
 .event-card {
   border: 1px solid var(--border);
   border-radius: 18px;
@@ -336,6 +436,9 @@
 }
 
 .event-thread__empty-live-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
   font-weight: 800;
   margin-bottom: 6px;
 }
@@ -400,23 +503,9 @@
 }
 
 .event-message__action {
-  appearance: none;
-  border: 1px solid var(--border);
-  background: color-mix(in oklab, var(--bg) 84%, var(--event-bg));
-  color: var(--fg);
-  border-radius: 999px;
-  min-height: 30px;
+  min-height: 34px;
   padding: 0 12px;
   font-size: var(--fs-sm);
-  cursor: pointer;
-}
-
-.event-message__action:hover {
-  background: color-mix(in oklab, var(--accent) 10%, var(--event-bg));
-}
-
-.event-message__action--danger:hover {
-  background: color-mix(in oklab, var(--urgent) 14%, var(--event-bg));
 }
 
 .event-message__text {

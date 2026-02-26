@@ -103,4 +103,33 @@
   <path fill="currentColor" d="M12 12c2.21 0 4-1.79 4-4S14.21 4 12 4 8 5.79 8 8s1.79 4 4 4zm0 2c-3.31 0-6 1.34-6 3v1h12v-1c0-1.66-2.69-3-6-3z"/>
 </symbol>
 
+
+
+  <symbol id="i-list" viewBox="0 0 24 24">
+    <path d="M9 6h11M9 12h11M9 18h11"/>
+    <circle cx="5" cy="6" r="1.2" fill="currentColor" stroke="none"/>
+    <circle cx="5" cy="12" r="1.2" fill="currentColor" stroke="none"/>
+    <circle cx="5" cy="18" r="1.2" fill="currentColor" stroke="none"/>
+  </symbol>
+
+  <symbol id="i-send" viewBox="0 0 24 24">
+    <path d="M21 3L10 14"/>
+    <path d="M21 3l-7 18-4-7-7-4 18-7z"/>
+  </symbol>
+
+  <symbol id="i-paperclip" viewBox="0 0 24 24">
+    <path d="M16.5 6.5l-6.8 6.8a3 3 0 1 0 4.24 4.24l7.07-7.07a5 5 0 1 0-7.07-7.07L6.1 11.3"/>
+  </symbol>
+
+  <symbol id="i-trash" viewBox="0 0 24 24">
+    <path d="M4 7h16"/>
+    <path d="M9 7V5h6v2"/>
+    <path d="M7 7l1 12h8l1-12"/>
+    <path d="M10 11v5M14 11v5"/>
+  </symbol>
+
+  <symbol id="i-message" viewBox="0 0 24 24">
+    <path d="M5 6h14a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H9l-4 3v-3H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2z"/>
+  </symbol>
+
 </svg>

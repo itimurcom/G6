@@ -143,10 +143,10 @@
           '<div class="event-message__actions">',
           isEditing
             ? ''
-            : '<button type="button" class="event-message__action" data-action="edit" data-id="' + itemId + '">Редагувати</button>',
+            : '<button type="button" class="btn btn--ghost event-message__action" data-action="edit" data-id="' + itemId + '"><svg class="event-ui-icon" aria-hidden="true"><use href="#i-edit"></use></svg><span>Редагувати</span></button>',
           isEditing
             ? ''
-            : '<button type="button" class="event-message__action event-message__action--danger" data-action="delete" data-id="' + itemId + '">Видалити</button>',
+            : '<button type="button" class="btn btn--danger event-message__action event-message__action--danger" data-action="delete" data-id="' + itemId + '"><svg class="event-ui-icon" aria-hidden="true"><use href="#i-trash"></use></svg><span>Видалити</span></button>',
           '</div>'
         ].join('')
       : '';
@@ -156,8 +156,8 @@
           '<div class="event-message__editor">',
           '<textarea rows="5" maxlength="20000" data-role="edit-text" data-id="' + itemId + '">' + esc(state.editingText) + '</textarea>',
           '<div class="event-message__editor-actions">',
-          '<button type="button" class="btn" data-action="save-edit" data-id="' + itemId + '">Зберегти</button>',
-          '<button type="button" class="btn" data-action="cancel-edit" data-id="' + itemId + '">Скасувати</button>',
+          '<button type="button" class="btn btn--primary" data-action="save-edit" data-id="' + itemId + '"><svg class="event-ui-icon" aria-hidden="true"><use href="#i-check"></use></svg><span>Зберегти</span></button>',
+          '<button type="button" class="btn btn--ghost" data-action="cancel-edit" data-id="' + itemId + '"><svg class="event-ui-icon" aria-hidden="true"><use href="#i-x"></use></svg><span>Скасувати</span></button>',
           '</div>',
           '</div>'
         ].join('')
