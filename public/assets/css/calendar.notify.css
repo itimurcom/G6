@@ -209,7 +209,7 @@ body.light #notifStack,
 }
 
 #notifStack .notif-buttons {
-  display: none !important; /* тимчасово: сховали кнопки всередині повідомлення */
+  display: none !important; /* тимчасово: сховали кнопки всередині коментаря */
 }
 
 #notifStack .notif-btn {

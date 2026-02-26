@@ -85,6 +85,9 @@ class CabinetController extends Controller
             $name  = trim((string)$r->input('name'));
             $email = mb_strtolower(trim((string)$r->input('email')));
 
+            $removeAvatar = (string)$r->input('avatar_remove', '0') === '1';
+            $avatarFile = $_FILES['avatar_file'] ?? null;
+
             $errors = [];
 
             if ($name === '') {
@@ -92,6 +95,46 @@ class CabinetController extends Controller
             }
             if ($email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
                 $errors[] = 'Некоректний e-mail.';
+            }
+
+            $avatarBlob = null;
+            $avatarMime = null;
+            $avatarFilename = null;
+
+            if (is_array($avatarFile) && (int)($avatarFile['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_NO_FILE) {
+                $err = (int)($avatarFile['error'] ?? UPLOAD_ERR_OK);
+                if ($err !== UPLOAD_ERR_OK) {
+                    $errors[] = 'Не вдалося завантажити аватарку.';
+                } else {
+                    $size = (int)($avatarFile['size'] ?? 0);
+                    if ($size <= 0) {
+                        $errors[] = 'Файл аватарки порожній.';
+                    } elseif ($size > 2 * 1024 * 1024) {
+                        $errors[] = 'Аватарка має бути не більшою за 2 МБ.';
+                    } else {
+                        $tmp = (string)($avatarFile['tmp_name'] ?? '');
+                        $finfo = function_exists('finfo_open') ? finfo_open(FILEINFO_MIME_TYPE) : false;
+                        $mime = $finfo ? (string)finfo_file($finfo, $tmp) : '';
+                        if ($finfo) { finfo_close($finfo); }
+                        $allowed = [
+                            'image/jpeg' => 'jpg',
+                            'image/png' => 'png',
+                            'image/webp' => 'webp',
+                        ];
+                        if (!isset($allowed[$mime])) {
+                            $errors[] = 'Дозволені лише JPG, PNG або WEBP.';
+                        } else {
+                            $blob = @file_get_contents($tmp);
+                            if ($blob === false || $blob === '') {
+                                $errors[] = 'Не вдалося прочитати файл аватарки.';
+                            } else {
+                                $avatarBlob = $blob;
+                                $avatarMime = $mime;
+                                $avatarFilename = (string)($avatarFile['name'] ?? ('avatar.' . $allowed[$mime]));
+                            }
+                        }
+                    }
+                }
             }
 
             $repo = new \App\Models\UserMysqlRepository();
@@ -129,6 +172,12 @@ class CabinetController extends Controller
                         'email' => $email,
                     ]);
                 }
+                if ($removeAvatar && method_exists($repo, 'clearAvatarById')) {
+                    $repo->clearAvatarById($userId);
+                }
+                if ($avatarBlob !== null && method_exists($repo, 'setAvatarById')) {
+                    $repo->setAvatarById($userId, $avatarBlob, (string)$avatarMime, (string)$avatarFilename);
+                }
 
                 // Оновлюємо користувача в сесії
                 $fresh = null;
@@ -149,6 +198,8 @@ class CabinetController extends Controller
                 $logger->log('cabinet.profile_update', 'success', [
                     'user_id' => $userId,
                     'email'   => $email,
+                    'avatar_removed' => $removeAvatar ? 1 : 0,
+                    'avatar_uploaded' => $avatarBlob !== null ? 1 : 0,
                 ]);
             } catch (\Throwable $e) {
                 if (method_exists(\App\Core\Session::class, 'flash')) {

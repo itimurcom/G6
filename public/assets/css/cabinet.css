@@ -468,3 +468,13 @@ body.cab-modal-open{
 .cab-modal__dialog{
   max-width: 836px;
 }
+
+
+/* P16.9: Profile avatar */
+.cab-profile-head{display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:16px;}
+.cab-avatar-preview{width:88px;height:88px;border-radius:999px;border:1px solid var(--cabinet-border);background:var(--cabinet-btn-bg);display:flex;align-items:center;justify-content:center;overflow:hidden;font-size:30px;font-weight:800;color:var(--cabinet-btn-text);box-shadow:var(--cabinet-shadow);}
+.cab-avatar-preview.has-image{background:#fff;color:transparent;}
+.cab-avatar-preview img{width:100%;height:100%;object-fit:cover;display:block;}
+.cab-avatar-actions{display:flex;flex-direction:column;gap:8px;align-items:flex-start;}
+.cab-avatar-input{position:absolute!important;left:-9999px!important;width:1px;height:1px;opacity:0;pointer-events:none;}
+.cab-form__actions{display:flex;gap:10px;justify-content:flex-start;margin-top:16px;flex-wrap:wrap;}

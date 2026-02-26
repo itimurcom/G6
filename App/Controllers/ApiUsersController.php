@@ -74,6 +74,9 @@ final class ApiUsersController
                     'name'  => (string)(($u['name'] ?? '') !== '' ? $u['name'] : ($u['login'] ?? '')),
                     'email' => $u['email'] ?? null,
                     'kind'  => 'user',
+                    'has_avatar' => !empty($u['has_avatar']),
+                    'avatar_url' => $u['avatar_url'] ?? null,
+                    'avatar_version' => $u['avatar_version'] ?? null,
                 ];
             }, is_array($rows) ? $rows : []);
 
@@ -138,7 +141,10 @@ final class ApiUsersController
                 'login' => $u['login'],
                 'email' => $u['email'] ?? null,
                 'role'  => $u['role'] ?? 'user',
-                'is_admin' => !empty($u['is_admin'])
+                'is_admin' => !empty($u['is_admin']),
+                'has_avatar' => !empty($u['has_avatar']),
+                'avatar_url' => $u['avatar_url'] ?? null,
+                'avatar_version' => $u['avatar_version'] ?? null
             ]]);
         } catch (\Throwable $e) {
             $this->json(['ok'=>false, 'error'=>'internal', 'message'=>$e->getMessage()], 500);
@@ -167,6 +173,52 @@ final class ApiUsersController
             $this->json(['ok'=>true, 'user'=>$u]);
         } catch (\Throwable $e) {
             $this->json(['ok'=>false,'error'=>'internal','message'=>$e->getMessage()], 500);
+        }
+    }
+
+
+    /**
+     * GET /api/users/avatar?id=1
+     * Streams avatar binary from DB.
+     */
+    public function avatar(): void
+    {
+        try {
+            $id = (int)($_GET['id'] ?? 0);
+            if ($id <= 0) {
+                http_response_code(400);
+                echo 'Bad Request';
+                return;
+            }
+
+            $avatar = $this->users->getAvatarById($id);
+            if (!$avatar) {
+                http_response_code(404);
+                echo 'Not Found';
+                return;
+            }
+
+            $mime = trim((string)($avatar['mime'] ?? 'application/octet-stream')) ?: 'application/octet-stream';
+            $blob = $avatar['blob'] ?? null;
+            if ($blob === null || $blob === '') {
+                http_response_code(404);
+                echo 'Not Found';
+                return;
+            }
+
+            if (!headers_sent()) {
+                header('Content-Type: ' . $mime);
+                header('Content-Length: ' . strlen($blob));
+                header('Cache-Control: private, max-age=86400');
+                $filename = trim((string)($avatar['filename'] ?? 'avatar'));
+                if ($filename !== '') {
+                    header('Content-Disposition: inline; filename="' . addslashes($filename) . '"');
+                }
+            }
+            echo $blob;
+        } catch (\Throwable $e) {
+            http_response_code(500);
+            echo 'Internal Server Error';
         }
     }
 

@@ -362,3 +362,52 @@
     });
 })();
 
+
+
+// P16.9: Cabinet profile avatar preview + remove toggle
+(function () {
+    var input = document.getElementById('cabAvatarInput');
+    var preview = document.getElementById('cabAvatarPreview');
+    var img = document.getElementById('cabAvatarImg');
+    var clearBtn = document.getElementById('cabAvatarClearBtn');
+    var removeField = document.getElementById('cabAvatarRemove');
+    if (!input || !preview || !removeField) return;
+
+    function ensureImg() {
+        var existing = preview.querySelector('img');
+        if (existing) return existing;
+        var node = document.createElement('img');
+        node.id = 'cabAvatarImg';
+        node.alt = 'Аватар користувача';
+        preview.innerHTML = '';
+        preview.appendChild(node);
+        return node;
+    }
+
+    function showInitials() {
+        var initials = String(preview.getAttribute('data-initials') || 'U');
+        preview.classList.remove('has-image');
+        preview.innerHTML = '<span>' + initials.replace(/[&<>"']/g, '') + '</span>';
+    }
+
+    input.addEventListener('change', function () {
+        var file = input.files && input.files[0] ? input.files[0] : null;
+        if (!file) return;
+        removeField.value = '0';
+        var reader = new FileReader();
+        reader.onload = function (e) {
+            var node = ensureImg();
+            node.src = String((e && e.target && e.target.result) || '');
+            preview.classList.add('has-image');
+        };
+        reader.readAsDataURL(file);
+    });
+
+    if (clearBtn) {
+        clearBtn.addEventListener('click', function () {
+            removeField.value = '1';
+            input.value = '';
+            showInitials();
+        });
+    }
+})();

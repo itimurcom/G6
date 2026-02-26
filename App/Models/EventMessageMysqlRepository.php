@@ -41,7 +41,10 @@ final class EventMessageMysqlRepository implements EventMessageRepositoryInterfa
                     u.name  AS author_name,
                     u.login AS author_login,
                     u.role  AS author_role,
-                    u.is_admin AS author_is_admin
+                    u.is_admin AS author_is_admin,
+                    u.avatar_mime AS author_avatar_mime,
+                    u.avatar_filename AS author_avatar_filename,
+                    u.avatar_updated_at AS author_avatar_updated_at
                 FROM event_messages m
                 LEFT JOIN users u ON u.id = m.user_id
                 WHERE m.event_id = :event_id{$whereDeleted}
@@ -90,7 +93,10 @@ final class EventMessageMysqlRepository implements EventMessageRepositoryInterfa
                     u.name  AS author_name,
                     u.login AS author_login,
                     u.role  AS author_role,
-                    u.is_admin AS author_is_admin
+                    u.is_admin AS author_is_admin,
+                    u.avatar_mime AS author_avatar_mime,
+                    u.avatar_filename AS author_avatar_filename,
+                    u.avatar_updated_at AS author_avatar_updated_at
                 FROM event_messages m
                 LEFT JOIN users u ON u.id = m.user_id
                 WHERE m.id = :id
@@ -236,6 +242,11 @@ final class EventMessageMysqlRepository implements EventMessageRepositoryInterfa
                 'display' => $display,
                 'role' => (string)($row['author_role'] ?? ''),
                 'is_admin' => !empty($row['author_is_admin']),
+                'has_avatar' => (!empty($row['author_avatar_mime']) || !empty($row['author_avatar_filename']) || !empty($row['author_avatar_updated_at'])),
+                'avatar_url' => ((int)($row['user_id'] ?? 0) > 0 && (!empty($row['author_avatar_mime']) || !empty($row['author_avatar_filename']) || !empty($row['author_avatar_updated_at'])))
+                    ? ('/api/users/avatar?id=' . (int)($row['user_id'] ?? 0) . (!empty($row['author_avatar_updated_at']) ? ('&v=' . rawurlencode((string)$row['author_avatar_updated_at'])) : ''))
+                    : null,
+                'avatar_version' => (string)($row['author_avatar_updated_at'] ?? ''),
             ],
         ];
     }

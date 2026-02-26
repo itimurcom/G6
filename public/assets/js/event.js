@@ -10,6 +10,8 @@
   const currentUserId = parseInt(app.dataset.currentUserId || '0', 10) || 0;
   const currentUserIsAdmin = String(app.dataset.currentUserIsAdmin || '') === '1';
   const currentUserDisplay = String(app.dataset.currentUserDisplay || '').trim() || 'Користувач';
+  const currentUserHasAvatar = String(app.dataset.currentUserHasAvatar || '') === '1';
+  const currentUserAvatarUrl = String(app.dataset.currentUserAvatarUrl || '').trim();
 
   const els = {
     status: document.getElementById('eventThreadStatus'),
@@ -115,6 +117,16 @@
     els.countBadge.textContent = 'Повідомлень: ' + state.items.length;
   }
 
+
+  function avatarHtml(author, fallbackDisplay) {
+    const a = author && typeof author === 'object' ? author : {};
+    const url = String(a.avatar_url || '').trim();
+    if (url) {
+      return '<img src="' + esc(url) + '" alt="' + esc(String(a.display || fallbackDisplay || '')) + '">';
+    }
+    return '<span>' + esc(initials(String(fallbackDisplay || a.display || ''))) + '</span>';
+  }
+
   function renderEmptyState() {
     return [
       '<div class="event-thread__empty-live">',
@@ -127,7 +139,7 @@
   function renderItem(item) {
     const author = item && item.author ? item.author : {};
     const display = String(author.display || author.name || author.login || ('User #' + (item.user_id || 0)));
-    const avatar = initials(display);
+    const avatar = avatarHtml(author, display);
     const itemId = parseInt(item.id || 0, 10) || 0;
     const isMine = currentUserId > 0 && parseInt(item.user_id || 0, 10) === currentUserId;
     const isEditing = state.editingId === itemId;
@@ -143,10 +155,10 @@
           '<div class="event-message__actions">',
           isEditing
             ? ''
-            : '<button type="button" class="btn btn--ghost event-message__action" data-action="edit" data-id="' + itemId + '"><svg class="event-ui-icon" aria-hidden="true"><use href="#i-edit"></use></svg><span>Редагувати</span></button>',
+            : '<button type="button" class="event-message__action" data-action="edit" data-id="' + itemId + '">Редагувати</button>',
           isEditing
             ? ''
-            : '<button type="button" class="btn btn--danger event-message__action event-message__action--danger" data-action="delete" data-id="' + itemId + '"><svg class="event-ui-icon" aria-hidden="true"><use href="#i-trash"></use></svg><span>Видалити</span></button>',
+            : '<button type="button" class="event-message__action event-message__action--danger" data-action="delete" data-id="' + itemId + '">Видалити</button>',
           '</div>'
         ].join('')
       : '';
@@ -156,8 +168,8 @@
           '<div class="event-message__editor">',
           '<textarea rows="5" maxlength="20000" data-role="edit-text" data-id="' + itemId + '">' + esc(state.editingText) + '</textarea>',
           '<div class="event-message__editor-actions">',
-          '<button type="button" class="btn btn--primary" data-action="save-edit" data-id="' + itemId + '"><svg class="event-ui-icon" aria-hidden="true"><use href="#i-check"></use></svg><span>Зберегти</span></button>',
-          '<button type="button" class="btn btn--ghost" data-action="cancel-edit" data-id="' + itemId + '"><svg class="event-ui-icon" aria-hidden="true"><use href="#i-x"></use></svg><span>Скасувати</span></button>',
+          '<button type="button" class="btn" data-action="save-edit" data-id="' + itemId + '">Зберегти</button>',
+          '<button type="button" class="btn" data-action="cancel-edit" data-id="' + itemId + '">Скасувати</button>',
           '</div>',
           '</div>'
         ].join('')
@@ -165,7 +177,7 @@
 
     return [
       '<article class="' + classes.join(' ') + '" data-message-id="' + itemId + '">',
-      '<div class="event-message__avatar">' + esc(avatar) + '</div>',
+      '<div class="event-message__avatar">' + avatar + '</div>',
       '<div class="event-message__bubble">',
       '<div class="event-message__meta">',
       '<span class="event-message__author">' + esc(display) + '</span>',
@@ -333,7 +345,13 @@
   }
 
   if (els.composerAvatar) {
-    els.composerAvatar.textContent = initials(currentUserDisplay);
+    if (currentUserHasAvatar && currentUserAvatarUrl) {
+      els.composerAvatar.classList.add('has-image');
+      els.composerAvatar.innerHTML = '<img src= + esc(currentUserAvatarUrl) +  alt= + esc(currentUserDisplay) + >';
+    } else {
+      els.composerAvatar.classList.remove('has-image');
+      els.composerAvatar.innerHTML = '<span>' + esc(initials(currentUserDisplay)) + '</span>';
+    }
   }
 
   if (els.submit) {

@@ -476,9 +476,9 @@ var Data = (global.CalendarApp && global.CalendarApp.data) || null;
     if (kind === 'event_title_changed') return 'Змінено назву події.';
     if (kind === 'event_desc_changed' || kind === 'event_description_changed') return 'Змінено опис події.';
     if (kind === 'event_owner_changed') return 'Змінено виконавця.';
-    if (kind === 'event_message_created') return 'Додано повідомлення у лист події.';
-    if (kind === 'event_message_updated') return 'Відредаговано повідомлення у листі події.';
-    if (kind === 'event_message_deleted') return 'Видалено повідомлення з листа події.';
+    if (kind === 'event_message_created') return 'Додано коментар у події.';
+    if (kind === 'event_message_updated') return 'Відредаговано коментар у події.';
+    if (kind === 'event_message_deleted') return 'Видалено коментар з події.';
 
     if (kind === 'event_docs_changed') {
       var p3 = parsePayloadMaybe(notif && notif.payload) || null;
@@ -603,7 +603,7 @@ var Data = (global.CalendarApp && global.CalendarApp.data) || null;
     btnClear.type = 'button';
     btnClear.className = 'notif-iconbtn';
     btnClear.title = 'Відмітити всі як переглянуті';
-    btnClear.setAttribute('aria-label', 'Відмітити всі повідомлення як переглянуті');
+    btnClear.setAttribute('aria-label', 'Відмітити всі коментарі як переглянуті');
     setBtnSvg(btnClear, svgIconMarkAll());
 
     actions.appendChild(btnCollapse);

@@ -16,4 +16,11 @@ interface UserRepositoryInterface
 
     /** Create a user and return its numeric ID */
     public function create(array $data): int;
+
+
+    public function getAvatarById(int $id): ?array;
+
+    public function setAvatarById(int $id, string $blob, string $mime, string $filename): bool;
+
+    public function clearAvatarById(int $id): bool;
 }

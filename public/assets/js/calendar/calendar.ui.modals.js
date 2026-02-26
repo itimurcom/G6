@@ -304,8 +304,8 @@
   function __threadRenderEmpty() {
     return ''
       + '<div class="info-thread-empty">'
-      +   '<div class="info-thread-empty__title">Поки немає повідомлень</div>'
-      +   '<div class="info-thread-empty__text">Почни переписку по задачі з першого повідомлення. Повідомлення завантажуються лише коли ти відкриваєш цей блок.</div>'
+      +   '<div class="info-thread-empty__title">Поки немає коментарів</div>'
+      +   '<div class="info-thread-empty__text">Почни переписку по задачі з першого коментаря. Коментарі завантажуються лише коли ти відкриваєш цей блок.</div>'
       + '</div>';
   }
 
@@ -332,7 +332,7 @@
     var body = '';
     if (isEditing) {
       body += '<div class="info-thread-editor">';
-      body += '<textarea class="input info-thread-textarea info-thread-editor__textarea" rows="3" maxlength="20000" data-thread-role="edit-input" data-id="' + itemId + '" placeholder="Відредагуйте повідомлення…">' + __threadEsc(state.editingText) + '</textarea>';
+      body += '<textarea class="input info-thread-textarea info-thread-editor__textarea" rows="3" maxlength="20000" data-thread-role="edit-input" data-id="' + itemId + '" placeholder="Відредагуйте коментар…">' + __threadEsc(state.editingText) + '</textarea>';
       body += '<div class="info-thread-editor__actions">';
       body += '<button type="button" class="btn btn--green" data-thread-action="save-edit" data-id="' + itemId + '">Зберегти</button>';
       body += '<button type="button" class="btn" data-thread-action="cancel-edit" data-id="' + itemId + '">Скасувати</button>';
@@ -394,7 +394,7 @@
     if (!state || !host) return;
     if (state.loading) return;
     state.loading = true;
-    host.innerHTML = '<div class="info-thread-loading">Завантаження повідомлень…</div>';
+    host.innerHTML = '<div class="info-thread-loading">Завантаження коментарів…</div>';
     __threadSetStatus('', '');
     __threadFetchJson('/api/event-messages/list?event_id=' + encodeURIComponent(String(eventId || '')))
       .then(function (data) {
@@ -406,7 +406,7 @@
         state.items = [];
         state.loaded = false;
         host.innerHTML = __threadRenderEmpty();
-        __threadSetStatus('Не вдалося завантажити повідомлення: ' + error.message, 'error');
+        __threadSetStatus('Не вдалося завантажити коментарі: ' + error.message, 'error');
       })
       .finally(function () {
         state.loading = false;
@@ -419,12 +419,12 @@
     if (!state || !input || state.saving) return;
     var messageText = String(input.value || '').replace(/\r\n?/g, '\n').trim();
     if (!messageText) {
-      __threadSetStatus('Введи текст повідомлення.', 'error');
+      __threadSetStatus('Введи текст коментаря.', 'error');
       try { input.focus(); } catch (_) { }
       return;
     }
     state.saving = true;
-    __threadSetStatus('Збереження повідомлення…', '');
+    __threadSetStatus('Збереження коментаря…', '');
     __threadFetchJson('/api/event-messages/create', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -437,11 +437,11 @@
         input.value = '';
         state.composerOpen = false;
         __threadRender();
-        __threadSetStatus('Повідомлення додано.', 'success');
+        __threadSetStatus('Коментар додано.', 'success');
         setTimeout(function () { __threadSetStatus('', ''); }, 1800);
       })
       .catch(function (error) {
-        __threadSetStatus('Не вдалося додати повідомлення: ' + error.message, 'error');
+        __threadSetStatus('Не вдалося додати коментар: ' + error.message, 'error');
       })
       .finally(function () {
         state.saving = false;
@@ -477,7 +477,7 @@
     var input = host.querySelector('[data-thread-role="edit-input"][data-id="' + id + '"]');
     var messageText = String(input ? input.value : state.editingText).replace(/\r\n?/g, '\n').trim();
     if (!messageText) {
-      __threadSetStatus('Текст повідомлення не може бути порожнім.', 'error');
+      __threadSetStatus('Текст коментаря не може бути порожнім.', 'error');
       if (input) { try { input.focus(); } catch (_) { } }
       return;
     }
@@ -497,11 +497,11 @@
         state.editingId = 0;
         state.editingText = '';
         __threadRender();
-        __threadSetStatus('Повідомлення відредаговано.', 'success');
+        __threadSetStatus('Коментар відредаговано.', 'success');
         setTimeout(function () { __threadSetStatus('', ''); }, 1800);
       })
       .catch(function (error) {
-        __threadSetStatus('Не вдалося відредагувати повідомлення: ' + error.message, 'error');
+        __threadSetStatus('Не вдалося відредагувати коментар: ' + error.message, 'error');
       })
       .finally(function () {
         state.saving = false;
@@ -517,9 +517,9 @@
       if ((parseInt(item.id || 0, 10) || 0) === id) { target = item; break; }
     }
     if (!target || !__threadCanManage(target)) return;
-    if (!window.confirm('Видалити це повідомлення?')) return;
+    if (!window.confirm('Видалити цей коментар?')) return;
     state.saving = true;
-    __threadSetStatus('Видалення повідомлення…', '');
+    __threadSetStatus('Видалення коментаря…', '');
     __threadFetchJson('/api/event-messages/delete', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -534,11 +534,11 @@
           state.editingText = '';
         }
         __threadRender();
-        __threadSetStatus('Повідомлення видалено.', 'success');
+        __threadSetStatus('Коментар видалено.', 'success');
         setTimeout(function () { __threadSetStatus('', ''); }, 1800);
       })
       .catch(function (error) {
-        __threadSetStatus('Не вдалося видалити повідомлення: ' + error.message, 'error');
+        __threadSetStatus('Не вдалося видалити коментар: ' + error.message, 'error');
       })
       .finally(function () {
         state.saving = false;
@@ -549,18 +549,18 @@
     var me = __threadCurrentUser();
     return ''
       + '<details class="info-thread-wrap" id="infoThreadWrap">'
-      +   '<summary class="info-thread-head"><strong>Повідомлення <span id="infoThreadCount" class="info-thread-count"></span></strong></summary>'
+      +   '<summary class="info-thread-head"><strong>Коментарі <span id="infoThreadCount" class="info-thread-count"></span></strong></summary>'
       +   '<div class="info-thread-body">'
       +     '<div id="infoThreadStatus" class="info-thread-status" hidden></div>'
       +     '<div class="info-thread-toolbar">'
-      +       '<button type="button" id="infoThreadComposerToggle" class="btn">Написати повідомлення</button>'
+      +       '<button type="button" id="infoThreadComposerToggle" class="btn">Написати коментар</button>'
       +     '</div>'
       +     '<div id="infoThreadComposer" class="info-thread-composer" hidden>'
       +       '<div id="infoThreadComposerAvatar" class="info-thread-composer__avatar">' + __threadEsc(__threadInitials(me.display)) + '</div>'
       +       '<div class="info-thread-composer__main">'
       +         '<div id="infoThreadComposerAuthor" class="info-thread-composer__author">' + __threadEsc(me.display) + '</div>'
       +         '<div class="info-thread-composer__row">'
-      +           '<textarea id="infoThreadInput" class="input info-thread-textarea" rows="3" maxlength="20000" placeholder="Напишіть повідомлення по задачі…"></textarea>'
+      +           '<textarea id="infoThreadInput" class="input info-thread-textarea" rows="3" maxlength="20000" placeholder="Напишіть коментар по задачі…"></textarea>'
       +           '<div class="info-thread-composer__actions">'
       +             '<button type="button" id="infoThreadSendBtn" class="btn btn--green">Надіслати</button>'
       +             '<button type="button" id="infoThreadComposerCancel" class="btn">Скасувати</button>'
@@ -569,7 +569,7 @@
       +       '</div>'
       +     '</div>'
       +     '<div id="infoThreadList" class="info-thread-list">'
-      +       '<div class="info-thread-hint">Відкрий цей блок — і повідомлення завантажаться тільки в момент потреби.</div>'
+      +       '<div class="info-thread-hint">Відкрий цей блок — і коментарі завантажаться тільки в момент потреби.</div>'
       +     '</div>'
       +   '</div>'
       + '</details>';

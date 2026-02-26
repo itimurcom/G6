@@ -65,6 +65,7 @@ $router->get('/favicon.ico', function(){
 $router->get('/',                           [\App\Controllers\HomeController::class,            'planning']);
 $router->get('/calendar',                   [\App\Controllers\CalendarController::class,        'index']);
 $router->get('/today',                      [\App\Controllers\TodayController::class,          'index']);
+$router->get('/event',                      [\App\Controllers\EventController::class,           'show']);
 $router->get('/cabinet',                    [\App\Controllers\CabinetController::class,         'cabinet']);
 
 
@@ -81,11 +82,6 @@ $router->get('/api/audit/list',             [\App\Controllers\ApiAuditController
 $router->get('/api/events/get',             [\App\Controllers\ApiEventsController::class,       'get']);
 $router->get('/api/events/search',          [\App\Controllers\ApiEventsController::class,       'search']);
 
-$router->get('/api/event-messages/list',   [\App\Controllers\ApiEventMessagesController::class, 'list']);
-$router->post('/api/event-messages/create',[\App\Controllers\ApiEventMessagesController::class, 'create']);
-$router->post('/api/event-messages/update',[\App\Controllers\ApiEventMessagesController::class, 'update']);
-$router->post('/api/event-messages/delete',[\App\Controllers\ApiEventMessagesController::class, 'delete']);
-
 $router->post('/api/events/create',         [\App\Controllers\ApiEventsController::class,       'create']);
 $router->post('/api/events/update',         [\App\Controllers\ApiEventsController::class,       'update']);
 $router->post('/api/events/delete',         [\App\Controllers\ApiEventsController::class,       'delete']);
@@ -99,6 +95,7 @@ $router->get('/api/users/get'
 $router->get('/api/users/search',      [\App\Controllers\ApiUsersController::class, 'search']);
 $router->get('/api/users/name',         [\App\Controllers\ApiUserNameController::class, 'name']);
 $router->get('/api/users/me',           [\App\Controllers\ApiUsersController::class, 'me']);
+$router->get('/api/users/avatar',       [\App\Controllers\ApiUsersController::class, 'avatar']);
 
 
 
@@ -135,7 +132,7 @@ $router->get('/password/setup', [\App\Controllers\AuthController::class, 'passwo
 $router->post('/password/setup', [\App\Controllers\AuthController::class, 'passwordSetupSave']);
 
 // Exact paths that require auth (no subpaths)
-$_PROTECTED = ['/', '/calendar', '/calendar/', '/today', '/today/', '/cabinet', '/cabinet/'];
+$_PROTECTED = ['/', '/calendar', '/calendar/', '/today', '/today/', '/event', '/event/', '/cabinet', '/cabinet/'];
 
 $path = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?? '/';
 

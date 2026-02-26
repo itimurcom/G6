@@ -58,19 +58,19 @@ class AuditLabels
                 'tags' => 'close archive'
             ],
             'event.message.create' => [
-                'text' => 'Додано повідомлення до події',
+                'text' => 'Додано коментар до події',
                 'css'  => 't-create',
-                'tags' => 'message comment thread повідомлення лист події'
+                'tags' => 'message comment thread коментар подія'
             ],
             'event.message.update' => [
-                'text' => 'Відредаговано повідомлення події',
+                'text' => 'Відредаговано коментар події',
                 'css'  => 't-update',
-                'tags' => 'message edit update коментар повідомлення'
+                'tags' => 'message edit update коментар'
             ],
             'event.message.delete' => [
-                'text' => 'Видалено повідомлення події',
+                'text' => 'Видалено коментар події',
                 'css'  => 't-delete',
-                'tags' => 'message delete remove повідомлення'
+                'tags' => 'message delete remove коментар'
             ],
 
             // --- Адмінка ---

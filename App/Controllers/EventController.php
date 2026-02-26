@@ -140,6 +140,9 @@ final class EventController extends Controller
                 'login' => $currentUserLogin,
                 'display' => $currentUserDisplay,
                 'is_admin' => $currentUserIsAdmin,
+                'has_avatar' => !empty($currentUser['has_avatar']),
+                'avatar_url' => $currentUser['avatar_url'] ?? null,
+                'avatar_version' => $currentUser['avatar_version'] ?? null,
             ],
         ]);
     }
@@ -170,6 +173,9 @@ final class EventController extends Controller
                 'login' => '',
                 'display' => 'Користувач',
                 'is_admin' => false,
+                'has_avatar' => false,
+                'avatar_url' => null,
+                'avatar_version' => null,
             ],
         ]);
     }
