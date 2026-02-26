@@ -174,7 +174,497 @@
 
     return '<div class="info-badges">' + parts.join('') + '</div>';
   }
-  // === /permissions ===
+  // === Event thread in info modal ===
+  function __threadEsc(value) {
+    return Ev.escapeHtml(String(value == null ? '' : value));
+  }
+
+  function __threadInitials(value) {
+    var src = String(value || '').trim();
+    if (!src) return '??';
+    var parts = src.split(/\s+/).filter(Boolean);
+    if (!parts.length) return '??';
+    var first = Array.from(parts[0])[0] || '';
+    var second = parts.length > 1 ? (Array.from(parts[1])[0] || '') : (Array.from(parts[0])[1] || '');
+    return (first + second).toUpperCase() || '??';
+  }
+
+  function __threadFormatDateTime(value) {
+    var src = String(value || '').trim();
+    if (!src) return '—';
+    var normalized = src.replace(' ', 'T');
+    var dt = new Date(normalized);
+    if (isNaN(dt.getTime())) return src;
+    try {
+      return new Intl.DateTimeFormat(locale, {
+        year: 'numeric', month: '2-digit', day: '2-digit',
+        hour: '2-digit', minute: '2-digit', hour12: false
+      }).format(dt);
+    } catch (_) {
+      return src;
+    }
+  }
+
+  function __threadCurrentUser() {
+    var ds = (infoOverlay && infoOverlay.dataset) ? infoOverlay.dataset : {};
+    var id = parseInt(ds.currentUserId || ((__me && __me.id) || 0), 10) || 0;
+    var display = String(ds.currentUserDisplay || '').trim();
+    if (!display) display = id > 0 ? ('User #' + id) : 'Користувач';
+    var isAdmin = String(ds.currentUserIsAdmin || '') === '1' || !!(__me && __me.isAdmin);
+    return { id: id, display: display, isAdmin: isAdmin };
+  }
+
+  function __threadGetState() {
+    if (!infoOverlay) return null;
+    if (!infoOverlay.__threadState) {
+      infoOverlay.__threadState = {
+        eventId: '',
+        loaded: false,
+        loading: false,
+        saving: false,
+        composerOpen: false,
+        items: [],
+        editingId: 0,
+        editingText: ''
+      };
+    }
+    return infoOverlay.__threadState;
+  }
+
+  function __threadReset(eventId) {
+    if (!infoOverlay) return;
+    infoOverlay.__threadState = {
+      eventId: String(eventId || ''),
+      loaded: false,
+      loading: false,
+      saving: false,
+      composerOpen: false,
+      items: [],
+      editingId: 0,
+      editingText: ''
+    };
+  }
+
+  function __threadSetCount(n) {
+    var el = document.getElementById('infoThreadCount');
+    if (!el) return;
+    if (n == null || n === '') {
+      el.textContent = '';
+      return;
+    }
+    el.textContent = '(' + String(n) + ')';
+  }
+
+  function __threadSetStatus(message, type) {
+    var el = document.getElementById('infoThreadStatus');
+    if (!el) return;
+    var text = String(message || '').trim();
+    if (!text) {
+      el.hidden = true;
+      el.textContent = '';
+      el.classList.remove('is-error', 'is-success');
+      return;
+    }
+    el.hidden = false;
+    el.textContent = text;
+    el.classList.toggle('is-error', type === 'error');
+    el.classList.toggle('is-success', type === 'success');
+  }
+
+  function __threadSetComposerVisible(openIt) {
+    var state = __threadGetState();
+    if (!state) return;
+    state.composerOpen = !!openIt;
+    var box = document.getElementById('infoThreadComposer');
+    var toggleBtn = document.getElementById('infoThreadComposerToggle');
+    if (box) box.hidden = !state.composerOpen;
+    if (toggleBtn) toggleBtn.hidden = state.composerOpen;
+    if (state.composerOpen) {
+      var input = document.getElementById('infoThreadInput');
+      if (input) {
+        setTimeout(function () { try { input.focus(); } catch (_) { } }, 0);
+      }
+    }
+  }
+
+  function __threadSyncComposerIdentity() {
+    var me = __threadCurrentUser();
+    var avatar = document.getElementById('infoThreadComposerAvatar');
+    var author = document.getElementById('infoThreadComposerAuthor');
+    if (avatar) avatar.textContent = __threadInitials(me.display);
+    if (author) author.textContent = me.display;
+  }
+
+  function __threadCanManage(item) {
+    var me = __threadCurrentUser();
+    var authorId = parseInt((item && item.user_id) || 0, 10) || 0;
+    return !!(me.isAdmin || (me.id > 0 && authorId === me.id));
+  }
+
+  function __threadRenderEmpty() {
+    return ''
+      + '<div class="info-thread-empty">'
+      +   '<div class="info-thread-empty__title">Поки немає повідомлень</div>'
+      +   '<div class="info-thread-empty__text">Почни переписку по задачі з першого повідомлення. Повідомлення завантажуються лише коли ти відкриваєш цей блок.</div>'
+      + '</div>';
+  }
+
+  function __threadRenderItem(item, state) {
+    state = state || __threadGetState();
+    var author = item && item.author ? item.author : {};
+    var display = String(author.display || author.name || author.login || ('User #' + (item.user_id || 0)));
+    var avatar = __threadInitials(display);
+    var itemId = parseInt(item.id || 0, 10) || 0;
+    var edited = !!item.edited_at;
+    var canManage = __threadCanManage(item);
+    var isEditing = state && state.editingId === itemId;
+
+    var actions = '';
+    if (canManage) {
+      actions += '<div class="info-thread-message__actions">';
+      if (!isEditing) {
+        actions += '<button type="button" class="info-thread-action" data-thread-action="edit" data-id="' + itemId + '">Редагувати</button>';
+        actions += '<button type="button" class="info-thread-action info-thread-action--danger" data-thread-action="delete" data-id="' + itemId + '">Видалити</button>';
+      }
+      actions += '</div>';
+    }
+
+    var body = '';
+    if (isEditing) {
+      body += '<div class="info-thread-editor">';
+      body += '<textarea class="input info-thread-textarea info-thread-editor__textarea" rows="3" maxlength="20000" data-thread-role="edit-input" data-id="' + itemId + '" placeholder="Відредагуйте повідомлення…">' + __threadEsc(state.editingText) + '</textarea>';
+      body += '<div class="info-thread-editor__actions">';
+      body += '<button type="button" class="btn btn--green" data-thread-action="save-edit" data-id="' + itemId + '">Зберегти</button>';
+      body += '<button type="button" class="btn" data-thread-action="cancel-edit" data-id="' + itemId + '">Скасувати</button>';
+      body += '</div></div>';
+    } else {
+      body += '<div class="info-thread-message__text">' + __threadEsc(item.message_text || '') + '</div>';
+    }
+
+    return ''
+      + '<article class="info-thread-message" data-message-id="' + itemId + '">'
+      +   '<div class="info-thread-message__avatar">' + __threadEsc(avatar) + '</div>'
+      +   '<div class="info-thread-message__body">'
+      +     '<div class="info-thread-message__meta">'
+      +       '<span class="info-thread-message__author">' + __threadEsc(display) + '</span>'
+      +       '<time class="info-thread-message__time" datetime="' + __threadEsc(item.created_at || '') + '">' + __threadEsc(__threadFormatDateTime(item.created_at)) + '</time>'
+      +       (edited ? '<span class="info-thread-message__edited">відредаговано</span>' : '')
+      +       actions
+      +     '</div>'
+      +     body
+      +   '</div>'
+      + '</article>';
+  }
+
+  function __threadRender() {
+    var state = __threadGetState();
+    var host = document.getElementById('infoThreadList');
+    if (!state || !host) return;
+    __threadSetCount(state.items.length);
+    if (!state.items.length) {
+      host.innerHTML = __threadRenderEmpty();
+    } else {
+      host.innerHTML = state.items.map(function (item) { return __threadRenderItem(item, state); }).join('');
+    }
+    __threadSetComposerVisible(state.composerOpen);
+    if (state.editingId > 0) {
+      var input = host.querySelector('[data-thread-role="edit-input"][data-id="' + state.editingId + '"]');
+      if (input) {
+        try { input.focus(); input.setSelectionRange(input.value.length, input.value.length); } catch (_) { }
+      }
+    }
+  }
+
+  function __threadFetchJson(url, init) {
+    return fetch(url, Object.assign({ credentials: 'same-origin' }, init || {}))
+      .then(function (response) {
+        return response.json().catch(function () { return null; }).then(function (data) {
+          if (!response.ok || !data || data.ok === false) {
+            var msg = data && (data.message || data.error) ? (data.message || data.error) : ('HTTP ' + response.status);
+            throw new Error(String(msg));
+          }
+          return data;
+        });
+      });
+  }
+
+  function __threadLoad(eventId) {
+    var state = __threadGetState();
+    var host = document.getElementById('infoThreadList');
+    if (!state || !host) return;
+    if (state.loading) return;
+    state.loading = true;
+    host.innerHTML = '<div class="info-thread-loading">Завантаження повідомлень…</div>';
+    __threadSetStatus('', '');
+    __threadFetchJson('/api/event-messages/list?event_id=' + encodeURIComponent(String(eventId || '')))
+      .then(function (data) {
+        state.items = Array.isArray(data.items) ? data.items : [];
+        state.loaded = true;
+        __threadRender();
+      })
+      .catch(function (error) {
+        state.items = [];
+        state.loaded = false;
+        host.innerHTML = __threadRenderEmpty();
+        __threadSetStatus('Не вдалося завантажити повідомлення: ' + error.message, 'error');
+      })
+      .finally(function () {
+        state.loading = false;
+      });
+  }
+
+  function __threadCreate() {
+    var state = __threadGetState();
+    var input = document.getElementById('infoThreadInput');
+    if (!state || !input || state.saving) return;
+    var messageText = String(input.value || '').replace(/\r\n?/g, '\n').trim();
+    if (!messageText) {
+      __threadSetStatus('Введи текст повідомлення.', 'error');
+      try { input.focus(); } catch (_) { }
+      return;
+    }
+    state.saving = true;
+    __threadSetStatus('Збереження повідомлення…', '');
+    __threadFetchJson('/api/event-messages/create', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ event_id: state.eventId, message_text: messageText })
+    })
+      .then(function (data) {
+        var row = data && data.message ? data.message : null;
+        if (!row) throw new Error('Порожня відповідь сервера');
+        state.items = state.items.concat([row]);
+        input.value = '';
+        state.composerOpen = false;
+        __threadRender();
+        __threadSetStatus('Повідомлення додано.', 'success');
+        setTimeout(function () { __threadSetStatus('', ''); }, 1800);
+      })
+      .catch(function (error) {
+        __threadSetStatus('Не вдалося додати повідомлення: ' + error.message, 'error');
+      })
+      .finally(function () {
+        state.saving = false;
+      });
+  }
+
+  function __threadStartEdit(id) {
+    var state = __threadGetState();
+    if (!state) return;
+    for (var i = 0; i < state.items.length; i++) {
+      var item = state.items[i];
+      if ((parseInt(item.id || 0, 10) || 0) === id && __threadCanManage(item)) {
+        state.editingId = id;
+        state.editingText = String(item.message_text || '');
+        __threadRender();
+        return;
+      }
+    }
+  }
+
+  function __threadCancelEdit() {
+    var state = __threadGetState();
+    if (!state) return;
+    state.editingId = 0;
+    state.editingText = '';
+    __threadRender();
+  }
+
+  function __threadSaveEdit(id) {
+    var state = __threadGetState();
+    var host = document.getElementById('infoThreadList');
+    if (!state || !host || state.saving) return;
+    var input = host.querySelector('[data-thread-role="edit-input"][data-id="' + id + '"]');
+    var messageText = String(input ? input.value : state.editingText).replace(/\r\n?/g, '\n').trim();
+    if (!messageText) {
+      __threadSetStatus('Текст повідомлення не може бути порожнім.', 'error');
+      if (input) { try { input.focus(); } catch (_) { } }
+      return;
+    }
+    state.saving = true;
+    __threadSetStatus('Збереження змін…', '');
+    __threadFetchJson('/api/event-messages/update', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: id, message_text: messageText })
+    })
+      .then(function (data) {
+        var row = data && data.message ? data.message : null;
+        if (!row) throw new Error('Порожня відповідь сервера');
+        state.items = state.items.map(function (item) {
+          return (parseInt(item.id || 0, 10) || 0) === id ? row : item;
+        });
+        state.editingId = 0;
+        state.editingText = '';
+        __threadRender();
+        __threadSetStatus('Повідомлення відредаговано.', 'success');
+        setTimeout(function () { __threadSetStatus('', ''); }, 1800);
+      })
+      .catch(function (error) {
+        __threadSetStatus('Не вдалося відредагувати повідомлення: ' + error.message, 'error');
+      })
+      .finally(function () {
+        state.saving = false;
+      });
+  }
+
+  function __threadDelete(id) {
+    var state = __threadGetState();
+    if (!state || state.saving) return;
+    var target = null;
+    for (var i = 0; i < state.items.length; i++) {
+      var item = state.items[i];
+      if ((parseInt(item.id || 0, 10) || 0) === id) { target = item; break; }
+    }
+    if (!target || !__threadCanManage(target)) return;
+    if (!window.confirm('Видалити це повідомлення?')) return;
+    state.saving = true;
+    __threadSetStatus('Видалення повідомлення…', '');
+    __threadFetchJson('/api/event-messages/delete', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: id })
+    })
+      .then(function () {
+        state.items = state.items.filter(function (item) {
+          return (parseInt(item.id || 0, 10) || 0) !== id;
+        });
+        if (state.editingId === id) {
+          state.editingId = 0;
+          state.editingText = '';
+        }
+        __threadRender();
+        __threadSetStatus('Повідомлення видалено.', 'success');
+        setTimeout(function () { __threadSetStatus('', ''); }, 1800);
+      })
+      .catch(function (error) {
+        __threadSetStatus('Не вдалося видалити повідомлення: ' + error.message, 'error');
+      })
+      .finally(function () {
+        state.saving = false;
+      });
+  }
+
+  function __infoThreadHtml() {
+    var me = __threadCurrentUser();
+    return ''
+      + '<details class="info-thread-wrap" id="infoThreadWrap">'
+      +   '<summary class="info-thread-head"><strong>Повідомлення <span id="infoThreadCount" class="info-thread-count"></span></strong></summary>'
+      +   '<div class="info-thread-body">'
+      +     '<div id="infoThreadStatus" class="info-thread-status" hidden></div>'
+      +     '<div class="info-thread-toolbar">'
+      +       '<button type="button" id="infoThreadComposerToggle" class="btn">Написати повідомлення</button>'
+      +     '</div>'
+      +     '<div id="infoThreadComposer" class="info-thread-composer" hidden>'
+      +       '<div id="infoThreadComposerAvatar" class="info-thread-composer__avatar">' + __threadEsc(__threadInitials(me.display)) + '</div>'
+      +       '<div class="info-thread-composer__main">'
+      +         '<div id="infoThreadComposerAuthor" class="info-thread-composer__author">' + __threadEsc(me.display) + '</div>'
+      +         '<div class="info-thread-composer__row">'
+      +           '<textarea id="infoThreadInput" class="input info-thread-textarea" rows="3" maxlength="20000" placeholder="Напишіть повідомлення по задачі…"></textarea>'
+      +           '<div class="info-thread-composer__actions">'
+      +             '<button type="button" id="infoThreadSendBtn" class="btn btn--green">Надіслати</button>'
+      +             '<button type="button" id="infoThreadComposerCancel" class="btn">Скасувати</button>'
+      +           '</div>'
+      +         '</div>'
+      +       '</div>'
+      +     '</div>'
+      +     '<div id="infoThreadList" class="info-thread-list">'
+      +       '<div class="info-thread-hint">Відкрий цей блок — і повідомлення завантажаться тільки в момент потреби.</div>'
+      +     '</div>'
+      +   '</div>'
+      + '</details>';
+  }
+
+  function __bindInfoThread(eventId) {
+    var wrap = document.getElementById('infoThreadWrap');
+    if (!wrap || wrap.__threadBound) return;
+    wrap.__threadBound = true;
+
+    var state = __threadGetState();
+    if (state) state.eventId = String(eventId || '');
+
+    wrap.addEventListener('toggle', function () {
+      var st = __threadGetState();
+      if (!st) return;
+      if (wrap.open && !st.loaded && !st.loading) {
+        __threadLoad(eventId);
+      }
+    });
+
+    var composerToggle = document.getElementById('infoThreadComposerToggle');
+    if (composerToggle) {
+      composerToggle.addEventListener('click', function () {
+        __threadSetComposerVisible(true);
+      });
+    }
+
+    var composerCancel = document.getElementById('infoThreadComposerCancel');
+    if (composerCancel) {
+      composerCancel.addEventListener('click', function () {
+        __threadSetComposerVisible(false);
+        __threadSetStatus('', '');
+      });
+    }
+
+    var sendBtn = document.getElementById('infoThreadSendBtn');
+    if (sendBtn) {
+      sendBtn.addEventListener('click', function () {
+        __threadCreate();
+      });
+    }
+
+    var input = document.getElementById('infoThreadInput');
+    if (input) {
+      input.addEventListener('keydown', function (ev) {
+        if (ev.key === 'Enter' && !ev.shiftKey && !ev.ctrlKey && !ev.metaKey && !ev.altKey) {
+          ev.preventDefault();
+          __threadCreate();
+        }
+      });
+    }
+
+    var list = document.getElementById('infoThreadList');
+    if (list) {
+      list.addEventListener('click', function (ev) {
+        var btn = ev.target.closest('[data-thread-action]');
+        if (!btn) return;
+        var action = String(btn.getAttribute('data-thread-action') || '');
+        var id = parseInt(btn.getAttribute('data-id') || '0', 10) || 0;
+        if (id <= 0) return;
+        if (action === 'edit') __threadStartEdit(id);
+        else if (action === 'cancel-edit') __threadCancelEdit();
+        else if (action === 'save-edit') __threadSaveEdit(id);
+        else if (action === 'delete') __threadDelete(id);
+      });
+
+      list.addEventListener('input', function (ev) {
+        var inputEl = ev.target.closest('[data-thread-role="edit-input"]');
+        if (!inputEl) return;
+        var st = __threadGetState();
+        if (!st) return;
+        var id = parseInt(inputEl.getAttribute('data-id') || '0', 10) || 0;
+        if (id > 0 && st.editingId === id) {
+          st.editingText = String(inputEl.value || '');
+        }
+      });
+
+      list.addEventListener('keydown', function (ev) {
+        var inputEl = ev.target.closest('[data-thread-role="edit-input"]');
+        if (!inputEl) return;
+        if (ev.key === 'Enter' && !ev.shiftKey && !ev.ctrlKey && !ev.metaKey && !ev.altKey) {
+          ev.preventDefault();
+          var id = parseInt(inputEl.getAttribute('data-id') || '0', 10) || 0;
+          if (id > 0) __threadSaveEdit(id);
+        }
+      });
+    }
+
+    __threadSyncComposerIdentity();
+    __threadSetCount('');
+    __threadSetStatus('', '');
+    __threadSetComposerVisible(false);
+  }
+  // === /Event thread in info modal ===
 
   // Inputs
   var inputDate = $id('inputDate');
@@ -198,7 +688,6 @@
   var infoModal = infoOverlay ? infoOverlay.querySelector('.modal') : null;
   var infoClose = $id('infoClose');
   var infoOk = $id('infoOk');
-  var openEventSheetBtn = $id('openEventSheetBtn');
 
   // Edit modal
   var overlay = $id('eventOverlay');
@@ -1285,7 +1774,8 @@ function __renderEventHistory(host, items, currentEvent) {
           '<summary class="info-history-head"><strong>Історія змін</strong></summary>' + // P15.34: whole block collapsible by triangle
           '<div id="infoHistoryList" class="info-history-list"><div class="info-history-loading">Завантаження історії…</div></div>' +
         '</details>'
-      ) : '');
+      ) : '') +
+      __infoThreadHtml();
 if (infoContent) infoContent.innerHTML = html;
     setInfoModalType(ev.type);
 
@@ -1300,14 +1790,7 @@ if (infoContent) infoContent.innerHTML = html;
       infoOverlay.setAttribute('aria-hidden', 'false');
       infoOverlay.removeAttribute('inert');
 
-      if (openEventSheetBtn) {
-        var targetHref = '/event?id=' + encodeURIComponent(String(id || ''));
-        openEventSheetBtn.setAttribute('href', targetHref);
-        openEventSheetBtn.onclick = function (e) {
-          e.preventDefault();
-          window.location.href = targetHref;
-        };
-      }
+      try { __threadReset(ev.id); __bindInfoThread(ev.id); } catch (_) { }
 
       var el = document.querySelector('#editEvBtn');
       if (el) {
