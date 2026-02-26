@@ -185,6 +185,12 @@
   gap: 18px;
 }
 
+.event-sheet__thread-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
 .event-thread__empty {
   border: 1px dashed color-mix(in oklab, var(--accent) 34%, var(--border));
   border-radius: 16px;
@@ -289,4 +295,190 @@
   .event-thread__composer {
     grid-template-columns: 1fr;
   }
+}
+
+
+.event-thread__app {
+  display: grid;
+  gap: 16px;
+}
+
+.event-thread__status {
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: color-mix(in oklab, var(--bg) 82%, var(--event-bg));
+  color: var(--muted);
+}
+
+.event-thread__status.is-error {
+  color: #fff;
+  background: color-mix(in oklab, var(--urgent) 58%, var(--event-bg));
+  border-color: color-mix(in oklab, var(--urgent) 44%, var(--border));
+}
+
+.event-thread__status.is-success {
+  color: var(--fg);
+  background: color-mix(in oklab, var(--done) 16%, var(--event-bg));
+  border-color: color-mix(in oklab, var(--done) 30%, var(--border));
+}
+
+.event-thread__list {
+  display: grid;
+  gap: 14px;
+}
+
+.event-thread__empty-live {
+  border: 1px dashed color-mix(in oklab, var(--accent) 34%, var(--border));
+  border-radius: 16px;
+  padding: 18px;
+  background: color-mix(in oklab, var(--accent) 6%, transparent);
+}
+
+.event-thread__empty-live-title {
+  font-weight: 800;
+  margin-bottom: 6px;
+}
+
+.event-message {
+  display: grid;
+  grid-template-columns: 56px minmax(0, 1fr);
+  gap: 14px;
+  align-items: start;
+}
+
+.event-message--mine .event-message__bubble {
+  border-color: color-mix(in oklab, var(--accent) 32%, var(--border));
+  box-shadow: 0 10px 22px rgba(0,0,0,.10);
+}
+
+.event-message__avatar {
+  width: 56px;
+  height: 56px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--border);
+  background: color-mix(in oklab, var(--accent) 18%, var(--event-bg));
+  font-weight: 800;
+}
+
+.event-message__bubble {
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  padding: 14px 16px;
+  background: color-mix(in oklab, var(--bg) 78%, var(--event-bg));
+}
+
+.event-message__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 10px;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.event-message__author {
+  font-weight: 800;
+}
+
+.event-message__time,
+.event-message__edited {
+  color: var(--muted);
+  font-size: var(--fs-sm);
+}
+
+.event-message__edited {
+  font-style: italic;
+}
+
+.event-message__actions {
+  margin-left: auto;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.event-message__action {
+  appearance: none;
+  border: 1px solid var(--border);
+  background: color-mix(in oklab, var(--bg) 84%, var(--event-bg));
+  color: var(--fg);
+  border-radius: 999px;
+  min-height: 30px;
+  padding: 0 12px;
+  font-size: var(--fs-sm);
+  cursor: pointer;
+}
+
+.event-message__action:hover {
+  background: color-mix(in oklab, var(--accent) 10%, var(--event-bg));
+}
+
+.event-message__action--danger:hover {
+  background: color-mix(in oklab, var(--urgent) 14%, var(--event-bg));
+}
+
+.event-message__text {
+  white-space: pre-wrap;
+  word-break: break-word;
+  line-height: 1.65;
+}
+
+.event-message__editor {
+  display: grid;
+  gap: 10px;
+}
+
+.event-message__editor textarea {
+  width: 100%;
+  min-height: 140px;
+  resize: vertical;
+}
+
+.event-message__editor-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.event-thread__composer.is-busy,
+.event-message.is-busy {
+  opacity: .7;
+  pointer-events: none;
+}
+
+@media (max-width: 640px) {
+  .event-message,
+  .event-thread__composer {
+    grid-template-columns: 1fr;
+  }
+
+  .event-message__meta {
+    align-items: flex-start;
+  }
+
+  .event-message__actions {
+    margin-left: 0;
+    width: 100%;
+  }
+}
+
+.event-thread__fallback {
+  display: grid;
+  gap: 12px;
+  padding: 18px;
+  border: 1px dashed color-mix(in oklab, var(--border) 85%, transparent);
+  border-radius: 16px;
+  background: color-mix(in oklab, var(--panel) 78%, transparent);
+}
+
+.event-thread__fallback-title {
+  font-size: var(--fs-md);
+  font-weight: 700;
+}
+
+.event-thread__fallback-text {
+  color: var(--muted);
+  line-height: 1.6;
 }

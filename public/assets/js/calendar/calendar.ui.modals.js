@@ -198,6 +198,7 @@
   var infoModal = infoOverlay ? infoOverlay.querySelector('.modal') : null;
   var infoClose = $id('infoClose');
   var infoOk = $id('infoOk');
+  var openEventSheetBtn = $id('openEventSheetBtn');
 
   // Edit modal
   var overlay = $id('eventOverlay');
@@ -1298,6 +1299,15 @@ if (infoContent) infoContent.innerHTML = html;
       infoOverlay.classList.add('show');
       infoOverlay.setAttribute('aria-hidden', 'false');
       infoOverlay.removeAttribute('inert');
+
+      if (openEventSheetBtn) {
+        var targetHref = '/event?id=' + encodeURIComponent(String(id || ''));
+        openEventSheetBtn.setAttribute('href', targetHref);
+        openEventSheetBtn.onclick = function (e) {
+          e.preventDefault();
+          window.location.href = targetHref;
+        };
+      }
 
       var el = document.querySelector('#editEvBtn');
       if (el) {

@@ -65,6 +65,7 @@ $router->get('/favicon.ico', function(){
 $router->get('/',                           [\App\Controllers\HomeController::class,            'planning']);
 $router->get('/calendar',                   [\App\Controllers\CalendarController::class,        'index']);
 $router->get('/today',                      [\App\Controllers\TodayController::class,          'index']);
+$router->get('/event',                      [\App\Controllers\EventController::class,           'show']);
 $router->get('/cabinet',                    [\App\Controllers\CabinetController::class,         'cabinet']);
 
 
@@ -130,7 +131,7 @@ $router->get('/password/setup', [\App\Controllers\AuthController::class, 'passwo
 $router->post('/password/setup', [\App\Controllers\AuthController::class, 'passwordSetupSave']);
 
 // Exact paths that require auth (no subpaths)
-$_PROTECTED = ['/', '/calendar', '/calendar/', '/today', '/today/', '/cabinet', '/cabinet/'];
+$_PROTECTED = ['/', '/calendar', '/calendar/', '/today', '/today/', '/event', '/event/', '/cabinet', '/cabinet/'];
 
 $path = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?? '/';
 

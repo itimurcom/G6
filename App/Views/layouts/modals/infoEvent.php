@@ -16,7 +16,7 @@
       </div>
     </header>
     <div class="content" id="infoContent"></div>
-    <footer><span></span><div style="display:flex;gap:10px;"><?php if ($is_admin): ?>
+    <footer><span></span><div style="display:flex;gap:10px;flex-wrap:wrap;"><a id="openEventSheetBtn" class="btn" href="#">Лист події</a><?php if ($is_admin): ?>
 <button type="button" id="editEvBtn" class="btn btn--green">редагувати</button>
 <?php else: ?>
 <button type="button" id="editEvBtn" class="btn btn--green" hidden aria-hidden="true" tabindex="-1">редагувати</button>

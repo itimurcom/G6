@@ -6,6 +6,15 @@ $badges = is_array($event_badges ?? null) ? $event_badges : [];
 $missingMessage = (string)($event_missing_message ?? '');
 $missingDetails = (string)($event_missing_details ?? '');
 $description = (string)($event_description ?? '');
+$messageTotal = (int)($message_total ?? 0);
+$threadBackendReady = !empty($thread_backend_ready);
+$eventId = (string)($event_id ?? ($event['id'] ?? ''));
+$threadCurrentUser = is_array($thread_current_user ?? null) ? $thread_current_user : [];
+$currentUserId = (int)($threadCurrentUser['id'] ?? 0);
+$currentUserDisplay = trim((string)($threadCurrentUser['display'] ?? ''));
+$currentUserName = trim((string)($threadCurrentUser['name'] ?? ''));
+$currentUserLogin = trim((string)($threadCurrentUser['login'] ?? ''));
+$currentUserIsAdmin = !empty($threadCurrentUser['is_admin']);
 ?>
 
 <div class="event-sheet">
@@ -83,35 +92,61 @@ $description = (string)($event_description ?? '');
       </div>
     </section>
 
-    <section class="event-card event-thread event-thread--stage0">
+    <section class="event-card event-thread">
       <div class="event-card__head">
         <div>
           <h2 class="event-card__title">Повідомлення по події</h2>
-          <p class="event-card__hint">Етап 1 підготовлено: окремий лист події створено. Наступним патчем буде база повідомлень, API та робоча стрічка переписки.</p>
+          <p class="event-card__hint">Робоча переписка по задачі: повідомлення, редагування, видалення та позначка «відредаговано». Вкладення поки на підготовчій стадії.</p>
+        </div>
+        <div class="event-sheet__thread-meta">
+          <span class="event-badge event-badge--neutral" id="eventThreadCountBadge">Повідомлень: <?= (int)$messageTotal ?></span>
+          <?php if ($threadBackendReady): ?>
+            <span class="event-badge event-badge--mine">Backend API готовий</span>
+          <?php endif; ?>
         </div>
       </div>
 
-      <div class="event-thread__placeholder">
-        <div class="event-thread__empty">
-          <div class="event-thread__empty-title">Стрічка повідомлень ще не активована</div>
-          <div class="event-thread__empty-text">
-            У наступному патчі тут з’явиться повноцінна переписка між користувачами: аватар, ім’я, дата, текст повідомлення, редагування, видалення та позначка «відредаговано».
-          </div>
-        </div>
+      <?php if ($threadBackendReady): ?>
+      <div
+        class="event-thread__app"
+        id="eventThreadApp"
+        data-event-id="<?= htmlspecialchars($eventId, ENT_QUOTES, 'UTF-8') ?>"
+        data-current-user-id="<?= (int)$currentUserId ?>"
+        data-current-user-name="<?= htmlspecialchars($currentUserName, ENT_QUOTES, 'UTF-8') ?>"
+        data-current-user-login="<?= htmlspecialchars($currentUserLogin, ENT_QUOTES, 'UTF-8') ?>"
+        data-current-user-display="<?= htmlspecialchars($currentUserDisplay, ENT_QUOTES, 'UTF-8') ?>"
+        data-current-user-is-admin="<?= $currentUserIsAdmin ? '1' : '0' ?>"
+      >
+        <div class="event-thread__status" id="eventThreadStatus" hidden></div>
 
-        <div class="event-thread__composer is-disabled" aria-disabled="true">
-          <div class="event-thread__avatar">Aa</div>
+        <div class="event-thread__list" id="eventThreadList" aria-live="polite"></div>
+
+        <div class="event-thread__composer" id="eventThreadComposer">
+          <div class="event-thread__avatar" id="eventThreadComposerAvatar">Aa</div>
           <div class="event-thread__composer-main">
             <div class="event-thread__composer-head">Нове повідомлення</div>
-            <textarea class="event-thread__textarea" rows="4" disabled placeholder="Тут буде поле введення повідомлення..."></textarea>
+            <textarea
+              class="event-thread__textarea"
+              id="eventThreadTextarea"
+              rows="4"
+              maxlength="20000"
+              placeholder="Напишіть повідомлення по задачі..."
+            ></textarea>
             <div class="event-thread__composer-actions">
-              <button type="button" class="btn" disabled>Додати файл</button>
-              <button type="button" class="btn" disabled>Надіслати</button>
+              <button type="button" class="btn" id="eventThreadAttachmentBtn" disabled>Додати файл</button>
+              <button type="button" class="btn" id="eventThreadSubmitBtn">Надіслати</button>
             </div>
-            <div class="event-thread__prep-note">Вкладення (зображення / файли) — підготовчий етап, буде реалізовано окремим патчем.</div>
+            <div class="event-thread__prep-note">Вкладення (зображення / файли) — підготовчий етап. Кнопка вже є як точка розширення, але поки недоступна.</div>
           </div>
         </div>
       </div>
+      <?php else: ?>
+      <div class="event-thread__fallback">
+        <div class="event-thread__fallback-title">Модуль повідомлень ще не підключено</div>
+        <div class="event-thread__fallback-text">Лист події вже працює, але backend повідомлень для цієї інсталяції ще не накладено. Сторінка більше не падає фатально і може працювати без цього модуля.</div>
+        <div class="event-thread__prep-note">Щоб увімкнути переписку, потрібно накласти патч backend повідомлень (P16.2) або сумісний наступний патч із таблицею <code>event_messages</code> та API <code>/api/event-messages/*</code>.</div>
+      </div>
+      <?php endif; ?>
     </section>
   <?php endif; ?>
 </div>

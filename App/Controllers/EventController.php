@@ -12,12 +12,25 @@ use App\Models\UserNameResolver;
 final class EventController extends Controller
 {
     private EventMysqlRepository $repo;
+    private ?object $messageRepo = null;
+    private bool $messageBackendReady = false;
     private UserNameResolver $userNames;
 
     public function __construct()
     {
         $this->repo = new EventMysqlRepository();
         $this->userNames = new UserNameResolver();
+
+        if (class_exists('App\\Models\\EventMessageMysqlRepository')) {
+            try {
+                $this->messageRepo = new \App\Models\EventMessageMysqlRepository();
+                $this->messageBackendReady = true;
+            } catch (\Throwable $e) {
+                $this->messageRepo = null;
+                $this->messageBackendReady = false;
+                error_log('[event-sheet] event message backend unavailable: ' . $e->getMessage());
+            }
+        }
     }
 
     public function show(Request $request): string
@@ -69,6 +82,26 @@ final class EventController extends Controller
             ['label' => 'Вихідний №', 'value' => trim((string)($event['outgoing_no'] ?? '')) !== '' ? (string)$event['outgoing_no'] : '—'],
         ];
 
+        $messageTotal = 0;
+        if ($this->messageBackendReady && $this->messageRepo && method_exists($this->messageRepo, 'countByEvent')) {
+            try {
+                $messageTotal = (int)$this->messageRepo->countByEvent((string)($event['id'] ?? ''));
+            } catch (\Throwable $e) {
+                $messageTotal = 0;
+                $this->messageBackendReady = false;
+                error_log('[event-sheet] countByEvent failed: ' . $e->getMessage());
+            }
+        }
+
+        $currentUser = Auth::user() ?? [];
+        $currentUserId = (int)($currentUser['id'] ?? 0);
+        $currentUserName = trim((string)($currentUser['name'] ?? ''));
+        $currentUserLogin = trim((string)($currentUser['login'] ?? ''));
+        $currentUserDisplay = $currentUserName !== ''
+            ? $currentUserName
+            : ($currentUserLogin !== '' ? $currentUserLogin : ($currentUserId > 0 ? ('User #' . $currentUserId) : 'Користувач'));
+        $currentUserIsAdmin = !empty($currentUser['is_admin']) || strtolower((string)($currentUser['role'] ?? '')) === 'admin';
+
         $badges = [];
         if (!empty($event['urgent'])) $badges[] = ['key' => 'urgent', 'label' => 'Терміново'];
         if (!empty($event['done'])) $badges[] = ['key' => 'done', 'label' => 'Виконано'];
@@ -82,6 +115,9 @@ final class EventController extends Controller
                 '/assets/css/event.css',
                 '/assets/css/icons.css',
             ],
+            'extra_js' => $this->messageBackendReady ? [
+                '/assets/js/event.js',
+            ] : [],
             'event' => $event,
             'event_title' => trim((string)($event['title'] ?? '')) !== '' ? (string)$event['title'] : 'Подія без назви',
             'event_type_label' => $this->typeLabel((string)($event['type'] ?? 'other')),
@@ -95,7 +131,16 @@ final class EventController extends Controller
             'event_duration_days' => $durationDays,
             'event_badges' => $badges,
             'passport_rows' => $passportRows,
-            'thread_stage_placeholder' => true,
+            'message_total' => $messageTotal,
+            'thread_backend_ready' => $this->messageBackendReady,
+            'event_id' => (string)($event['id'] ?? ''),
+            'thread_current_user' => [
+                'id' => $currentUserId,
+                'name' => $currentUserName,
+                'login' => $currentUserLogin,
+                'display' => $currentUserDisplay,
+                'is_admin' => $currentUserIsAdmin,
+            ],
         ]);
     }
 
@@ -107,13 +152,25 @@ final class EventController extends Controller
                 '/assets/css/event.css',
                 '/assets/css/icons.css',
             ],
+            'extra_js' => $this->messageBackendReady ? [
+                '/assets/js/event.js',
+            ] : [],
             'event' => null,
             'event_title' => 'Лист події',
             'event_missing_message' => $message,
             'event_missing_details' => $details,
             'passport_rows' => [],
+            'message_total' => 0,
             'event_badges' => [],
-            'thread_stage_placeholder' => false,
+            'thread_backend_ready' => false,
+            'event_id' => '',
+            'thread_current_user' => [
+                'id' => 0,
+                'name' => '',
+                'login' => '',
+                'display' => 'Користувач',
+                'is_admin' => false,
+            ],
         ]);
     }
 
