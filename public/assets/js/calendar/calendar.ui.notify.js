@@ -16,6 +16,7 @@ var Data = (global.CalendarApp && global.CalendarApp.data) || null;
 
   var KEY_SOUND = 'calendar.notify.sound';
   var KEY_COLLAPSED = 'calendar.notify.collapsed';
+  var KEY_POS = 'calendar.notify.position';
 
   var audioCtx = null;
   var soundEnabled = true;
@@ -26,6 +27,8 @@ var Data = (global.CalendarApp && global.CalendarApp.data) || null;
   var btnSound = null;
   var btnClear = null;
   var btnCollapse = null;
+  var dragHandleEl = null;
+  var dragState = null;
 
   // key -> element (key is notification.id when available; otherwise event_id+kind)
   var byKey = Object.create(null);
@@ -41,6 +44,112 @@ var Data = (global.CalendarApp && global.CalendarApp.data) || null;
   }
   function safeSet(key, value) {
     try { localStorage.setItem(key, value); } catch (_) { }
+  }
+
+  function readSavedPos() {
+    var raw = safeGet(KEY_POS);
+    if (!raw) return null;
+    try {
+      var p = JSON.parse(raw);
+      if (!p || typeof p !== 'object') return null;
+      var left = Number(p.left);
+      var top = Number(p.top);
+      if (!isFinite(left) || !isFinite(top)) return null;
+      return { left: left, top: top };
+    } catch (_) {
+      return null;
+    }
+  }
+
+  function clampStackPos(left, top) {
+    var margin = 8;
+    var w = 280;
+    var h = 140;
+    try {
+      if (stackRoot) {
+        var r = stackRoot.getBoundingClientRect();
+        if (r && r.width) w = r.width;
+        if (r && r.height) h = r.height;
+      }
+    } catch (_) { }
+
+    var maxLeft = Math.max(margin, (global.innerWidth || 0) - w - margin);
+    var maxTop = Math.max(margin, (global.innerHeight || 0) - h - margin);
+
+    left = Math.max(margin, Math.min(maxLeft, Number(left) || margin));
+    top = Math.max(margin, Math.min(maxTop, Number(top) || margin));
+    return { left: Math.round(left), top: Math.round(top) };
+  }
+
+  function applyStackPos(pos, saveIt) {
+    if (!stackRoot || !pos) return;
+    var c = clampStackPos(pos.left, pos.top);
+    stackRoot.style.left = c.left + 'px';
+    stackRoot.style.top = c.top + 'px';
+    stackRoot.style.bottom = 'auto';
+    if (saveIt) {
+      try { safeSet(KEY_POS, JSON.stringify(c)); } catch (_) { }
+    }
+  }
+
+  function installDragForStack() {
+    if (!stackRoot || !dragHandleEl || dragHandleEl.__dragBound) return;
+    dragHandleEl.__dragBound = true;
+
+    function onMove(e) {
+      if (!dragState) return;
+      try { if (e && typeof e.preventDefault === 'function') e.preventDefault(); } catch (_) { }
+      applyStackPos({ left: (e.clientX - dragState.dx), top: (e.clientY - dragState.dy) }, false);
+    }
+
+    function onUp(e) {
+      if (!dragState) return;
+      try {
+        if (dragHandleEl && dragHandleEl.releasePointerCapture && e && e.pointerId != null) {
+          dragHandleEl.releasePointerCapture(e.pointerId);
+        }
+      } catch (_) { }
+      try { document.body.classList.remove('notif-dragging'); } catch (_) { }
+      try { document.removeEventListener('pointermove', onMove, true); } catch (_) { }
+      try { document.removeEventListener('pointerup', onUp, true); } catch (_) { }
+      try { document.removeEventListener('pointercancel', onUp, true); } catch (_) { }
+      try {
+        var r = stackRoot.getBoundingClientRect();
+        applyStackPos({ left: r.left, top: r.top }, true);
+      } catch (_) { }
+      dragState = null;
+    }
+
+    dragHandleEl.addEventListener('pointerdown', function (e) {
+      if (!e || e.button !== 0) return;
+      if (!stackRoot) return;
+
+      try { e.preventDefault(); } catch (_) { }
+      try {
+        var rect = stackRoot.getBoundingClientRect();
+        dragState = {
+          dx: e.clientX - rect.left,
+          dy: e.clientY - rect.top,
+          pointerId: e.pointerId
+        };
+        if (dragHandleEl.setPointerCapture && e.pointerId != null) {
+          dragHandleEl.setPointerCapture(e.pointerId);
+        }
+        document.body.classList.add('notif-dragging');
+        document.addEventListener('pointermove', onMove, true);
+        document.addEventListener('pointerup', onUp, true);
+        document.addEventListener('pointercancel', onUp, true);
+      } catch (_) {
+        dragState = null;
+      }
+    });
+
+    try {
+      global.addEventListener('resize', function () {
+        var p = readSavedPos();
+        if (p) applyStackPos(p, true);
+      });
+    } catch (_) { }
   }
 
   function ensureAudio() {
@@ -322,7 +431,6 @@ var Data = (global.CalendarApp && global.CalendarApp.data) || null;
     if (kind === 'event_new') return 'Додано нову подію.';
     if (kind === 'event_deleted') return 'Подію видалено.';
     if (kind === 'event_date_changed') return 'Змінено дату події.';
-    if (kind === 'event_end_date_changed') return 'Змінено дату завершення.';
 
     if (kind === 'event_time_changed') {
       var pt = parsePayloadMaybe(notif && notif.payload) || null;
@@ -368,6 +476,9 @@ var Data = (global.CalendarApp && global.CalendarApp.data) || null;
     if (kind === 'event_title_changed') return 'Змінено назву події.';
     if (kind === 'event_desc_changed' || kind === 'event_description_changed') return 'Змінено опис події.';
     if (kind === 'event_owner_changed') return 'Змінено виконавця.';
+    if (kind === 'event_message_created') return 'Додано повідомлення у лист події.';
+    if (kind === 'event_message_updated') return 'Відредаговано повідомлення у листі події.';
+    if (kind === 'event_message_deleted') return 'Видалено повідомлення з листа події.';
 
     if (kind === 'event_docs_changed') {
       var p3 = parsePayloadMaybe(notif && notif.payload) || null;
@@ -469,6 +580,7 @@ var Data = (global.CalendarApp && global.CalendarApp.data) || null;
     title.className = 'notif-title';
     title.innerHTML = '<span class="notif-title-word" style="font-size: 18px; font-weight: 900;">Активність</span> <span class="notif-count" id="notifCount"></span>';
     titleCountEl = title.querySelector('#notifCount');
+    dragHandleEl = title.querySelector('.notif-title-word');
 
     var actions = document.createElement('div');
     actions.className = 'notif-actions';
@@ -515,6 +627,14 @@ var Data = (global.CalendarApp && global.CalendarApp.data) || null;
     stackRoot.appendChild(shell);
     document.body.appendChild(stackRoot);
 
+    installDragForStack();
+    try {
+      var __savedPos = readSavedPos();
+      if (__savedPos) {
+        global.requestAnimationFrame(function () { applyStackPos(__savedPos, false); });
+      }
+    } catch (_) { }
+
     btnSound.addEventListener('click', function () {
       soundEnabled = !soundEnabled;
       safeSet(KEY_SOUND, soundEnabled ? '1' : '0');
@@ -549,6 +669,9 @@ var Data = (global.CalendarApp && global.CalendarApp.data) || null;
     });
 
     btnCollapse.addEventListener('click', function () {
+      var prevRect = null;
+      try { if (stackRoot) prevRect = stackRoot.getBoundingClientRect(); } catch (_) { prevRect = null; }
+
       var isCollapsed = (listEl.style.display === 'none');
       if (isCollapsed) {
         listEl.style.display = '';
@@ -562,6 +685,17 @@ var Data = (global.CalendarApp && global.CalendarApp.data) || null;
         safeSet(KEY_COLLAPSED, '1');
       }
       btnCollapse.setAttribute('aria-label', btnCollapse.title);
+
+      try {
+        if (prevRect && stackRoot) {
+          global.requestAnimationFrame(function () {
+            try {
+              var nextRect = stackRoot.getBoundingClientRect();
+              applyStackPos({ left: prevRect.left, top: (prevRect.bottom - nextRect.height) }, true);
+            } catch (_) { }
+          });
+        }
+      } catch (_) { }
     });
 
     updateCount();
@@ -766,45 +900,61 @@ ttl.appendChild(subtitle);
       links.appendChild(openLink);
     }
 
-    // Optional extra line for date changes (event date / end date)
+    // Optional extra line for date/message details
     try {
-      if (baseKind === 'event_date_changed' || baseKind === 'event_end_date_changed') {
+      if (baseKind === 'event_date_changed') {
         var p = parsePayloadMaybe(notif && notif.payload) || null;
-        var fromDate = '';
-        var toDate = '';
-
-        if (baseKind === 'event_date_changed') {
-          fromDate = p ? String(p.from_date || '') : '';
-          toDate = p ? String(p.to_date || '') : '';
-
-          if ((!fromDate || !toDate) && p) {
-            var b = p.before && typeof p.before === 'object' ? p.before : null;
-            var a = p.after && typeof p.after === 'object' ? p.after : null;
-            fromDate = fromDate || (b ? String(b.start_date || b._date || '') : '');
-            toDate = toDate || (a ? String(a.start_date || a._date || '') : '');
-          }
-        } else {
-          fromDate = p ? String(p.from_end_date || '') : '';
-          toDate = p ? String(p.to_end_date || '') : '';
-
-          if ((!fromDate && !toDate) && p) {
-            var b2 = p.before && typeof p.before === 'object' ? p.before : null;
-            var a2 = p.after && typeof p.after === 'object' ? p.after : null;
-            fromDate = fromDate || (b2 ? String(b2.end_date || '') : '');
-            toDate = toDate || (a2 ? String(a2.end_date || '') : '');
-          }
-        }
-
-        if (fromDate !== toDate) {
+        var b = p && p.before ? p.before : null;
+        var a = p && p.after ? p.after : null;
+        var bDate = b ? String(b.start_date || b._date || '') : '';
+        var aDate = a ? String(a.start_date || a._date || '') : '';
+        if (bDate && aDate && bDate !== aDate) {
           var extra = document.createElement('div');
           extra.className = 'notif-body-sub';
-
-          var fromLabel = fromDate ? fmtDate(fromDate) : 'не вказано';
-          var toLabel = toDate ? fmtDate(toDate) : 'не вказано';
-
-          extra.textContent = 'Було: ' + fromLabel + ' → Стало: ' + toLabel;
+          extra.textContent = 'Було: ' + fmtDate(bDate) + ' → Стало: ' + fmtDate(aDate);
           body.appendChild(document.createElement('br'));
           body.appendChild(extra);
+        }
+      }
+
+      if (baseKind === 'event_message_created' || baseKind === 'event_message_updated' || baseKind === 'event_message_deleted') {
+        var pm = parsePayloadMaybe(notif && notif.payload) || null;
+        var message = pm && pm.message ? pm.message : null;
+        var before = pm && pm.before ? pm.before : null;
+        var actor = pm && pm.actor ? pm.actor : null;
+        var authorDisplay = message ? String(message.author_display || '') : '';
+        if (!authorDisplay && actor) {
+          authorDisplay = String(actor.display || '');
+        }
+        var preview = message ? String(message.preview || '') : '';
+        var previewBefore = before ? String(before.preview || '') : '';
+
+        if (authorDisplay) {
+          var who = document.createElement('div');
+          who.className = 'notif-body-sub';
+          who.textContent = 'Автор: ' + authorDisplay;
+          body.appendChild(document.createElement('br'));
+          body.appendChild(who);
+        }
+
+        if (baseKind === 'event_message_updated' && previewBefore && preview && previewBefore !== preview) {
+          var beforeLine = document.createElement('div');
+          beforeLine.className = 'notif-body-sub';
+          beforeLine.textContent = 'Було: ' + previewBefore;
+          body.appendChild(document.createElement('br'));
+          body.appendChild(beforeLine);
+
+          var afterLine = document.createElement('div');
+          afterLine.className = 'notif-body-sub';
+          afterLine.textContent = 'Стало: ' + preview;
+          body.appendChild(document.createElement('br'));
+          body.appendChild(afterLine);
+        } else if (preview) {
+          var previewLine = document.createElement('div');
+          previewLine.className = 'notif-body-sub';
+          previewLine.textContent = 'Текст: ' + preview;
+          body.appendChild(document.createElement('br'));
+          body.appendChild(previewLine);
         }
       }
     } catch (_) { }

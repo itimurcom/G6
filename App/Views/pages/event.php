@@ -102,11 +102,12 @@ $currentUserIsAdmin = !empty($threadCurrentUser['is_admin']);
           <span class="event-badge event-badge--neutral" id="eventThreadCountBadge">Повідомлень: <?= (int)$messageTotal ?></span>
           <?php if ($threadBackendReady): ?>
             <span class="event-badge event-badge--mine">Backend API готовий</span>
+            <span class="event-badge event-badge--neutral">Аудит / Активність інтегровано</span>
+            <span class="event-badge event-badge--neutral">Вкладення: схема підготовлена</span>
           <?php endif; ?>
         </div>
       </div>
 
-      <?php if ($threadBackendReady): ?>
       <div
         class="event-thread__app"
         id="eventThreadApp"
@@ -140,13 +141,6 @@ $currentUserIsAdmin = !empty($threadCurrentUser['is_admin']);
           </div>
         </div>
       </div>
-      <?php else: ?>
-      <div class="event-thread__fallback">
-        <div class="event-thread__fallback-title">Модуль повідомлень ще не підключено</div>
-        <div class="event-thread__fallback-text">Лист події вже працює, але backend повідомлень для цієї інсталяції ще не накладено. Сторінка більше не падає фатально і може працювати без цього модуля.</div>
-        <div class="event-thread__prep-note">Щоб увімкнути переписку, потрібно накласти патч backend повідомлень (P16.2) або сумісний наступний патч із таблицею <code>event_messages</code> та API <code>/api/event-messages/*</code>.</div>
-      </div>
-      <?php endif; ?>
     </section>
   <?php endif; ?>
 </div>

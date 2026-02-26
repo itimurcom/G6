@@ -57,6 +57,21 @@ class AuditLabels
                 'css'  => 't-update',
                 'tags' => 'close archive'
             ],
+            'event.message.create' => [
+                'text' => 'Додано повідомлення до події',
+                'css'  => 't-create',
+                'tags' => 'message comment thread повідомлення лист події'
+            ],
+            'event.message.update' => [
+                'text' => 'Відредаговано повідомлення події',
+                'css'  => 't-update',
+                'tags' => 'message edit update коментар повідомлення'
+            ],
+            'event.message.delete' => [
+                'text' => 'Видалено повідомлення події',
+                'css'  => 't-delete',
+                'tags' => 'message delete remove повідомлення'
+            ],
 
             // --- Адмінка ---
             'user.create' => [

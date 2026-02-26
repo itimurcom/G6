@@ -82,6 +82,11 @@ $router->get('/api/audit/list',             [\App\Controllers\ApiAuditController
 $router->get('/api/events/get',             [\App\Controllers\ApiEventsController::class,       'get']);
 $router->get('/api/events/search',          [\App\Controllers\ApiEventsController::class,       'search']);
 
+$router->get('/api/event-messages/list',   [\App\Controllers\ApiEventMessagesController::class, 'list']);
+$router->post('/api/event-messages/create',[\App\Controllers\ApiEventMessagesController::class, 'create']);
+$router->post('/api/event-messages/update',[\App\Controllers\ApiEventMessagesController::class, 'update']);
+$router->post('/api/event-messages/delete',[\App\Controllers\ApiEventMessagesController::class, 'delete']);
+
 $router->post('/api/events/create',         [\App\Controllers\ApiEventsController::class,       'create']);
 $router->post('/api/events/update',         [\App\Controllers\ApiEventsController::class,       'update']);
 $router->post('/api/events/delete',         [\App\Controllers\ApiEventsController::class,       'delete']);
