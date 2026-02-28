@@ -161,7 +161,7 @@ class CabinetController extends Controller
                     'email'   => $email,
                     'errors'  => $errors,
                 ]);
-                header('Location: /cabinet', true, 302);
+                header('Location: /cabinet?tab=settings', true, 302);
                 return '';
             }
 
@@ -212,7 +212,7 @@ class CabinetController extends Controller
                 ]);
             }
 
-            header('Location: /cabinet', true, 302); return '';
+            header('Location: /cabinet?tab=settings', true, 302); return '';
         }
 
         public function changePassword(\App\Core\Request $r): string {

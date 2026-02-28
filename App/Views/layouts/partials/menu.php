@@ -2,6 +2,7 @@
 // English-only code
 $isAuth = \App\Core\Auth::check();
 $path = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?? '/';
+$queryTab = strtolower((string)($_GET['tab'] ?? ''));
 
 $mk = static function(string $href) use ($path): string {
     // simple active marker
@@ -24,7 +25,8 @@ $mk = static function(string $href) use ($path): string {
   <nav class="sidebar-menu" aria-label="Навігація">
     <a class="sidebar-link<?= $mk('/') ?>" href="/">Планування</a>
     <a class="sidebar-link<?= $mk('/calendar') ?>" href="/calendar">Календар</a>
-    <a class="sidebar-link<?= $mk('/cabinet') ?>" href="/cabinet">Кабінет</a>
+    <a class="sidebar-link<?= ($path === '/cabinet' && $queryTab !== 'settings') ? ' is-active' : '' ?>" href="/cabinet">Кабінет</a>
+    <a class="sidebar-link<?= ($path === '/cabinet' && $queryTab === 'settings') ? ' is-active' : '' ?>" href="/cabinet?tab=settings">Налаштування</a>
     <?php if ($isAuth): ?>
       <a class="sidebar-link danger" href="/logout">Вийти</a>
     <?php else: ?>

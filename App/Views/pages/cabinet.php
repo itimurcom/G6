@@ -85,10 +85,43 @@ $__toastErr = \App\Core\Session::flash('toast_error');
         <div class="cab-card">
           <div class="cab-card__title">Основне</div>
           <div class="cab-card__body">
-            <?php if ($isOwnCabinet): ?>
+            <div class="cab-profile-head">
+              <div class="cab-avatar-preview <?= !empty($u['has_avatar']) ? 'has-image' : '' ?>">
+                <?php if (!empty($u['has_avatar']) && !empty($u['avatar_url'])): ?>
+                  <img src="<?= htmlspecialchars((string)$u['avatar_url'], ENT_QUOTES) ?>" alt="Аватар користувача">
+                <?php else: ?>
+                  <span><?= htmlspecialchars(mb_strtoupper(mb_substr((string)($u['name'] ?? $u['login'] ?? 'U'), 0, 1)), ENT_QUOTES) ?></span>
+                <?php endif; ?>
+              </div>
+              <div class="hint"><?= $isOwnCabinet ? 'Дані профілю доступні лише для перегляду. Керування аватаркою перенесено у вкладку Налаштування.' : 'Перегляд профілю іншого користувача.' ?></div>
+            </div>
+            <div class="cab-kv">
+              <div class="cab-kv__k">Логін</div>
+              <div class="cab-kv__v"><?= htmlspecialchars((string)($u['login'] ?? ''), ENT_QUOTES) ?></div>
+
+              <div class="cab-kv__k">Ім’я</div>
+              <div class="cab-kv__v"><?= htmlspecialchars((string)($u['name'] ?? ''), ENT_QUOTES) ?></div>
+
+              <div class="cab-kv__k">Ел. пошта</div>
+              <div class="cab-kv__v"><?= htmlspecialchars((string)($u['email'] ?? ''), ENT_QUOTES) ?></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+    <section class="cabinet-tab" data-tab="settings" style="display:none">
+      <div class='sub-title'>Налаштування</div>
+
+      <div class="cabinet-settings">
+        <?php if ($isOwnCabinet): ?>
+        <div class="cab-card">
+          <div class="cab-card__title">Профіль</div>
+          <div class="cab-card__body">
             <form class="cab-form" method="post" action="/cabinet/profile/update" enctype="multipart/form-data">
               <input type="hidden" name="_csrf" value="<?= htmlspecialchars(\App\Security\Csrf::token(), ENT_QUOTES) ?>">
               <input type="hidden" name="avatar_remove" id="cabAvatarRemove" value="0">
+              <input type="hidden" name="name" value="<?= htmlspecialchars((string)($u['name'] ?? ''), ENT_QUOTES) ?>">
+              <input type="hidden" name="email" value="<?= htmlspecialchars((string)($u['email'] ?? ''), ENT_QUOTES) ?>">
 
               <div class="cab-profile-head">
                 <div class="cab-avatar-preview <?= !empty($u['has_avatar']) ? 'has-image' : '' ?>" id="cabAvatarPreview" data-initials="<?= htmlspecialchars(mb_strtoupper(mb_substr((string)($u['name'] ?? $u['login'] ?? 'U'), 0, 1)), ENT_QUOTES) ?>">
@@ -102,57 +135,15 @@ $__toastErr = \App\Core\Session::flash('toast_error');
                   <label class="btn" for="cabAvatarInput">Обрати аватарку</label>
                   <input class="cab-avatar-input" type="file" id="cabAvatarInput" name="avatar_file" accept="image/jpeg,image/png,image/webp">
                   <button type="button" class="btn" id="cabAvatarClearBtn">Видалити аватарку</button>
-                  <div class="hint">JPG, PNG або WEBP, до 2 МБ. Аватарка зберігається в базі даних.</div>
+                  <button type="submit" class="btn btn--primary">Зберегти аватарку</button>
+                  <div class="hint">JPG, PNG або WEBP, до 2 МБ. Тут можна лише змінити або видалити аватарку.</div>
                 </div>
               </div>
-
-              <div class="field">
-                <label>Логін</label>
-                <input class="input" type="text" value="<?= htmlspecialchars((string)($u['login'] ?? ''), ENT_QUOTES) ?>" readonly>
-              </div>
-              <div class="field">
-                <label>Ім’я</label>
-                <input class="input" type="text" name="name" value="<?= htmlspecialchars((string)($u['name'] ?? ''), ENT_QUOTES) ?>" required>
-              </div>
-              <div class="field">
-                <label>Ел. пошта</label>
-                <input class="input" type="email" name="email" value="<?= htmlspecialchars((string)($u['email'] ?? ''), ENT_QUOTES) ?>" required>
-              </div>
-
-              <div class="cab-form__actions">
-                <button type="submit" class="btn btn--primary">Зберегти профіль</button>
-              </div>
             </form>
-            <?php else: ?>
-            <div class="cab-profile-head">
-              <div class="cab-avatar-preview <?= !empty($u['has_avatar']) ? 'has-image' : '' ?>">
-                <?php if (!empty($u['has_avatar']) && !empty($u['avatar_url'])): ?>
-                  <img src="<?= htmlspecialchars((string)$u['avatar_url'], ENT_QUOTES) ?>" alt="Аватар користувача">
-                <?php else: ?>
-                  <span><?= htmlspecialchars(mb_strtoupper(mb_substr((string)($u['name'] ?? $u['login'] ?? 'U'), 0, 1)), ENT_QUOTES) ?></span>
-                <?php endif; ?>
-              </div>
-              <div class="hint">Перегляд профілю іншого користувача.</div>
-            </div>
-            <div class="cab-kv">
-              <div class="cab-kv__k">Логін</div>
-              <div class="cab-kv__v"><?= htmlspecialchars((string)($u['login'] ?? ''), ENT_QUOTES) ?></div>
-
-              <div class="cab-kv__k">Ім’я</div>
-              <div class="cab-kv__v"><?= htmlspecialchars((string)($u['name'] ?? ''), ENT_QUOTES) ?></div>
-
-              <div class="cab-kv__k">Ел. пошта</div>
-              <div class="cab-kv__v"><?= htmlspecialchars((string)($u['email'] ?? ''), ENT_QUOTES) ?></div>
-            </div>
-            <?php endif; ?>
           </div>
         </div>
-      </div>
-    </section>
-    <section class="cabinet-tab" data-tab="settings" style="display:none">
-      <div class='sub-title'>Налаштування</div>
+        <?php endif; ?>
 
-      <div class="cabinet-settings">
         <div class="cab-card">
           <div class="cab-card__title">Тема</div>
           <div class="cab-card__body">

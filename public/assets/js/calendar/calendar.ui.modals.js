@@ -211,7 +211,9 @@
     var display = String(ds.currentUserDisplay || '').trim();
     if (!display) display = id > 0 ? ('User #' + id) : 'Користувач';
     var isAdmin = String(ds.currentUserIsAdmin || '') === '1' || !!(__me && __me.isAdmin);
-    return { id: id, display: display, isAdmin: isAdmin };
+    var avatarUrl = String(ds.currentUserAvatarUrl || '').trim();
+    var hasAvatar = String(ds.currentUserHasAvatar || '') === '1' || !!avatarUrl;
+    return { id: id, display: display, isAdmin: isAdmin, hasAvatar: hasAvatar, avatarUrl: avatarUrl };
   }
 
   function __threadGetState() {
@@ -225,7 +227,9 @@
         composerOpen: false,
         items: [],
         editingId: 0,
-        editingText: ''
+        editingText: '',
+        countLoading: false,
+        countValue: ''
       };
     }
     return infoOverlay.__threadState;
@@ -241,7 +245,9 @@
       composerOpen: false,
       items: [],
       editingId: 0,
-      editingText: ''
+      editingText: '',
+      countLoading: false,
+      countValue: ''
     };
   }
 
@@ -287,11 +293,24 @@
     }
   }
 
+  function __threadAvatarHtml(author, fallbackDisplay) {
+    var a = author && typeof author === 'object' ? author : {};
+    var url = String(a.avatar_url || a.avatarUrl || '').trim();
+    var display = String(a.display || fallbackDisplay || '').trim();
+    if (url) {
+      return '<img src="' + __threadEsc(url) + '" alt="' + __threadEsc(display) + '">';
+    }
+    return '<span>' + __threadEsc(__threadInitials(display)) + '</span>';
+  }
+
   function __threadSyncComposerIdentity() {
     var me = __threadCurrentUser();
     var avatar = document.getElementById('infoThreadComposerAvatar');
     var author = document.getElementById('infoThreadComposerAuthor');
-    if (avatar) avatar.textContent = __threadInitials(me.display);
+    if (avatar) {
+      avatar.classList.toggle('has-image', !!(me.hasAvatar && me.avatarUrl));
+      avatar.innerHTML = __threadAvatarHtml({ avatar_url: me.avatarUrl, display: me.display }, me.display);
+    }
     if (author) author.textContent = me.display;
   }
 
@@ -313,7 +332,8 @@
     state = state || __threadGetState();
     var author = item && item.author ? item.author : {};
     var display = String(author.display || author.name || author.login || ('User #' + (item.user_id || 0)));
-    var avatar = __threadInitials(display);
+    var avatar = __threadAvatarHtml(author, display);
+    var avatarClass = 'info-thread-message__avatar' + ((author && author.avatar_url) ? ' has-image' : '');
     var itemId = parseInt(item.id || 0, 10) || 0;
     var edited = !!item.edited_at;
     var canManage = __threadCanManage(item);
@@ -323,8 +343,8 @@
     if (canManage) {
       actions += '<div class="info-thread-message__actions">';
       if (!isEditing) {
-        actions += '<button type="button" class="info-thread-action" data-thread-action="edit" data-id="' + itemId + '">Редагувати</button>';
-        actions += '<button type="button" class="info-thread-action info-thread-action--danger" data-thread-action="delete" data-id="' + itemId + '">Видалити</button>';
+        actions += '<button type="button" class="info-thread-action info-thread-action--icon" data-thread-action="edit" data-id="' + itemId + '"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 20h9"></path><path d="M16.5 3.5a2.12 2.12 0 1 1 3 3L7 19l-4 1 1-4 12.5-12.5Z"></path></svg><span>Редагувати</span></button>';
+        actions += '<button type="button" class="info-thread-action info-thread-action--icon info-thread-action--danger" data-thread-action="delete" data-id="' + itemId + '"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M3 6h18"></path><path d="M8 6V4h8v2"></path><path d="M19 6l-1 14H6L5 6"></path><path d="M10 11v6"></path><path d="M14 11v6"></path></svg><span>Видалити</span></button>';
       }
       actions += '</div>';
     }
@@ -334,7 +354,7 @@
       body += '<div class="info-thread-editor">';
       body += '<textarea class="input info-thread-textarea info-thread-editor__textarea" rows="3" maxlength="20000" data-thread-role="edit-input" data-id="' + itemId + '" placeholder="Відредагуйте коментар…">' + __threadEsc(state.editingText) + '</textarea>';
       body += '<div class="info-thread-editor__actions">';
-      body += '<button type="button" class="btn btn--green" data-thread-action="save-edit" data-id="' + itemId + '">Зберегти</button>';
+      body += '<button type="button" class="btn btn--green btn-icon" data-thread-action="save-edit" data-id="' + itemId + '"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M5 3h11l3 3v15H5z"></path><path d="M8 3v6h8"></path><path d="M8 21v-6h8v6"></path></svg><span>Зберегти</span></button>';
       body += '<button type="button" class="btn" data-thread-action="cancel-edit" data-id="' + itemId + '">Скасувати</button>';
       body += '</div></div>';
     } else {
@@ -342,8 +362,8 @@
     }
 
     return ''
-      + '<article class="info-thread-message" data-message-id="' + itemId + '">'
-      +   '<div class="info-thread-message__avatar">' + __threadEsc(avatar) + '</div>'
+      + '<article class="info-thread-message" data-message-id="' + itemId + '">' 
+      +   '<div class="' + avatarClass + '">' + avatar + '</div>'
       +   '<div class="info-thread-message__body">'
       +     '<div class="info-thread-message__meta">'
       +       '<span class="info-thread-message__author">' + __threadEsc(display) + '</span>'
@@ -360,7 +380,7 @@
     var state = __threadGetState();
     var host = document.getElementById('infoThreadList');
     if (!state || !host) return;
-    __threadSetCount(state.items.length);
+    __threadSetCount(state.loaded ? state.items.length : state.countValue);
     if (!state.items.length) {
       host.innerHTML = __threadRenderEmpty();
     } else {
@@ -388,6 +408,29 @@
       });
   }
 
+
+  function __threadPrefetchCount(eventId) {
+    var state = __threadGetState();
+    if (!state) return;
+    if (state.loaded || state.loading || state.countLoading) return;
+    state.countLoading = true;
+    __threadFetchJson('/api/event-messages/list?event_id=' + encodeURIComponent(String(eventId || '')) + '&limit=1')
+      .then(function (data) {
+        var total = parseInt((data && data.total) || 0, 10);
+        if (isNaN(total) || total < 0) total = 0;
+        state.countValue = total;
+        if (!state.loaded) {
+          __threadSetCount(total);
+        }
+      })
+      .catch(function () {
+        // Count prefetch must never break info modal rendering.
+      })
+      .finally(function () {
+        state.countLoading = false;
+      });
+  }
+
   function __threadLoad(eventId) {
     var state = __threadGetState();
     var host = document.getElementById('infoThreadList');
@@ -399,6 +442,7 @@
     __threadFetchJson('/api/event-messages/list?event_id=' + encodeURIComponent(String(eventId || '')))
       .then(function (data) {
         state.items = Array.isArray(data.items) ? data.items : [];
+        state.countValue = state.items.length;
         state.loaded = true;
         __threadRender();
       })
@@ -556,7 +600,7 @@
       +       '<button type="button" id="infoThreadComposerToggle" class="btn">Написати коментар</button>'
       +     '</div>'
       +     '<div id="infoThreadComposer" class="info-thread-composer" hidden>'
-      +       '<div id="infoThreadComposerAvatar" class="info-thread-composer__avatar">' + __threadEsc(__threadInitials(me.display)) + '</div>'
+      +       '<div id="infoThreadComposerAvatar" class="info-thread-composer__avatar' + ((me.hasAvatar && me.avatarUrl) ? ' has-image' : '') + '">' + __threadAvatarHtml({ avatar_url: me.avatarUrl, display: me.display }, me.display) + '</div>'
       +       '<div class="info-thread-composer__main">'
       +         '<div id="infoThreadComposerAuthor" class="info-thread-composer__author">' + __threadEsc(me.display) + '</div>'
       +         '<div class="info-thread-composer__row">'
@@ -660,7 +704,9 @@
     }
 
     __threadSyncComposerIdentity();
-    __threadSetCount('');
+    if (state.countValue !== '') __threadSetCount(state.countValue);
+    else __threadSetCount('');
+    __threadPrefetchCount(eventId);
     __threadSetStatus('', '');
     __threadSetComposerVisible(false);
   }

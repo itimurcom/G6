@@ -492,6 +492,26 @@ body.light #infoContent .info-seen-head,
   background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 82%, #1e3a5f), color-mix(in srgb, var(--accent) 58%, #0f2740));
   box-shadow: inset 0 1px 0 rgba(255,255,255,.08);
 }
+.info-thread-composer__avatar img,
+.info-thread-message__avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.info-thread-composer__avatar span,
+.info-thread-message__avatar span {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  align-items: center;
+  justify-content: center;
+}
+.info-thread-composer__avatar.has-image,
+.info-thread-message__avatar.has-image {
+  color: transparent;
+  background: color-mix(in srgb, var(--card) 88%, #fff);
+}
 .info-thread-composer__main {
   min-width: 0;
 }
@@ -592,6 +612,18 @@ body.light #infoContent .info-seen-head,
   font-weight: 800;
 }
 .info-thread-action:hover { filter: brightness(1.06); }
+
+.info-thread-action--icon {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.info-thread-action--icon svg {
+  width: 14px;
+  height: 14px;
+  display: block;
+  flex: 0 0 14px;
+}
 .info-thread-action--danger {
   border-color: rgba(248, 113, 113, 0.25);
   color: #fecaca;
