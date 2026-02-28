@@ -38,6 +38,78 @@
     }
   })();
 
+  var __CALENDAR_PAGE = (function () {
+    try {
+      var p = (global.location && global.location.pathname) ? String(global.location.pathname) : '';
+      p = p.replace(/\/+$/, '') || '/';
+      return (p === '/calendar');
+    } catch (_) {
+      return false;
+    }
+  })();
+
+  var __SCROLL_RESTORE_KEY = 'calendar.page.scroll.restore';
+  var __SCROLL_RESTORE_APPLIED = false;
+
+  function __saveCalendarScrollPosition() {
+    if (!__CALENDAR_PAGE) return;
+    try {
+      var payload = JSON.stringify({
+        x: Math.max(0, global.scrollX || 0),
+        y: Math.max(0, global.scrollY || 0),
+        ts: Date.now()
+      });
+      sessionStorage.setItem(__SCROLL_RESTORE_KEY, payload);
+    } catch (_) { }
+  }
+
+  function __readCalendarScrollPosition() {
+    if (!__CALENDAR_PAGE) return null;
+    try {
+      var raw = sessionStorage.getItem(__SCROLL_RESTORE_KEY) || '';
+      if (!raw) return null;
+      var data = JSON.parse(raw);
+      if (!data || typeof data !== 'object') return null;
+      var x = Math.max(0, parseInt(data.x, 10) || 0);
+      var y = Math.max(0, parseInt(data.y, 10) || 0);
+      var ts = parseInt(data.ts, 10) || 0;
+      if ((Date.now() - ts) > 10 * 60 * 1000) return null;
+      return { x: x, y: y };
+    } catch (_) {
+      return null;
+    }
+  }
+
+  function __applyPendingCalendarScrollRestore() {
+    if (!__CALENDAR_PAGE || __SCROLL_RESTORE_APPLIED) return;
+    var pos = __readCalendarScrollPosition();
+    if (!pos) return;
+    __SCROLL_RESTORE_APPLIED = true;
+    try {
+      if (global.history && 'scrollRestoration' in global.history) {
+        global.history.scrollRestoration = 'manual';
+      }
+    } catch (_) { }
+    var restore = function () {
+      try { global.scrollTo(pos.x, pos.y); } catch (_) { }
+    };
+    try { requestAnimationFrame(restore); } catch (_) { restore(); }
+    try { setTimeout(restore, 0); } catch (_) { }
+    try { setTimeout(restore, 120); } catch (_) { }
+    try { setTimeout(restore, 300); } catch (_) { }
+    try { sessionStorage.removeItem(__SCROLL_RESTORE_KEY); } catch (_) { }
+  }
+
+  if (__CALENDAR_PAGE) {
+    try {
+      if (global.history && 'scrollRestoration' in global.history) {
+        global.history.scrollRestoration = 'manual';
+      }
+    } catch (_) { }
+    try { global.addEventListener('beforeunload', __saveCalendarScrollPosition, { capture: true }); } catch (_) { }
+    try { global.addEventListener('pagehide', __saveCalendarScrollPosition, { capture: true }); } catch (_) { }
+  }
+
   // Current user (for marking "my" events in the calendar grid)
   var __ME_ID = 0;
   var __ME_FETCH_STARTED = false;
@@ -58,6 +130,7 @@
           } catch (_) { }
           __ME_READY = true;
           try { if (typeof withStableScroll === 'function') withStableScroll(renderAllFn); else renderAllFn(); } catch (_) { }
+          try { __applyPendingCalendarScrollRestore(); } catch (_) { }
         })
         .catch(function () {
           __ME_READY = true;
@@ -1460,6 +1533,7 @@
       Data._setCache(Data.ensureStoreShape(data));
       migrateEnsureIds();
       withStableScroll(renderAllFn);
+      try { __applyPendingCalendarScrollRestore(); } catch (_) { }
     });
   }
 
