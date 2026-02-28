@@ -224,9 +224,9 @@
         loaded: false,
         loading: false,
         saving: false,
-        countLoading: false,
-        countValue: '',
         composerOpen: false,
+        countLoading: false,
+        countValue: null,
         items: [],
         editingId: 0,
         editingText: ''
@@ -242,9 +242,9 @@
       loaded: false,
       loading: false,
       saving: false,
-      countLoading: false,
-      countValue: '',
       composerOpen: false,
+      countLoading: false,
+      countValue: null,
       items: [],
       editingId: 0,
       editingText: ''
@@ -380,8 +380,7 @@
     var state = __threadGetState();
     var host = document.getElementById('infoThreadList');
     if (!state || !host) return;
-    state.countValue = state.items.length;
-    __threadSetCount(state.countValue);
+    __threadSetCount(state.countValue == null ? state.items.length : state.countValue);
     if (!state.items.length) {
       host.innerHTML = __threadRenderEmpty();
     } else {
@@ -409,33 +408,6 @@
       });
   }
 
-  function __threadPrefetchCount(eventId) {
-    var state = __threadGetState();
-    if (!state) return;
-    if (state.loaded || state.loading || state.countLoading) return;
-    if (state.countValue !== '') {
-      __threadSetCount(state.countValue);
-      return;
-    }
-    state.countLoading = true;
-    __threadFetchJson('/api/event-messages/list?event_id=' + encodeURIComponent(String(eventId || '')))
-      .then(function (data) {
-        var st = __threadGetState();
-        if (!st) return;
-        if (String(st.eventId || '') !== String(eventId || '')) return;
-        var items = Array.isArray(data.items) ? data.items : [];
-        st.countValue = items.length;
-        __threadSetCount(st.countValue);
-      })
-      .catch(function () { })
-      .finally(function () {
-        var st = __threadGetState();
-        if (!st) return;
-        if (String(st.eventId || '') !== String(eventId || '')) return;
-        st.countLoading = false;
-      });
-  }
-
   function __threadLoad(eventId) {
     var state = __threadGetState();
     var host = document.getElementById('infoThreadList');
@@ -447,17 +419,39 @@
     __threadFetchJson('/api/event-messages/list?event_id=' + encodeURIComponent(String(eventId || '')))
       .then(function (data) {
         state.items = Array.isArray(data.items) ? data.items : [];
+        state.countValue = (data && data.total != null) ? (parseInt(data.total, 10) || 0) : state.items.length;
         state.loaded = true;
         __threadRender();
       })
       .catch(function (error) {
         state.items = [];
         state.loaded = false;
+        state.countValue = null;
         host.innerHTML = __threadRenderEmpty();
         __threadSetStatus('Не вдалося завантажити коментарі: ' + error.message, 'error');
       })
       .finally(function () {
         state.loading = false;
+      });
+  }
+
+  function __threadPrefetchCount(eventId) {
+    var state = __threadGetState();
+    if (!state) return;
+    if (state.countLoading) return;
+    if (state.countValue != null && String(state.eventId || '') === String(eventId || '')) return;
+    state.countLoading = true;
+    __threadFetchJson('/api/event-messages/list?event_id=' + encodeURIComponent(String(eventId || '')) + '&limit=1')
+      .then(function (data) {
+        state.countValue = (data && data.total != null) ? (parseInt(data.total, 10) || 0) : (Array.isArray(data.items) ? data.items.length : 0);
+        __threadSetCount(state.countValue);
+      })
+      .catch(function () {
+        state.countValue = null;
+        __threadSetCount('');
+      })
+      .finally(function () {
+        state.countLoading = false;
       });
   }
 
@@ -708,7 +702,7 @@
     }
 
     __threadSyncComposerIdentity();
-    __threadSetCount(state ? state.countValue : '');
+    __threadSetCount('');
     __threadSetStatus('', '');
     __threadSetComposerVisible(false);
     __threadPrefetchCount(eventId);

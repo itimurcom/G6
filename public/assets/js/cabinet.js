@@ -370,10 +370,31 @@
     var input = document.getElementById('cabAvatarInput');
     var preview = document.getElementById('cabAvatarPreview');
     var uploadForm = document.getElementById('cabAvatarUploadForm');
+    var img = document.getElementById('cabAvatarImg');
+    var initials = document.getElementById('cabAvatarInitials');
+    var deleteForm = document.getElementById('cabAvatarDeleteForm');
     if (!input || !preview || !uploadForm) return;
 
     function openPicker() {
         try { input.click(); } catch (e) { /* no-op */ }
+    }
+
+    function showInitialsFallback() {
+        preview.classList.remove('has-image');
+        if (img && img.parentNode) {
+            img.parentNode.removeChild(img);
+            img = null;
+        }
+        if (initials) {
+            initials.hidden = false;
+            if (!String(initials.textContent || '').trim()) {
+                initials.textContent = String(preview.getAttribute('data-initials') || '??');
+            }
+        }
+        if (deleteForm && deleteForm.parentNode) {
+            deleteForm.parentNode.removeChild(deleteForm);
+            deleteForm = null;
+        }
     }
 
     preview.addEventListener('click', function (e) {
@@ -387,6 +408,12 @@
             openPicker();
         }
     });
+
+    if (img) {
+        img.addEventListener('error', function () {
+            showInitialsFallback();
+        }, { once: true });
+    }
 
     input.addEventListener('change', function () {
         var file = input.files && input.files[0] ? input.files[0] : null;

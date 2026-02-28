@@ -140,7 +140,7 @@ class UserMysqlRepository implements UserRepositoryInterface {
 
     private function decorateUserRow(array $row): array
     {
-        $hasAvatar = !empty($row['avatar_mime']) || !empty($row['avatar_filename']) || !empty($row['avatar_updated_at']);
+        $hasAvatar = !empty($row['avatar_mime']) || !empty($row['avatar_filename']);
         $id = (int)($row['id'] ?? 0);
         $row['has_avatar'] = $hasAvatar;
         $row['avatar_url'] = $hasAvatar && $id > 0 ? $this->buildAvatarUrl($id, (string)($row['avatar_updated_at'] ?? '')) : null;

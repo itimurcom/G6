@@ -61,16 +61,6 @@
     <section class="weekdays" id="weekdays"></section>
     <section class="grid" id="grid" aria-live="polite"></section>
 
-    <div class="legend">
-      <span class="lg"><i style="background:var(--today)"></i>Сьогодні</span>
-      <span class="lg"><i style="background:var(--type-mi)"></i>ТЛГ: МИ</span>
-      <span class="lg"><i style="background:var(--type-nas)"></i>ТЛГ: НАС</span>
-      <span class="lg"><i style="background:var(--type-evt)"></i>Захід</span>
-      <span class="lg"><i style="background:var(--type-other)"></i>Інше</span>
-      <span class="lg ev--overdue-flash"><i style="background:var(--type-overdue);"></i>Прострочені</span>
-      <span class="subtle" style="margin-left:auto">Клік по вільному місцю дня — додати; перетягни картку, щоб перенести</span>
-    </div>
-
     <div class="bottom-actions" aria-label="Файлові дії">
       <button id="btnExport" class="icon-btn" title="Записати JSON" aria-label="Записати JSON">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
