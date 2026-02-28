@@ -394,7 +394,7 @@ body.light #infoContent .info-seen-head,
   line-height: 1;
 }
 .info-history-wrap[open] > summary.info-history-head::after {
-  content: '▾';
+  content: '▸';
 }
 
 /* Consolidated history-header and raw-toggle tweaks (P15.34/P15.36/P15.39/P15.40) */
