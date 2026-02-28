@@ -224,12 +224,12 @@
         loaded: false,
         loading: false,
         saving: false,
+        countLoading: false,
+        countValue: '',
         composerOpen: false,
         items: [],
         editingId: 0,
-        editingText: '',
-        countLoading: false,
-        countValue: ''
+        editingText: ''
       };
     }
     return infoOverlay.__threadState;
@@ -242,12 +242,12 @@
       loaded: false,
       loading: false,
       saving: false,
+      countLoading: false,
+      countValue: '',
       composerOpen: false,
       items: [],
       editingId: 0,
-      editingText: '',
-      countLoading: false,
-      countValue: ''
+      editingText: ''
     };
   }
 
@@ -343,8 +343,8 @@
     if (canManage) {
       actions += '<div class="info-thread-message__actions">';
       if (!isEditing) {
-        actions += '<button type="button" class="info-thread-action info-thread-action--icon" data-thread-action="edit" data-id="' + itemId + '"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 20h9"></path><path d="M16.5 3.5a2.12 2.12 0 1 1 3 3L7 19l-4 1 1-4 12.5-12.5Z"></path></svg><span>Редагувати</span></button>';
-        actions += '<button type="button" class="info-thread-action info-thread-action--icon info-thread-action--danger" data-thread-action="delete" data-id="' + itemId + '"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M3 6h18"></path><path d="M8 6V4h8v2"></path><path d="M19 6l-1 14H6L5 6"></path><path d="M10 11v6"></path><path d="M14 11v6"></path></svg><span>Видалити</span></button>';
+        actions += '<button type="button" class="info-thread-action" data-thread-action="edit" data-id="' + itemId + '">Редагувати</button>';
+        actions += '<button type="button" class="info-thread-action info-thread-action--danger" data-thread-action="delete" data-id="' + itemId + '">Видалити</button>';
       }
       actions += '</div>';
     }
@@ -354,7 +354,7 @@
       body += '<div class="info-thread-editor">';
       body += '<textarea class="input info-thread-textarea info-thread-editor__textarea" rows="3" maxlength="20000" data-thread-role="edit-input" data-id="' + itemId + '" placeholder="Відредагуйте коментар…">' + __threadEsc(state.editingText) + '</textarea>';
       body += '<div class="info-thread-editor__actions">';
-      body += '<button type="button" class="btn btn--green btn-icon" data-thread-action="save-edit" data-id="' + itemId + '"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M5 3h11l3 3v15H5z"></path><path d="M8 3v6h8"></path><path d="M8 21v-6h8v6"></path></svg><span>Зберегти</span></button>';
+      body += '<button type="button" class="btn btn--green" data-thread-action="save-edit" data-id="' + itemId + '">Зберегти</button>';
       body += '<button type="button" class="btn" data-thread-action="cancel-edit" data-id="' + itemId + '">Скасувати</button>';
       body += '</div></div>';
     } else {
@@ -380,7 +380,8 @@
     var state = __threadGetState();
     var host = document.getElementById('infoThreadList');
     if (!state || !host) return;
-    __threadSetCount(state.loaded ? state.items.length : state.countValue);
+    state.countValue = state.items.length;
+    __threadSetCount(state.countValue);
     if (!state.items.length) {
       host.innerHTML = __threadRenderEmpty();
     } else {
@@ -408,26 +409,30 @@
       });
   }
 
-
   function __threadPrefetchCount(eventId) {
     var state = __threadGetState();
     if (!state) return;
     if (state.loaded || state.loading || state.countLoading) return;
+    if (state.countValue !== '') {
+      __threadSetCount(state.countValue);
+      return;
+    }
     state.countLoading = true;
-    __threadFetchJson('/api/event-messages/list?event_id=' + encodeURIComponent(String(eventId || '')) + '&limit=1')
+    __threadFetchJson('/api/event-messages/list?event_id=' + encodeURIComponent(String(eventId || '')))
       .then(function (data) {
-        var total = parseInt((data && data.total) || 0, 10);
-        if (isNaN(total) || total < 0) total = 0;
-        state.countValue = total;
-        if (!state.loaded) {
-          __threadSetCount(total);
-        }
+        var st = __threadGetState();
+        if (!st) return;
+        if (String(st.eventId || '') !== String(eventId || '')) return;
+        var items = Array.isArray(data.items) ? data.items : [];
+        st.countValue = items.length;
+        __threadSetCount(st.countValue);
       })
-      .catch(function () {
-        // Count prefetch must never break info modal rendering.
-      })
+      .catch(function () { })
       .finally(function () {
-        state.countLoading = false;
+        var st = __threadGetState();
+        if (!st) return;
+        if (String(st.eventId || '') !== String(eventId || '')) return;
+        st.countLoading = false;
       });
   }
 
@@ -442,7 +447,6 @@
     __threadFetchJson('/api/event-messages/list?event_id=' + encodeURIComponent(String(eventId || '')))
       .then(function (data) {
         state.items = Array.isArray(data.items) ? data.items : [];
-        state.countValue = state.items.length;
         state.loaded = true;
         __threadRender();
       })
@@ -704,11 +708,10 @@
     }
 
     __threadSyncComposerIdentity();
-    if (state.countValue !== '') __threadSetCount(state.countValue);
-    else __threadSetCount('');
-    __threadPrefetchCount(eventId);
+    __threadSetCount(state ? state.countValue : '');
     __threadSetStatus('', '');
     __threadSetComposerVisible(false);
+    __threadPrefetchCount(eventId);
   }
   // === /Event thread in info modal ===
 
@@ -1816,13 +1819,13 @@ function __renderEventHistory(host, items, currentEvent) {
 
       '<div class="info-seen-divider"></div>' +
       '<div id="infoSeenBlock" class="info-seen-block"><div class="muted">Завантаження переглядів…</div></div>' +
+      __infoThreadHtml() +
       (__canShowEventHistory() ? (
         '<details class="info-history-wrap">' +
           '<summary class="info-history-head"><strong>Історія змін</strong></summary>' + // P15.34: whole block collapsible by triangle
           '<div id="infoHistoryList" class="info-history-list"><div class="info-history-loading">Завантаження історії…</div></div>' +
         '</details>'
-      ) : '') +
-      __infoThreadHtml();
+      ) : '');
 if (infoContent) infoContent.innerHTML = html;
     setInfoModalType(ev.type);
 

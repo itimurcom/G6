@@ -81,9 +81,9 @@
         </label>
       </div>
       <div style="display:flex; gap:10px;">
-        <button type="button" class="btn btn-icon" id="btnDelete" style="background:#ef4444;border-color:#ef4444;color:#fff" hidden aria-hidden="true" tabindex="-1"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M3 6h18"></path><path d="M8 6V4h8v2"></path><path d="M19 6l-1 14H6L5 6"></path><path d="M10 11v6"></path><path d="M14 11v6"></path></svg><span>Видалити</span></button>
-        <button type="button" class="btn btn-icon" id="btnCancel" style="background:#3b82f6;border-color:#3b82f6;color:#fff"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M15 18l-6-6 6-6"></path></svg><span>Скасувати</span></button>
-        <button type="submit" class="btn btn-icon" style="background:#22c55e;border-color:#22c55e;color:#fff"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M5 3h11l3 3v15H5z"></path><path d="M8 3v6h8"></path><path d="M8 21v-6h8v6"></path></svg><span>Зберегти</span></button>
+        <button type="button" class="btn" id="btnDelete" style="background:#ef4444;border-color:#ef4444;color:#fff" hidden aria-hidden="true" tabindex="-1">Видалити</button>
+        <button type="button" class="btn btn-icon" id="btnCancel" style="background:#3b82f6;border-color:#3b82f6;color:#fff"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg><span>Скасувати</span></button>
+        <button type="submit" class="btn" style="background:var(--accent);border-color:var(--accent);color:#fff">Зберегти</button>
       </div>
     </footer>
   </form>
