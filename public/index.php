@@ -102,6 +102,11 @@ $router->get('/api/users/name',         [\App\Controllers\ApiUserNameController:
 $router->get('/api/users/me',           [\App\Controllers\ApiUsersController::class, 'me']);
 $router->get('/api/users/avatar',       [\App\Controllers\ApiUsersController::class, 'avatar']);
 
+// ---- Event messages API ----
+$router->get('/api/event-messages/list',    [\App\Controllers\ApiEventMessagesController::class, 'list']);
+$router->post('/api/event-messages/create', [\App\Controllers\ApiEventMessagesController::class, 'create']);
+$router->post('/api/event-messages/update', [\App\Controllers\ApiEventMessagesController::class, 'update']);
+$router->post('/api/event-messages/delete', [\App\Controllers\ApiEventMessagesController::class, 'delete']);
 
 
 // Legacy V1 endpoints removed after V2 cutover (hard delete).
