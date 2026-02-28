@@ -25,7 +25,6 @@ $mk = static function(string $href) use ($path): string {
   <nav class="sidebar-menu" aria-label="Навігація">
     <a class="sidebar-link<?= $mk('/') ?>" href="/">Планування</a>
     <a class="sidebar-link<?= $mk('/calendar') ?>" href="/calendar">Календар</a>
-    <a class="sidebar-link<?= ($path === '/cabinet' && $queryTab !== 'settings') ? ' is-active' : '' ?>" href="/cabinet">Кабінет</a>
     <a class="sidebar-link<?= ($path === '/cabinet' && $queryTab === 'settings') ? ' is-active' : '' ?>" href="/cabinet?tab=settings">Налаштування</a>
     <?php if ($isAuth): ?>
       <a class="sidebar-link danger" href="/logout">Вийти</a>

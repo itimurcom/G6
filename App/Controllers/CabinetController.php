@@ -219,7 +219,14 @@ class CabinetController extends Controller
 
         public function uploadAvatar(\App\Core\Request $r): string {
             if (!\App\Core\Auth::check()) { header('Location: /login', true, 302); return ''; }
-            if (!\App\Security\Csrf::validate($r->input('_csrf'))) { http_response_code(403); return 'Forbidden'; }
+            $csrfToken = (string)($_POST['_csrf'] ?? $r->input('_csrf', ''));
+            if (!\App\Security\Csrf::validateAny($csrfToken)) {
+                if (method_exists(\App\Core\Session::class, 'flash')) {
+                    \App\Core\Session::flash('error', 'Сесію безпеки для завантаження аватарки не підтверджено. Онови сторінку і спробуй ще раз.');
+                }
+                header('Location: /cabinet?tab=settings', true, 302);
+                return '';
+            }
 
             $me = \App\Core\Auth::user();
             if (!is_array($me) || empty($me['id'])) {
@@ -324,7 +331,14 @@ class CabinetController extends Controller
 
         public function deleteAvatar(\App\Core\Request $r): string {
             if (!\App\Core\Auth::check()) { header('Location: /login', true, 302); return ''; }
-            if (!\App\Security\Csrf::validate($r->input('_csrf'))) { http_response_code(403); return 'Forbidden'; }
+            $csrfToken = (string)($_POST['_csrf'] ?? $r->input('_csrf', ''));
+            if (!\App\Security\Csrf::validateAny($csrfToken)) {
+                if (method_exists(\App\Core\Session::class, 'flash')) {
+                    \App\Core\Session::flash('error', 'Сесію безпеки для видалення аватарки не підтверджено. Онови сторінку і спробуй ще раз.');
+                }
+                header('Location: /cabinet?tab=settings', true, 302);
+                return '';
+            }
 
             $me = \App\Core\Auth::user();
             if (!is_array($me) || empty($me['id'])) {

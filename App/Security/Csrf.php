@@ -13,11 +13,13 @@ final class Csrf
         if (!is_string($cookie) || $cookie === '') {
             $token = bin2hex(random_bytes(32));
             self::setCookie($token);
+            self::setSessionToken($token);
             return $token;
         }
 
-        // Always return string cookie value
-        return (string)$cookie;
+        $token = (string)$cookie;
+        self::setSessionToken($token);
+        return $token;
     }
 
     /**
@@ -48,11 +50,19 @@ final class Csrf
      */
     public static function validate(?string $provided): bool
     {
+        if (!is_string($provided) || $provided === '') {
+            return false;
+        }
+
         $cookie = $_COOKIE[self::COOKIE] ?? '';
-        return is_string($provided)
-            && is_string($cookie)
-            && $cookie !== ''
-            && hash_equals($cookie, $provided);
+        if (is_string($cookie) && $cookie !== '' && hash_equals($cookie, $provided)) {
+            return true;
+        }
+
+        $sessionToken = self::sessionToken();
+        return is_string($sessionToken)
+            && $sessionToken !== ''
+            && hash_equals($sessionToken, $provided);
     }
 
     /**
@@ -64,10 +74,16 @@ final class Csrf
         if (!is_string($header) || $header === '') {
             return false;
         }
+
         $cookie = $_COOKIE[self::COOKIE] ?? '';
-        return is_string($cookie)
-            && $cookie !== ''
-            && hash_equals($cookie, $header);
+        if (is_string($cookie) && $cookie !== '' && hash_equals($cookie, $header)) {
+            return true;
+        }
+
+        $sessionToken = self::sessionToken();
+        return is_string($sessionToken)
+            && $sessionToken !== ''
+            && hash_equals($sessionToken, $header);
     }
 
     /**
@@ -80,4 +96,23 @@ final class Csrf
         }
         return self::validateHeader();
     }
+
+
+    private static function setSessionToken(string $token): void
+    {
+        if (session_status() !== PHP_SESSION_ACTIVE) {
+            return;
+        }
+        $_SESSION['_csrf_token'] = $token;
+    }
+
+    private static function sessionToken(): string
+    {
+        if (session_status() !== PHP_SESSION_ACTIVE) {
+            return '';
+        }
+        $token = $_SESSION['_csrf_token'] ?? '';
+        return is_string($token) ? $token : '';
+    }
+
 }
