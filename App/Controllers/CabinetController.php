@@ -104,13 +104,17 @@ class CabinetController extends Controller
             if (is_array($avatarFile) && (int)($avatarFile['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_NO_FILE) {
                 $err = (int)($avatarFile['error'] ?? UPLOAD_ERR_OK);
                 if ($err !== UPLOAD_ERR_OK) {
-                    $errors[] = 'Не вдалося завантажити аватарку.';
+                    if ($err === UPLOAD_ERR_INI_SIZE || $err === UPLOAD_ERR_FORM_SIZE) {
+                        $errors[] = 'Файл аватарки перевищує дозволений розмір. Дозволено до 8 МБ.';
+                    } else {
+                        $errors[] = 'Не вдалося завантажити аватарку.';
+                    }
                 } else {
                     $size = (int)($avatarFile['size'] ?? 0);
                     if ($size <= 0) {
                         $errors[] = 'Файл аватарки порожній.';
-                    } elseif ($size > 2 * 1024 * 1024) {
-                        $errors[] = 'Аватарка має бути не більшою за 2 МБ.';
+                    } elseif ($size > 8 * 1024 * 1024) {
+                        $errors[] = 'Аватарка має бути не більшою за 8 МБ.';
                     } else {
                         $tmp = (string)($avatarFile['tmp_name'] ?? '');
                         $finfo = function_exists('finfo_open') ? finfo_open(FILEINFO_MIME_TYPE) : false;
@@ -248,13 +252,17 @@ class CabinetController extends Controller
             } else {
                 $err = (int)($avatarFile['error'] ?? UPLOAD_ERR_OK);
                 if ($err !== UPLOAD_ERR_OK) {
-                    $errors[] = 'Не вдалося завантажити аватарку.';
+                    if ($err === UPLOAD_ERR_INI_SIZE || $err === UPLOAD_ERR_FORM_SIZE) {
+                        $errors[] = 'Файл аватарки перевищує дозволений розмір. Дозволено до 8 МБ.';
+                    } else {
+                        $errors[] = 'Не вдалося завантажити аватарку.';
+                    }
                 } else {
                     $size = (int)($avatarFile['size'] ?? 0);
                     if ($size <= 0) {
                         $errors[] = 'Файл аватарки порожній.';
-                    } elseif ($size > 2 * 1024 * 1024) {
-                        $errors[] = 'Аватарка має бути не більшою за 2 МБ.';
+                    } elseif ($size > 8 * 1024 * 1024) {
+                        $errors[] = 'Аватарка має бути не більшою за 8 МБ.';
                     } else {
                         $tmp = (string)($avatarFile['tmp_name'] ?? '');
                         $finfo = function_exists('finfo_open') ? finfo_open(FILEINFO_MIME_TYPE) : false;

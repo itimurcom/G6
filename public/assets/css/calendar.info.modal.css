@@ -394,7 +394,7 @@ body.light #infoContent .info-seen-head,
   line-height: 1;
 }
 .info-history-wrap[open] > summary.info-history-head::after {
-  content: '▸';
+  content: '▾';
 }
 
 /* Consolidated history-header and raw-toggle tweaks (P15.34/P15.36/P15.39/P15.40) */
@@ -485,6 +485,7 @@ body.light #infoContent .info-seen-head,
   width: 44px;
   height: 44px;
   border-radius: 999px;
+  overflow: hidden;
   display: grid;
   place-items: center;
   font-weight: 900;
@@ -497,6 +498,7 @@ body.light #infoContent .info-seen-head,
   width: 100%;
   height: 100%;
   object-fit: cover;
+  border-radius: inherit;
   display: block;
 }
 .info-thread-composer__avatar span,
@@ -603,18 +605,24 @@ body.light #infoContent .info-seen-head,
 }
 .info-thread-action {
   appearance: none;
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  padding: 6px 10px;
-  background: color-mix(in srgb, var(--bg) 28%, transparent);
-  color: inherit;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: #60a5fa;
   cursor: pointer;
-  font-weight: 800;
+  font-weight: 900;
+  text-decoration: none;
 }
-.info-thread-action:hover { filter: brightness(1.06); }
+.info-thread-action:hover {
+  color: #93c5fd;
+  text-decoration: underline;
+  filter: none;
+}
 .info-thread-action--danger {
-  border-color: rgba(248, 113, 113, 0.25);
-  color: #fecaca;
+  color: #f87171;
+}
+.info-thread-action--danger:hover {
+  color: #fca5a5;
 }
 .info-thread-message__text {
   white-space: pre-wrap;
