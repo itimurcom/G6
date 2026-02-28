@@ -384,31 +384,6 @@ body.light #infoContent .info-seen-head,
   background: color-mix(in srgb, var(--card) 86%, transparent);
 }
 
-.info-history-wrap > summary.info-history-head::after {
-  content: '▸';
-  display: inline-block;
-  margin-left: 4px;
-  color: var(--muted);
-  transform: translateY(-1px);
-  font-size: 18px;
-  line-height: 1;
-}
-.info-history-wrap[open] > summary.info-history-head::after {
-  content: '▾';
-}
-
-/* Consolidated history-header and raw-toggle tweaks (P15.34/P15.36/P15.39/P15.40) */
-
-/* Raw JSON toggles (inline + block) — bigger and more visible */
-.info-history-raw > summary::before,
-.info-history-raw-inline > summary::before {
-  font-size: 18px;
-  line-height: 1;
-}
-
-
-
-
 /* P16.6: inline event messages block inside info modal */
 .info-thread-wrap {
   margin-top: 14px;
@@ -425,15 +400,6 @@ body.light #infoContent .info-seen-head,
   list-style: none;
 }
 .info-thread-wrap > summary.info-thread-head::-webkit-details-marker { display: none; }
-.info-thread-head::before {
-  content: '▸';
-  margin-right: 8px;
-  color: var(--muted);
-  transition: transform .16s ease;
-}
-.info-thread-wrap[open] > summary.info-thread-head::before {
-  transform: rotate(90deg);
-}
 .info-thread-head strong {
   font-size: 14px;
   display: inline-flex;
@@ -661,6 +627,7 @@ body.light #infoContent .info-seen-head,
 }
 
 
+/* Consolidated disclosure triangle rules: single source of truth for history/thread headers */
 /* P16.11: larger disclosure triangles placed immediately after the heading text */
 .info-history-wrap > summary.info-history-head,
 .info-thread-wrap > summary.info-thread-head {
