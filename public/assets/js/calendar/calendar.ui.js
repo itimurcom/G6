@@ -1485,6 +1485,7 @@
   global.CalendarApp.ui = global.CalendarApp.ui || {};
   // global.CalendarApp.ui.init = init;
   global.CalendarApp.ui.renderAllFn = renderAllFn;
+  global.CalendarApp.ui.getCurrentMonthContext = function () { return { year: state.year, month: state.month + 1, monthIndex: state.month }; };
   CalendarApp.ui.isEventOverdueStrict = isEventOverdueStrict;
   window.CalendarApp.ui.isEventClosed = isEventClosed;
   window.CalendarApp.ui.applyClosedStyles = applyClosedStyles;

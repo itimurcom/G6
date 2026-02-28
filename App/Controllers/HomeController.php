@@ -23,6 +23,7 @@ class HomeController extends Controller
                 
                 // '/assets/js/calendar/calendar.ui.js',
                 '/assets/js/calendar/calendar.ui.modals.js',
+                '/assets/js/services/ui.pdf_export.js',
                         
             ]
         ]);

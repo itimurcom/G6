@@ -68,6 +68,11 @@ $router->get('/today',                      [\App\Controllers\TodayController::c
 $router->get('/event',                      [\App\Controllers\EventController::class,           'show']);
 $router->get('/cabinet',                    [\App\Controllers\CabinetController::class,         'cabinet']);
 
+$router->get('/print/today',                [\App\Controllers\PrintController::class,           'today']);
+$router->get('/print/calendar-month',       [\App\Controllers\PrintController::class,           'calendarMonth']);
+$router->get('/print/planning',             [\App\Controllers\PrintController::class,           'planning']);
+$router->get('/print/event',                [\App\Controllers\PrintController::class,           'event']);
+
 
 // ---- API V2 (table-like) ----
 $router->get('/api/events/by-date',         [\App\Controllers\ApiEventsController::class,       'byDate']);
@@ -132,7 +137,7 @@ $router->get('/password/setup', [\App\Controllers\AuthController::class, 'passwo
 $router->post('/password/setup', [\App\Controllers\AuthController::class, 'passwordSetupSave']);
 
 // Exact paths that require auth (no subpaths)
-$_PROTECTED = ['/', '/calendar', '/calendar/', '/today', '/today/', '/event', '/event/', '/cabinet', '/cabinet/'];
+$_PROTECTED = ['/', '/calendar', '/calendar/', '/today', '/today/', '/event', '/event/', '/cabinet', '/cabinet/', '/print/today', '/print/calendar-month', '/print/planning', '/print/event'];
 
 $path = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?? '/';
 

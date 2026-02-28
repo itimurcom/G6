@@ -1504,3 +1504,21 @@ body.light .ev--multi,
   font-size: 12px;
 }
 
+
+
+.btn.btn-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.btn.btn-icon svg {
+  width: 16px;
+  height: 16px;
+  display: block;
+}
+
+.btn.btn--pdf {
+  white-space: nowrap;
+}

@@ -28,6 +28,7 @@ class TodayController
                 '/assets/js/calendar/calendar.data.js',
                 '/assets/js/calendar/calendar.ui.js',
                 '/assets/js/calendar/calendar.ui.modals.js',
+                '/assets/js/services/ui.pdf_export.js',
                 // notify не підключаємо, щоб сторінка була тільки «Сьогодні»
             ],
         ]);

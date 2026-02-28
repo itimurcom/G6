@@ -1078,3 +1078,22 @@ body.sidebar-open .ui-fab.menu {
   border-color: rgba(239, 68, 68, .65);
 }
 
+
+
+/* P16.16: unified PDF icon button (same printer icon language as Today page) */
+.pdf-icon-btn {
+  display: inline-grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  min-width: 38px;
+  min-height: 38px;
+  padding: 0;
+  border-radius: 12px;
+  box-shadow: 0 8px 18px rgba(0, 0, 0, .10);
+}
+.pdf-icon-btn svg {
+  width: 18px;
+  height: 18px;
+  display: block;
+}

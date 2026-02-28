@@ -1203,6 +1203,7 @@
 
   function openInfo(
     dateISO, id) {
+    try { if (infoOverlay && infoOverlay.dataset) { infoOverlay.dataset.pdfEventId = String(id || ''); } } catch (_) { }
     // Move header edit button to footer and restyle (green, text "редагувати")
     try {
       var modal = document.getElementById('infoEventModal');

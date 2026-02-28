@@ -132,4 +132,11 @@
     <path d="M5 6h14a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H9l-4 3v-3H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2z"/>
   </symbol>
 
+  <symbol id="i-printer" viewBox="0 0 24 24">
+    <path d="M7 8V4h10v4"/>
+    <rect x="5" y="8" width="14" height="8" rx="2"/>
+    <rect x="7" y="14" width="10" height="6" rx="1"/>
+    <path d="M17 11h.01"/>
+  </symbol>
+
 </svg>

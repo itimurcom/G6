@@ -631,3 +631,35 @@ body.light #infoContent .info-seen-head,
     margin-left: 0;
   }
 }
+
+
+/* P16.11: align history/comments toggles and load comments count immediately */
+.info-history-wrap > summary.info-history-head,
+.info-thread-wrap > summary.info-thread-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.info-history-wrap > summary.info-history-head::before,
+.info-thread-wrap > summary.info-thread-head::before {
+  content: none !important;
+  display: none !important;
+}
+.info-history-wrap > summary.info-history-head::after,
+.info-thread-wrap > summary.info-thread-head::after {
+  content: '▸';
+  margin-left: auto;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1;
+  transition: transform .16s ease;
+}
+.info-history-wrap[open] > summary.info-history-head::after,
+.info-thread-wrap[open] > summary.info-thread-head::after {
+  transform: rotate(90deg);
+}
+.info-history-wrap > summary.info-history-head strong,
+.info-thread-wrap > summary.info-thread-head strong {
+  min-width: 0;
+}
