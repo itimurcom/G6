@@ -15,7 +15,10 @@
     <!-- [DEFERRED] Delete control moved to edit modal (#btnDelete). Keep legacy #deleteEvBtn hidden to avoid duplicate controls. -->
     <style>#deleteEvBtn{display:none !important;}</style>
     <header>
-      <div id="infoTitle">Деталі події</div>
+      <div class="left info-modal__header-main">
+        <div id="infoTitle">Деталі події</div>
+        <div id="infoHeaderBadges" class="info-header-badges" hidden></div>
+      </div>
       <div>
         <button type="button" id="infoClose" class="event-btn" aria-label="Закрити">×</button>
       </div>

@@ -133,12 +133,13 @@
     return false;
   }
 
-  function __infoStatusBadgesHtml(ev, fallbackDateISO) {
+  function __infoStatusBadgesHtml(ev, fallbackDateISO, variant) {
     var showAssigned = __isAssignedToMeForInfo(ev);
     var showMy = (!showAssigned && __isMyEventForInfo(ev));
     var showOverdue = __isOverdueForInfo(ev, fallbackDateISO);
     if (!showAssigned && !showMy && !showOverdue) return '';
 
+    var wrapClass = (variant === 'header') ? 'info-badges info-badges--header' : 'info-badges';
     var parts = [];
     if (showOverdue) {
       parts.push(''
@@ -172,7 +173,15 @@
         + '</span>');
     }
 
-    return '<div class="info-badges">' + parts.join('') + '</div>';
+    return '<div class="' + wrapClass + '">' + parts.join('') + '</div>';
+  }
+
+  function __setInfoHeaderBadges(ev, fallbackDateISO) {
+    var host = document.getElementById('infoHeaderBadges');
+    if (!host) return;
+    var html = __infoStatusBadgesHtml(ev, fallbackDateISO, 'header');
+    host.innerHTML = html || '';
+    host.hidden = !html;
   }
   // === Event thread in info modal ===
   function __threadEsc(value) {
@@ -1775,7 +1784,6 @@ function __renderEventHistory(host, items, currentEvent) {
 
     var html = '' +
       '<div class="info-title">' + Ev.escapeHtml(ev.title || '') + '</div>' +
-      __infoStatusBadgesHtml(ev, dateISO) +
 
       '<div class="info-grid">' +
         // 1st row: date(+time) + responsible
@@ -1821,6 +1829,7 @@ function __renderEventHistory(host, items, currentEvent) {
         '</details>'
       ) : '');
 if (infoContent) infoContent.innerHTML = html;
+    __setInfoHeaderBadges(ev, dateISO);
     setInfoModalType(ev.type);
 
     try { __loadSeenByEvent(ev.id); } catch (_) { }

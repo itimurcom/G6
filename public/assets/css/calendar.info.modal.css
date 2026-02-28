@@ -14,6 +14,104 @@
   margin: 0 0 12px 0;
 }
 
+#infoOverlay .modal > header {
+  gap: 16px;
+}
+
+#infoOverlay .modal > header .info-modal__header-main {
+  min-width: 0;
+  flex: 1 1 auto;
+  flex-wrap: wrap;
+  row-gap: 8px;
+}
+
+#infoHeaderBadges {
+  min-width: 0;
+}
+
+#infoHeaderBadges .info-badges--header {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+#infoHeaderBadges .info-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 34px;
+  padding: 7px 12px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.1;
+  box-shadow: none;
+}
+
+#infoHeaderBadges .info-badge svg {
+  width: 18px;
+  height: 18px;
+  display: block;
+  flex: 0 0 auto;
+}
+
+
+#infoHeaderBadges .info-badge--my {
+  color: #111;
+  border: 1px solid rgba(255, 255, 255, .36);
+  background: rgba(255, 255, 255, .96);
+}
+
+#infoHeaderBadges .info-badge--assigned {
+  color: #111;
+  border: 1px solid rgba(0, 0, 0, .14);
+  background: rgba(255, 220, 64, .86);
+}
+
+:root[data-theme=dark] #infoHeaderBadges .info-badge--assigned {
+  color: #111;
+  border-color: rgba(0, 0, 0, .16);
+  background: rgba(255, 220, 64, .90);
+}
+
+#infoHeaderBadges .info-badge--overdue {
+  color: #fff;
+  border: 1px solid color-mix(in oklab, var(--type-overdue) 62%, var(--border));
+  background: color-mix(in oklab, var(--type-overdue) 78%, var(--event-bg));
+}
+
+#infoHeaderBadges .info-badge--overdue.ev--overdue-flash {
+  overflow: hidden;
+  isolation: isolate;
+}
+
+#infoHeaderBadges .info-badge--overdue.ev--overdue-flash > * {
+  position: relative;
+  z-index: 2;
+}
+
+#infoHeaderBadges .info-badge--overdue.ev--overdue-flash::after {
+  z-index: 1;
+}
+
+:root[data-theme=light] #infoHeaderBadges .info-badge--overdue {
+  color: #fff;
+  border-color: color-mix(in oklab, var(--type-overdue) 55%, var(--border));
+  background: color-mix(in oklab, var(--type-overdue) 82%, white);
+}
+
+@media (max-width: 720px) {
+  #infoOverlay .modal > header .info-modal__header-main {
+    align-items: flex-start;
+  }
+
+  #infoHeaderBadges {
+    width: 100%;
+  }
+}
+
 /* --- Event info layout (grid rows) --- */
 #infoContent .info-grid {
   display: flex;

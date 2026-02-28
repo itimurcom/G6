@@ -947,6 +947,15 @@ select,
   align-items: center;
 }
 
+#modalTitle,
+#infoTitle {
+  font-size: clamp(17px, 0.875rem + 0.45vw, 22px);
+  line-height: 1.15;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+}
+
+
 .modal .content {
   position: relative;
   padding: 16px 18px;
