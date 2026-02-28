@@ -118,6 +118,8 @@ $router->post('/api/backup/import',         [\App\Controllers\ApiBackupControlle
 
 
 $router->post('/cabinet/profile/update',    [\App\Controllers\CabinetController::class, 'updateProfile']);
+$router->post('/cabinet/avatar/upload',     [\App\Controllers\CabinetController::class, 'uploadAvatar']);
+$router->post('/cabinet/avatar/delete',     [\App\Controllers\CabinetController::class, 'deleteAvatar']);
 $router->post('/cabinet/password/change',   [\App\Controllers\CabinetController::class, 'changePassword']);
 // Admin: manage users from Cabinet
 $router->post('/cabinet/users/update',      [\App\Controllers\CabinetController::class, 'adminUpdateUser']);

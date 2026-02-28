@@ -22,9 +22,8 @@ $isOwnCabinet = ((int)($_SESSION['user_id'] ?? 0) === (int)($u['id'] ?? 0));
   <!-- CABINET CARDS UI PATCH P15.5 -->
   <div class="title">Кабінет</div>
   <nav class="legend">
-    <span class="lg is-active" data-tab="profile">Профіль</span>
+    <span class="lg is-active" data-tab="settings">Налаштування</span>
     <span class="lg" data-tab="security">Безпека</span>
-    <span class="lg" data-tab="settings">Налаштування</span>
     <?php if (!empty($is_admin)): ?>
     <span class="lg" data-tab="users">Користувачі</span>
     <?php endif; ?>
@@ -78,14 +77,31 @@ $__toastErr = \App\Core\Session::flash('toast_error');
   <div id="cabinetToastPayloadAdminErr" data-kind="error" data-message="<?= htmlspecialchars((string)$__toastErr, ENT_QUOTES) ?>" hidden></div>
 <?php endif; ?>
 
-    <section class="cabinet-tab" data-tab="profile">
-      <div class='sub-title'>Профіль</div>
+    <section class="cabinet-tab" data-tab="settings">
+      <div class='sub-title'>Налаштування</div>
 
       <div class="cabinet-settings">
         <div class="cab-card">
-          <div class="cab-card__title">Основне</div>
+          <div class="cab-card__title">Профіль</div>
           <div class="cab-card__body">
             <div class="cab-profile-head">
+              <?php if ($isOwnCabinet): ?>
+              <form method="post" action="/cabinet/avatar/upload" enctype="multipart/form-data" id="cabAvatarUploadForm" class="cab-avatar-form">
+                <input type="hidden" name="_csrf" value="<?= htmlspecialchars(\App\Security\Csrf::token(), ENT_QUOTES) ?>">
+                <input class="cab-avatar-input" type="file" id="cabAvatarInput" name="avatar_file" accept="image/jpeg,image/png,image/webp">
+                <button type="button" class="cab-avatar-preview cab-avatar-trigger <?= !empty($u['has_avatar']) ? 'has-image' : '' ?>" id="cabAvatarPreview" data-initials="<?= htmlspecialchars(mb_strtoupper(mb_substr((string)($u['name'] ?? $u['login'] ?? 'U'), 0, 1)), ENT_QUOTES) ?>" aria-label="Змінити аватарку" title="Натисни, щоб вибрати аватарку">
+                  <?php if (!empty($u['has_avatar']) && !empty($u['avatar_url'])): ?>
+                    <img src="<?= htmlspecialchars((string)$u['avatar_url'], ENT_QUOTES) ?>" alt="Аватар користувача" id="cabAvatarImg">
+                  <?php else: ?>
+                    <span id="cabAvatarInitials"><?= htmlspecialchars(mb_strtoupper(mb_substr((string)($u['name'] ?? $u['login'] ?? 'U'), 0, 1)), ENT_QUOTES) ?></span>
+                  <?php endif; ?>
+                </button>
+              </form>
+              <form method="post" action="/cabinet/avatar/delete" class="cab-avatar-delete-form">
+                <input type="hidden" name="_csrf" value="<?= htmlspecialchars(\App\Security\Csrf::token(), ENT_QUOTES) ?>">
+                <button type="submit" class="cab-avatar-delete" aria-label="Видалити аватарку" title="Видалити аватарку"<?= empty($u['has_avatar']) ? ' disabled' : '' ?>>×</button>
+              </form>
+              <?php else: ?>
               <div class="cab-avatar-preview <?= !empty($u['has_avatar']) ? 'has-image' : '' ?>">
                 <?php if (!empty($u['has_avatar']) && !empty($u['avatar_url'])): ?>
                   <img src="<?= htmlspecialchars((string)$u['avatar_url'], ENT_QUOTES) ?>" alt="Аватар користувача">
@@ -93,56 +109,24 @@ $__toastErr = \App\Core\Session::flash('toast_error');
                   <span><?= htmlspecialchars(mb_strtoupper(mb_substr((string)($u['name'] ?? $u['login'] ?? 'U'), 0, 1)), ENT_QUOTES) ?></span>
                 <?php endif; ?>
               </div>
-              <div class="hint"><?= $isOwnCabinet ? 'Дані профілю доступні лише для перегляду. Керування аватаркою перенесено у вкладку Налаштування.' : 'Перегляд профілю іншого користувача.' ?></div>
-            </div>
-            <div class="cab-kv">
-              <div class="cab-kv__k">Логін</div>
-              <div class="cab-kv__v"><?= htmlspecialchars((string)($u['login'] ?? ''), ENT_QUOTES) ?></div>
+              <?php endif; ?>
 
-              <div class="cab-kv__k">Ім’я</div>
-              <div class="cab-kv__v"><?= htmlspecialchars((string)($u['name'] ?? ''), ENT_QUOTES) ?></div>
+              <div class="cab-profile-meta">
+                <div class="hint"><?= $isOwnCabinet ? 'Натисни на аватарку, щоб одразу вибрати і зберегти нове зображення. Червоний хрестик одразу видаляє збережену аватарку.' : 'Перегляд профілю іншого користувача.' ?></div>
+                <div class="cab-kv cab-kv--profile">
+                  <div class="cab-kv__k">Логін</div>
+                  <div class="cab-kv__v"><?= htmlspecialchars((string)($u['login'] ?? ''), ENT_QUOTES) ?></div>
 
-              <div class="cab-kv__k">Ел. пошта</div>
-              <div class="cab-kv__v"><?= htmlspecialchars((string)($u['email'] ?? ''), ENT_QUOTES) ?></div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-    <section class="cabinet-tab" data-tab="settings" style="display:none">
-      <div class='sub-title'>Налаштування</div>
+                  <div class="cab-kv__k">Ім’я</div>
+                  <div class="cab-kv__v"><?= htmlspecialchars((string)($u['name'] ?? ''), ENT_QUOTES) ?></div>
 
-      <div class="cabinet-settings">
-        <?php if ($isOwnCabinet): ?>
-        <div class="cab-card">
-          <div class="cab-card__title">Профіль</div>
-          <div class="cab-card__body">
-            <form class="cab-form" method="post" action="/cabinet/profile/update" enctype="multipart/form-data">
-              <input type="hidden" name="_csrf" value="<?= htmlspecialchars(\App\Security\Csrf::token(), ENT_QUOTES) ?>">
-              <input type="hidden" name="avatar_remove" id="cabAvatarRemove" value="0">
-              <input type="hidden" name="name" value="<?= htmlspecialchars((string)($u['name'] ?? ''), ENT_QUOTES) ?>">
-              <input type="hidden" name="email" value="<?= htmlspecialchars((string)($u['email'] ?? ''), ENT_QUOTES) ?>">
-
-              <div class="cab-profile-head">
-                <div class="cab-avatar-preview <?= !empty($u['has_avatar']) ? 'has-image' : '' ?>" id="cabAvatarPreview" data-initials="<?= htmlspecialchars(mb_strtoupper(mb_substr((string)($u['name'] ?? $u['login'] ?? 'U'), 0, 1)), ENT_QUOTES) ?>">
-                  <?php if (!empty($u['has_avatar']) && !empty($u['avatar_url'])): ?>
-                    <img src="<?= htmlspecialchars((string)$u['avatar_url'], ENT_QUOTES) ?>" alt="Аватар користувача" id="cabAvatarImg">
-                  <?php else: ?>
-                    <span id="cabAvatarInitials"><?= htmlspecialchars(mb_strtoupper(mb_substr((string)($u['name'] ?? $u['login'] ?? 'U'), 0, 1)), ENT_QUOTES) ?></span>
-                  <?php endif; ?>
-                </div>
-                <div class="cab-avatar-actions">
-                  <label class="btn" for="cabAvatarInput">Обрати аватарку</label>
-                  <input class="cab-avatar-input" type="file" id="cabAvatarInput" name="avatar_file" accept="image/jpeg,image/png,image/webp">
-                  <button type="button" class="btn" id="cabAvatarClearBtn">Видалити аватарку</button>
-                  <button type="submit" class="btn btn--primary">Зберегти аватарку</button>
-                  <div class="hint">JPG, PNG або WEBP, до 2 МБ. Тут можна лише змінити або видалити аватарку.</div>
+                  <div class="cab-kv__k">Ел. пошта</div>
+                  <div class="cab-kv__v"><?= htmlspecialchars((string)($u['email'] ?? ''), ENT_QUOTES) ?></div>
                 </div>
               </div>
-            </form>
+            </div>
           </div>
         </div>
-        <?php endif; ?>
 
         <div class="cab-card">
           <div class="cab-card__title">Тема</div>
@@ -191,7 +175,6 @@ $__toastErr = \App\Core\Session::flash('toast_error');
         </div>
       </div>
     </section>
-
 
     <section class="cabinet-tab" data-tab="security">
       <div class='sub-title'>Безпека</div>

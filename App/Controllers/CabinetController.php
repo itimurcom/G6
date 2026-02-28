@@ -215,6 +215,162 @@ class CabinetController extends Controller
             header('Location: /cabinet?tab=settings', true, 302); return '';
         }
 
+
+
+        public function uploadAvatar(\App\Core\Request $r): string {
+            if (!\App\Core\Auth::check()) { header('Location: /login', true, 302); return ''; }
+            if (!\App\Security\Csrf::validate($r->input('_csrf'))) { http_response_code(403); return 'Forbidden'; }
+
+            $me = \App\Core\Auth::user();
+            if (!is_array($me) || empty($me['id'])) {
+                if (method_exists(\App\Core\Session::class, 'flash')) {
+                    \App\Core\Session::flash('error', 'Користувач не знайдений в сесії.');
+                }
+                header('Location: /login', true, 302);
+                return '';
+            }
+            $userId = (int)$me['id'];
+            $avatarFile = $_FILES['avatar_file'] ?? null;
+            $errors = [];
+            $avatarBlob = null;
+            $avatarMime = null;
+            $avatarFilename = null;
+
+            if (!is_array($avatarFile) || (int)($avatarFile['error'] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_NO_FILE) {
+                $errors[] = 'Файл аватарки не вибрано.';
+            } else {
+                $err = (int)($avatarFile['error'] ?? UPLOAD_ERR_OK);
+                if ($err !== UPLOAD_ERR_OK) {
+                    $errors[] = 'Не вдалося завантажити аватарку.';
+                } else {
+                    $size = (int)($avatarFile['size'] ?? 0);
+                    if ($size <= 0) {
+                        $errors[] = 'Файл аватарки порожній.';
+                    } elseif ($size > 2 * 1024 * 1024) {
+                        $errors[] = 'Аватарка має бути не більшою за 2 МБ.';
+                    } else {
+                        $tmp = (string)($avatarFile['tmp_name'] ?? '');
+                        $finfo = function_exists('finfo_open') ? finfo_open(FILEINFO_MIME_TYPE) : false;
+                        $mime = $finfo ? (string)finfo_file($finfo, $tmp) : '';
+                        if ($finfo) { finfo_close($finfo); }
+                        $allowed = [
+                            'image/jpeg' => 'jpg',
+                            'image/png' => 'png',
+                            'image/webp' => 'webp',
+                        ];
+                        if (!isset($allowed[$mime])) {
+                            $errors[] = 'Дозволені лише JPG, PNG або WEBP.';
+                        } else {
+                            $blob = @file_get_contents($tmp);
+                            if ($blob === false || $blob === '') {
+                                $errors[] = 'Не вдалося прочитати файл аватарки.';
+                            } else {
+                                $avatarBlob = $blob;
+                                $avatarMime = $mime;
+                                $avatarFilename = (string)($avatarFile['name'] ?? ('avatar.' . $allowed[$mime]));
+                            }
+                        }
+                    }
+                }
+            }
+
+            $repo = new \App\Models\UserMysqlRepository();
+            $logger = new \App\Services\Audit\ActionLogger();
+
+            if (!empty($errors)) {
+                if (method_exists(\App\Core\Session::class, 'flash')) {
+                    \App\Core\Session::flash('error', implode(' ', $errors));
+                }
+                $logger->log('cabinet.avatar_upload', 'error', [
+                    'user_id' => $userId,
+                    'errors'  => $errors,
+                ]);
+                header('Location: /cabinet?tab=settings', true, 302);
+                return '';
+            }
+
+            try {
+                if ($avatarBlob !== null && method_exists($repo, 'setAvatarById')) {
+                    $repo->setAvatarById($userId, (string)$avatarBlob, (string)$avatarMime, (string)$avatarFilename);
+                }
+
+                $fresh = null;
+                try {
+                    $fresh = $repo->findById($userId);
+                } catch (\Throwable $e) {}
+                if (is_array($fresh)) {
+                    \App\Core\Session::set('user', $fresh);
+                }
+
+                if (method_exists(\App\Core\Session::class, 'flash')) {
+                    \App\Core\Session::flash('success', 'Аватарку оновлено.');
+                }
+                $logger->log('cabinet.avatar_upload', 'success', [
+                    'user_id' => $userId,
+                    'avatar_uploaded' => 1,
+                ]);
+            } catch (\Throwable $e) {
+                if (method_exists(\App\Core\Session::class, 'flash')) {
+                    \App\Core\Session::flash('error', 'Не вдалося зберегти аватарку.');
+                }
+                $logger->log('cabinet.avatar_upload', 'error', [
+                    'user_id'   => $userId,
+                    'exception' => $e->getMessage(),
+                ]);
+            }
+
+            header('Location: /cabinet?tab=settings', true, 302); return '';
+        }
+
+        public function deleteAvatar(\App\Core\Request $r): string {
+            if (!\App\Core\Auth::check()) { header('Location: /login', true, 302); return ''; }
+            if (!\App\Security\Csrf::validate($r->input('_csrf'))) { http_response_code(403); return 'Forbidden'; }
+
+            $me = \App\Core\Auth::user();
+            if (!is_array($me) || empty($me['id'])) {
+                if (method_exists(\App\Core\Session::class, 'flash')) {
+                    \App\Core\Session::flash('error', 'Користувач не знайдений в сесії.');
+                }
+                header('Location: /login', true, 302);
+                return '';
+            }
+            $userId = (int)$me['id'];
+
+            $repo = new \App\Models\UserMysqlRepository();
+            $logger = new \App\Services\Audit\ActionLogger();
+
+            try {
+                if (method_exists($repo, 'clearAvatarById')) {
+                    $repo->clearAvatarById($userId);
+                }
+
+                $fresh = null;
+                try {
+                    $fresh = $repo->findById($userId);
+                } catch (\Throwable $e) {}
+                if (is_array($fresh)) {
+                    \App\Core\Session::set('user', $fresh);
+                }
+
+                if (method_exists(\App\Core\Session::class, 'flash')) {
+                    \App\Core\Session::flash('success', 'Аватарку видалено.');
+                }
+                $logger->log('cabinet.avatar_delete', 'success', [
+                    'user_id' => $userId,
+                ]);
+            } catch (\Throwable $e) {
+                if (method_exists(\App\Core\Session::class, 'flash')) {
+                    \App\Core\Session::flash('error', 'Не вдалося видалити аватарку.');
+                }
+                $logger->log('cabinet.avatar_delete', 'error', [
+                    'user_id'   => $userId,
+                    'exception' => $e->getMessage(),
+                ]);
+            }
+
+            header('Location: /cabinet?tab=settings', true, 302); return '';
+        }
+
         public function changePassword(\App\Core\Request $r): string {
             if (!\App\Core\Auth::check()) { header('Location: /login', true, 302); return ''; }
             if (!\App\Security\Csrf::validate($r->input('_csrf'))) { http_response_code(403); return 'Forbidden'; }
