@@ -108,6 +108,14 @@ $router->post('/api/event-messages/create', [\App\Controllers\ApiEventMessagesCo
 $router->post('/api/event-messages/update', [\App\Controllers\ApiEventMessagesController::class, 'update']);
 $router->post('/api/event-messages/delete', [\App\Controllers\ApiEventMessagesController::class, 'delete']);
 
+// ---- Documents API ----
+$router->get('/api/documents/list-by-event',   [\App\Controllers\ApiDocumentsController::class, 'listByEvent']);
+$router->get('/api/documents/list-by-message', [\App\Controllers\ApiDocumentsController::class, 'listByMessage']);
+$router->get('/api/documents/view',            [\App\Controllers\ApiDocumentsController::class, 'view']);
+$router->get('/api/documents/download',        [\App\Controllers\ApiDocumentsController::class, 'download']);
+$router->post('/api/documents/upload',         [\App\Controllers\ApiDocumentsController::class, 'upload']);
+$router->post('/api/documents/delete',         [\App\Controllers\ApiDocumentsController::class, 'delete']);
+
 
 // Legacy V1 endpoints removed after V2 cutover (hard delete).
 // ---- Backup API (export/import) ----
