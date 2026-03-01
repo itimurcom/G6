@@ -121,10 +121,29 @@ function toUADisplayDate(dateLike) {
 function $(id) { return document.getElementById(id); }
 function $id(id) { return document.getElementById(id); }
 
+var __stableScrollRestoreToken = 0;
+
 function withStableScroll(fn) {
-  var x = window.scrollX, y = window.scrollY;
+  var x = 0, y = 0;
+  try {
+    x = Math.max(0, window.scrollX || 0);
+    y = Math.max(0, window.scrollY || 0);
+  } catch (_) { }
+
+  var token = (++__stableScrollRestoreToken);
+
+  function __restoreScrollIfCurrent() {
+    if (token !== __stableScrollRestoreToken) return;
+    try { window.scrollTo(x, y); } catch (_) { }
+  }
+
   try { fn && fn(); } catch (e) { console.warn('withStableScroll failed', e); }
-  try { window.scrollTo(x, y); } catch (_) { }
+
+  __restoreScrollIfCurrent();
+  try { requestAnimationFrame(__restoreScrollIfCurrent); } catch (_) { }
+  try { setTimeout(__restoreScrollIfCurrent, 0); } catch (_) { }
+  try { setTimeout(__restoreScrollIfCurrent, 120); } catch (_) { }
+  try { setTimeout(__restoreScrollIfCurrent, 320); } catch (_) { }
 }
 
 
