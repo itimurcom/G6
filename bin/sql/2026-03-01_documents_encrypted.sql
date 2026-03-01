@@ -1,0 +1,30 @@
+-- Encrypted documents stored directly in MySQL.
+-- Safe additive migration for calendar.localhost.
+CREATE TABLE IF NOT EXISTS `documents` (
+  `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `event_id` VARCHAR(32) NOT NULL,
+  `message_id` BIGINT UNSIGNED NULL DEFAULT NULL,
+  `uploaded_by_user_id` INT NOT NULL,
+  `original_name` VARCHAR(255) NOT NULL,
+  `mime_type` VARCHAR(191) NOT NULL DEFAULT 'application/octet-stream',
+  `file_size` BIGINT UNSIGNED NOT NULL DEFAULT 0,
+  `is_image` TINYINT(1) NOT NULL DEFAULT 0,
+  `sha256` CHAR(64) NOT NULL,
+  `cipher` VARCHAR(64) NOT NULL DEFAULT 'aes-256-gcm',
+  `key_version` INT NOT NULL DEFAULT 1,
+  `iv` VARBINARY(32) NOT NULL,
+  `auth_tag` VARBINARY(32) NOT NULL,
+  `file_blob` LONGBLOB NOT NULL,
+  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` DATETIME NULL DEFAULT NULL,
+  `deleted_at` DATETIME NULL DEFAULT NULL,
+  `deleted_by_user_id` INT NULL DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_documents_event_created` (`event_id`, `created_at`),
+  KEY `idx_documents_event_active` (`event_id`, `deleted_at`),
+  KEY `idx_documents_message_created` (`message_id`, `created_at`),
+  KEY `idx_documents_message_active` (`message_id`, `deleted_at`),
+  KEY `idx_documents_uploader_created` (`uploaded_by_user_id`, `created_at`),
+  KEY `idx_documents_sha256` (`sha256`),
+  KEY `idx_documents_is_image` (`is_image`, `created_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
