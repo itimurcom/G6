@@ -78,7 +78,9 @@ final class DocumentMysqlRepository
     public function listByMessageId(int $messageId, bool $includeDeleted = false): array
     {
         if ($messageId <= 0) return [];
-        $deletedSql = $includeDeleted ? '' : ' AND d.deleted_at IS NULL';
+        $deletedSql = $includeDeleted
+            ? ''
+            : ' AND d.deleted_at IS NULL AND (d.message_id IS NULL OR m.deleted_at IS NULL)';
         $sql = "SELECT d.*, e.title AS event_title,
                        u.name AS uploader_name, u.login AS uploader_login,
                        m.user_id AS message_user_id
@@ -99,7 +101,9 @@ final class DocumentMysqlRepository
         if ($eventId === '') return [];
         $limit = max(1, min(500, $limit));
         $offset = max(0, $offset);
-        $deletedSql = $includeDeleted ? '' : ' AND d.deleted_at IS NULL';
+        $deletedSql = $includeDeleted
+            ? ''
+            : ' AND d.deleted_at IS NULL AND (d.message_id IS NULL OR m.deleted_at IS NULL)';
         $sql = "SELECT d.*, e.title AS event_title,
                        u.name AS uploader_name, u.login AS uploader_login,
                        m.user_id AS message_user_id
@@ -119,10 +123,18 @@ final class DocumentMysqlRepository
     {
         $eventId = trim($eventId);
         if ($eventId === '') return 0;
-        $sql = 'SELECT COUNT(*) FROM documents WHERE event_id = :event_id';
-        if (!$includeDeleted) {
-            $sql .= ' AND deleted_at IS NULL';
+
+        if ($includeDeleted) {
+            $sql = 'SELECT COUNT(*) FROM documents WHERE event_id = :event_id';
+        } else {
+            $sql = 'SELECT COUNT(*)
+                    FROM documents d
+                    LEFT JOIN event_messages m ON m.id = d.message_id
+                    WHERE d.event_id = :event_id
+                      AND d.deleted_at IS NULL
+                      AND (d.message_id IS NULL OR m.deleted_at IS NULL)';
         }
+
         $st = $this->db->prepare($sql);
         $st->execute(['event_id' => $eventId]);
         return (int)$st->fetchColumn();
@@ -131,10 +143,18 @@ final class DocumentMysqlRepository
     public function countByMessageId(int $messageId, bool $includeDeleted = false): int
     {
         if ($messageId <= 0) return 0;
-        $sql = 'SELECT COUNT(*) FROM documents WHERE message_id = :message_id';
-        if (!$includeDeleted) {
-            $sql .= ' AND deleted_at IS NULL';
+
+        if ($includeDeleted) {
+            $sql = 'SELECT COUNT(*) FROM documents WHERE message_id = :message_id';
+        } else {
+            $sql = 'SELECT COUNT(*)
+                    FROM documents d
+                    LEFT JOIN event_messages m ON m.id = d.message_id
+                    WHERE d.message_id = :message_id
+                      AND d.deleted_at IS NULL
+                      AND (d.message_id IS NULL OR m.deleted_at IS NULL)';
         }
+
         $st = $this->db->prepare($sql);
         $st->execute(['message_id' => $messageId]);
         return (int)$st->fetchColumn();
@@ -202,6 +222,29 @@ final class DocumentMysqlRepository
         $st = $this->db->prepare($sql);
         $st->execute(['id' => $id, 'uid' => $deleterUserId]);
         return $this->getById($id, true);
+    }
+
+    public function softDeleteByMessageId(int $messageId, int $deleterUserId): int
+    {
+        if ($messageId <= 0) {
+            throw new \InvalidArgumentException('message_id required');
+        }
+        if ($deleterUserId <= 0) {
+            throw new \InvalidArgumentException('deleter_user_id required');
+        }
+
+        $sql = 'UPDATE documents
+                SET deleted_at = NOW(),
+                    deleted_by_user_id = :uid
+                WHERE message_id = :message_id
+                  AND deleted_at IS NULL';
+        $st = $this->db->prepare($sql);
+        $st->execute([
+            'message_id' => $messageId,
+            'uid' => $deleterUserId,
+        ]);
+
+        return (int)$st->rowCount();
     }
 
     public function listForCabinet(int $viewerUserId, bool $isAdmin, int $limit = 200, int $offset = 0): array

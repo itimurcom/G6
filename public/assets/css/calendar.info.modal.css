@@ -1039,3 +1039,195 @@ body.light #infoContent .info-seen-head,
   padding-top: 14px;
   border-top: 1px solid var(--border);
 }
+
+
+/* P4: comments/files visual simplification */
+.info-thread-linkbtn {
+  appearance: none;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: #60a5fa;
+  cursor: pointer;
+  font-weight: 800;
+  text-decoration: none;
+}
+.info-thread-linkbtn:hover {
+  color: #93c5fd;
+  text-decoration: underline;
+}
+.info-thread-linkbtn--strong {
+  color: var(--text);
+  font-weight: 900;
+}
+.info-thread-linkbtn--strong:hover {
+  color: #93c5fd;
+}
+.info-thread-toolbar {
+  margin-bottom: 8px;
+}
+.info-thread-composer {
+  padding: 10px 0 12px;
+  border: 0;
+  border-top: 1px solid color-mix(in srgb, var(--border) 68%, transparent);
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 40%, transparent);
+  border-radius: 0;
+  background: transparent;
+}
+.info-thread-composer__author {
+  margin-bottom: 6px;
+}
+.info-thread-composer__actions {
+  gap: 12px;
+}
+.info-thread-message {
+  gap: 10px;
+}
+.info-thread-message__body {
+  border: 0;
+  border-left: 2px solid color-mix(in srgb, var(--border) 78%, transparent);
+  border-radius: 0;
+  padding: 6px 0 6px 12px;
+  background: transparent;
+}
+.info-thread-message__meta {
+  gap: 6px 10px;
+  margin-bottom: 6px;
+}
+.info-thread-message__actions {
+  gap: 12px;
+}
+.info-thread-action,
+.info-thread-editor__actions .info-thread-action,
+.info-thread-attachment__link,
+.info-files-item__link,
+.info-thread-file__remove {
+  appearance: none;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  cursor: pointer;
+  font-weight: 800;
+  text-decoration: none;
+}
+.info-thread-action--strong {
+  color: var(--text);
+}
+.info-thread-action--strong:hover {
+  color: #93c5fd;
+}
+.info-thread-editor__actions {
+  gap: 12px;
+}
+.info-thread-attachments {
+  gap: 6px;
+  padding-top: 6px;
+}
+.info-thread-attachment {
+  grid-template-columns: 16px minmax(0, 1fr) auto;
+  gap: 6px 10px;
+  padding: 2px 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+.info-thread-attachment__size {
+  grid-column: 2;
+}
+.info-thread-attachment__actions {
+  grid-column: 2 / -1;
+  justify-content: flex-start;
+  gap: 12px;
+}
+.info-thread-attachment__del {
+  width: auto;
+  height: auto;
+  border-radius: 0;
+  display: inline;
+  background: transparent;
+  color: #f87171;
+}
+.info-thread-attachment__del:hover {
+  background: transparent;
+  color: #fca5a5;
+  text-decoration: underline;
+}
+.info-thread-attachment__link--danger,
+.info-files-item__link--danger,
+.info-thread-file__remove {
+  color: #f87171;
+}
+.info-thread-attachment__link--danger:hover,
+.info-files-item__link--danger:hover,
+.info-thread-file__remove:hover {
+  color: #fca5a5;
+  text-decoration: underline;
+}
+.info-thread-files {
+  padding: 8px 0 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+.info-thread-file {
+  grid-template-columns: 16px minmax(0, 1fr) auto auto;
+  padding: 2px 0;
+}
+.info-files-body {
+  padding-top: 4px;
+}
+.info-files-list {
+  gap: 8px;
+}
+.info-files-item {
+  grid-template-columns: 16px minmax(0, 1fr);
+  gap: 4px 12px;
+  align-items: start;
+  border: 0;
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 52%, transparent);
+  border-radius: 0;
+  padding: 10px 0;
+  background: transparent;
+}
+.info-files-item__icon {
+  width: 16px;
+  height: auto;
+  border-radius: 0;
+  display: block;
+  background: transparent;
+  border: 0;
+  font-size: 16px;
+  line-height: 1.2;
+}
+.info-files-item__body {
+  display: grid;
+  gap: 4px;
+}
+.info-files-item__top {
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.info-files-item__meta {
+  gap: 6px 12px;
+  margin-top: 0;
+}
+.info-files-item__actions {
+  grid-column: 2;
+  gap: 12px;
+}
+@media (max-width: 780px) {
+  .info-thread-message__body {
+    padding-left: 0;
+    border-left: 0;
+  }
+  .info-thread-attachment,
+  .info-thread-file,
+  .info-files-item {
+    grid-template-columns: 1fr;
+  }
+  .info-thread-attachment__size,
+  .info-thread-attachment__actions,
+  .info-files-item__actions {
+    grid-column: auto;
+  }
+}

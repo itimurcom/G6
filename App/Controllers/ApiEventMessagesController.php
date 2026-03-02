@@ -5,6 +5,7 @@ namespace App\Controllers;
 
 use App\Core\Auth;
 use App\Core\Database;
+use App\Models\DocumentMysqlRepository;
 use App\Models\EventMessageMysqlRepository;
 use App\Models\EventMysqlRepository;
 use App\Services\Audit\ActionLogger;
@@ -12,6 +13,7 @@ use App\Services\Audit\ActionLogger;
 final class ApiEventMessagesController
 {
     private EventMessageMysqlRepository $messages;
+    private DocumentMysqlRepository $documents;
     private EventMysqlRepository $events;
     private ActionLogger $logger;
     private ?bool $notifyHasPayloadColumn = null;
@@ -19,6 +21,7 @@ final class ApiEventMessagesController
     public function __construct()
     {
         $this->messages = new EventMessageMysqlRepository();
+        $this->documents = new DocumentMysqlRepository();
         $this->events = new EventMysqlRepository();
         $this->logger = new ActionLogger();
     }
@@ -443,16 +446,29 @@ final class ApiEventMessagesController
 
         try {
             $before = $current;
-            $row = $this->messages->softDeleteById($id, $userId);
-            if (!$row) {
-                $this->json(['ok' => false, 'error' => 'not_found'], 404);
-                return;
+            $db = Database::connect();
+            $db->beginTransaction();
+            try {
+                $deletedDocuments = $this->documents->softDeleteByMessageId($id, $userId);
+                $row = $this->messages->softDeleteById($id, $userId);
+                if (!$row) {
+                    $db->rollBack();
+                    $this->json(['ok' => false, 'error' => 'not_found'], 404);
+                    return;
+                }
+                $db->commit();
+            } catch (\Throwable $txe) {
+                if ($db->inTransaction()) {
+                    $db->rollBack();
+                }
+                throw $txe;
             }
 
             $this->auditMessage('event.message.delete', $event, $before, [
                 'thread_scope' => 'event_sheet',
                 'deleted_message_id' => (int)($before['id'] ?? 0),
                 'deleted_message_preview' => $this->messagePreview((string)($before['message_text'] ?? '')),
+                'deleted_document_count' => $deletedDocuments,
             ]);
             $this->notifyFanout('event_message_deleted', (string)($current['event_id'] ?? ''), [
                 'event' => $this->eventSnapshot($event),
@@ -461,9 +477,10 @@ final class ApiEventMessagesController
                     'user_id' => $userId,
                     'display' => $this->currentUserDisplay($user),
                 ],
+                'deleted_document_count' => $deletedDocuments,
             ]);
 
-            $this->json(['ok' => true, 'message' => $row]);
+            $this->json(['ok' => true, 'message' => $row, 'deleted_document_count' => $deletedDocuments]);
         } catch (\InvalidArgumentException $e) {
             $this->json(['ok' => false, 'error' => $e->getMessage()], 400);
         } catch (\Throwable $e) {

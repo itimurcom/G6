@@ -237,7 +237,7 @@
     return __threadDocIsImage(doc) ? '🖼' : '📎';
   }
 
-  function __threadRenderAttachments(docs, editable) {
+  function __threadRenderAttachments(docs, item) {
     docs = Array.isArray(docs) ? docs : [];
     if (!docs.length) return '';
 
@@ -250,6 +250,7 @@
       var size = __threadFormatBytes(d.file_size || 0);
       var viewUrl = String(d.view_url || ('/api/documents/view?id=' + id));
       var downloadUrl = String(d.download_url || ('/api/documents/download?id=' + id));
+      var canDelete = __threadCanDeleteDoc(d, item);
 
       html += ''
         + '<div class="info-thread-attachment" data-doc-id="' + id + '">' 
@@ -257,8 +258,8 @@
         +   '<a class="info-thread-attachment__name" href="' + __threadEsc(viewUrl) + '" target="_blank" rel="noopener">' + __threadEsc(name) + '</a>'
         +   '<span class="info-thread-attachment__size">' + __threadEsc(size) + '</span>'
         +   '<span class="info-thread-attachment__actions">'
-        +     '<a class="info-thread-attachment__link" href="' + __threadEsc(downloadUrl) + '" target="_blank" rel="noopener">Завантажити</a>'
-        +     (editable ? '<button type="button" class="info-thread-attachment__del" data-thread-action="delete-doc" data-doc-id="' + id + '">×</button>' : '')
+        +     '<a class="info-thread-attachment__link" href="' + __threadEsc(downloadUrl) + '" target="_blank" rel="noopener">завантажити</a>'
+        +     (canDelete ? '<button type="button" class="info-thread-attachment__link info-thread-attachment__link--danger" data-thread-action="delete-doc" data-doc-id="' + id + '">видалити</button>' : '')
         +   '</span>'
         + '</div>';
     }
@@ -277,10 +278,41 @@
     }
   }
 
+  function __threadFileKey(file) {
+    if (!file) return '';
+    return [
+      String(file.name || '').trim().toLowerCase(),
+      String(parseInt(file.size || 0, 10) || 0),
+      String(parseInt(file.lastModified || 0, 10) || 0),
+      String(file.type || '').trim().toLowerCase()
+    ].join('::');
+  }
+
+  function __threadMergePendingFiles(current, added) {
+    current = Array.isArray(current) ? current : [];
+    added = Array.isArray(added) ? added : [];
+
+    var out = current.slice();
+    var seen = {};
+    for (var i = 0; i < out.length; i++) {
+      var curKey = __threadFileKey(out[i]);
+      if (curKey) seen[curKey] = true;
+    }
+    for (var j = 0; j < added.length; j++) {
+      var next = added[j];
+      if (!next) continue;
+      var nextKey = __threadFileKey(next);
+      if (nextKey && seen[nextKey]) continue;
+      if (nextKey) seen[nextKey] = true;
+      out.push(next);
+    }
+    return out;
+  }
+
   function __threadSetPendingFiles(files) {
     var state = __threadGetState();
     if (!state) return;
-    state.pendingFiles = Array.isArray(files) ? files : [];
+    state.pendingFiles = Array.isArray(files) ? files.slice() : [];
     __threadRenderComposerFiles();
   }
 
@@ -312,7 +344,7 @@
         +   '<span class="info-thread-file__icon" aria-hidden="true">' + __threadEsc((String(f.type || '').indexOf('image/') === 0) ? '🖼' : '📎') + '</span>'
         +   '<span class="info-thread-file__name">' + __threadEsc(String(f.name || 'file')) + '</span>'
         +   '<span class="info-thread-file__size">' + __threadEsc(__threadFormatBytes(f.size || 0)) + '</span>'
-        +   '<button type="button" class="info-thread-file__remove" data-thread-action="remove-file" data-index="' + i + '" aria-label="Прибрати файл">×</button>'
+        +   '<button type="button" class="info-thread-file__remove" data-thread-action="remove-file" data-index="' + i + '" aria-label="Прибрати файл">прибрати</button>'
         + '</div>';
     }
     html += '</div>';
@@ -323,18 +355,40 @@
     files = Array.isArray(files) ? files : [];
     if (!files.length) return Promise.resolve({ ok: true, documents: [] });
 
-    var fd = new FormData();
-    fd.append('event_id', String(eventId || ''));
-    fd.append('message_id', String(messageId || ''));
-    for (var i = 0; i < files.length; i++) {
-      var f = files[i];
-      if (f) fd.append('documents[]', f, f.name);
+    var chunkSize = 10;
+    var uploaded = [];
+    var index = 0;
+
+    function sendNextChunk() {
+      if (index >= files.length) {
+        return Promise.resolve({ ok: true, documents: uploaded });
+      }
+
+      var chunk = files.slice(index, index + chunkSize);
+      index += chunkSize;
+
+      var fd = new FormData();
+      fd.append('event_id', String(eventId || ''));
+      fd.append('message_id', String(messageId || ''));
+      for (var i = 0; i < chunk.length; i++) {
+        var f = chunk[i];
+        if (f) fd.append('documents[]', f, f.name);
+      }
+
+      return __threadFetchJson('/api/documents/upload', {
+        method: 'POST',
+        body: fd
+      }).then(function (response) {
+        var docs = Array.isArray(response && response.documents) ? response.documents : [];
+        if (docs.length) uploaded = uploaded.concat(docs);
+        return sendNextChunk();
+      }).catch(function (error) {
+        try { error.__uploadedDocuments = uploaded.slice(); } catch (_) { }
+        throw error;
+      });
     }
 
-    return __threadFetchJson('/api/documents/upload', {
-      method: 'POST',
-      body: fd
-    });
+    return sendNextChunk();
   }
 
   function __threadAttachDocsToItems(items, docs) {
@@ -477,6 +531,18 @@
     return !!(me.isAdmin || (me.id > 0 && authorId === me.id));
   }
 
+  function __threadCanDeleteDoc(doc, item) {
+    var me = __threadCurrentUser();
+    if (me.isAdmin) return true;
+    if (!me.id || me.id <= 0) return false;
+
+    var uploaderId = parseInt((doc && doc.uploaded_by_user_id) || ((doc && doc.uploader && doc.uploader.id) || 0), 10) || 0;
+    if (uploaderId > 0 && uploaderId === me.id) return true;
+
+    var messageAuthorId = parseInt((item && item.user_id) || ((doc && doc.message_user_id) || 0), 10) || 0;
+    return !!(messageAuthorId > 0 && messageAuthorId === me.id);
+  }
+
   function __threadRenderEmpty() {
     return ''
       + '<div class="info-thread-empty">'
@@ -511,14 +577,14 @@
       body += '<div class="info-thread-editor">';
       body += '<textarea class="input info-thread-textarea info-thread-editor__textarea" rows="3" maxlength="20000" data-thread-role="edit-input" data-id="' + itemId + '" placeholder="Відредагуйте коментар…">' + __threadEsc(state.editingText) + '</textarea>';
       body += '<div class="info-thread-editor__actions">';
-      body += '<button type="button" class="btn btn--green" data-thread-action="save-edit" data-id="' + itemId + '">Зберегти</button>';
-      body += '<button type="button" class="btn" data-thread-action="cancel-edit" data-id="' + itemId + '">Скасувати</button>';
+      body += '<button type="button" class="info-thread-action info-thread-action--strong" data-thread-action="save-edit" data-id="' + itemId + '">зберегти</button>';
+      body += '<button type="button" class="info-thread-action" data-thread-action="cancel-edit" data-id="' + itemId + '">скасувати</button>';
       body += '</div>';
-      body += __threadRenderAttachments(item.documents || [], true);
+      body += __threadRenderAttachments(item.documents || [], item);
       body += '</div>';
     } else {
       body += '<div class="info-thread-message__text">' + __threadEsc(item.message_text || '') + '</div>';
-      body += __threadRenderAttachments(item.documents || [], false);
+      body += __threadRenderAttachments(item.documents || [], item);
     }
 
     return ''
@@ -673,7 +739,7 @@
           __threadSetStatus('Завантаження файлів…', '');
           __threadUploadFiles(state.eventId, createdId, files)
             .then(function (u) {
-              var docs = (u && u.documents) ? u.documents : [];
+              var docs = Array.isArray(u && u.documents) ? u.documents : [];
               state.items = (state.items || []).map(function (it) {
                 var id = parseInt((it && it.id) || 0, 10) || 0;
                 if (id !== createdId) return it;
@@ -684,6 +750,18 @@
               finalize('Коментар додано.', 'success');
             })
             .catch(function (error) {
+              var partialDocs = Array.isArray(error && error.__uploadedDocuments) ? error.__uploadedDocuments : [];
+              if (partialDocs.length) {
+                state.items = (state.items || []).map(function (it) {
+                  var id = parseInt((it && it.id) || 0, 10) || 0;
+                  if (id !== createdId) return it;
+                  it.documents = (it.documents || []).concat(partialDocs);
+                  return it;
+                });
+                __filesAppendDocuments(state.eventId, partialDocs);
+                finalize('Коментар створено, частину файлів завантажено (' + partialDocs.length + '), але сталася помилка: ' + error.message, 'error');
+                return;
+              }
               finalize('Коментар створено, але файли не завантажились: ' + error.message, 'error');
             });
         } else {
@@ -917,6 +995,7 @@
     var commentLabel = __filesDocCommentLabel(doc);
     var viewUrl = String(doc.view_url || ('/api/documents/view?id=' + id));
     var downloadUrl = String(doc.download_url || ('/api/documents/download?id=' + id));
+    var canDelete = __threadCanDeleteDoc(doc, { user_id: doc.message_user_id });
     return ''
       + '<article class="info-files-item" data-doc-id="' + id + '">'
       +   '<div class="info-files-item__icon" aria-hidden="true">' + __threadEsc(__threadDocIcon(doc)) + '</div>'
@@ -932,8 +1011,9 @@
       +     '</div>'
       +   '</div>'
       +   '<div class="info-files-item__actions">'
-      +     '<a class="info-files-item__link" href="' + __threadEsc(viewUrl) + '" target="_blank" rel="noopener">Відкрити</a>'
-      +     '<a class="info-files-item__link" href="' + __threadEsc(downloadUrl) + '" target="_blank" rel="noopener">Завантажити</a>'
+      +     '<a class="info-files-item__link" href="' + __threadEsc(viewUrl) + '" target="_blank" rel="noopener">відкрити</a>'
+      +     '<a class="info-files-item__link" href="' + __threadEsc(downloadUrl) + '" target="_blank" rel="noopener">завантажити</a>'
+      +     (canDelete ? '<button type="button" class="info-files-item__link info-files-item__link--danger" data-thread-action="delete-doc" data-doc-id="' + id + '">видалити</button>' : '')
       +   '</div>'
       + '</article>';
   }
@@ -1082,7 +1162,19 @@
       }
     });
 
+    var list = document.getElementById('infoFilesList');
+    if (list) {
+      list.addEventListener('click', function (ev) {
+        var btn = ev.target.closest('[data-thread-action="delete-doc"]');
+        if (!btn) return;
+        ev.preventDefault();
+        var docId = parseInt(btn.getAttribute('data-doc-id') || '0', 10) || 0;
+        if (docId > 0) __threadDeleteDoc(docId);
+      });
+    }
+
     __filesSetCount('');
+    __filesSetStatus('', '');
     __filesPrefetchCount(eventId);
   }
 
@@ -1104,10 +1196,10 @@
       +         '<div class="info-thread-composer__row">'
       +           '<textarea id="infoThreadInput" class="input info-thread-textarea" rows="3" maxlength="20000" placeholder="Напишіть коментар по задачі…"></textarea>'
       +           '<div class="info-thread-composer__actions">'
-      +             '<button type="button" id="infoThreadFilesBtn" class="btn">Файли</button>'
+      +             '<button type="button" id="infoThreadFilesBtn" class="info-thread-linkbtn">Файли</button>'
       +             '<input type="file" id="infoThreadFilesInput" multiple style="display:none">'
-      +             '<button type="button" id="infoThreadSendBtn" class="btn btn--green">Надіслати</button>'
-      +             '<button type="button" id="infoThreadComposerCancel" class="btn">Скасувати</button>'
+      +             '<button type="button" id="infoThreadSendBtn" class="info-thread-linkbtn info-thread-linkbtn--strong">Надіслати</button>'
+      +             '<button type="button" id="infoThreadComposerCancel" class="info-thread-linkbtn">Скасувати</button>'
       +           '</div>'
       +         '</div>'
       +         '<div id="infoThreadFilesList" class="info-thread-files-wrap" hidden></div>'
@@ -1168,7 +1260,12 @@
         try { filesInput.click(); } catch (_) { }
       });
       filesInput.addEventListener('change', function () {
-        __threadSetPendingFiles(__threadFilesToArray(filesInput.files));
+        var st = __threadGetState();
+        if (!st) return;
+        var selected = __threadFilesToArray(filesInput.files);
+        if (!selected.length) return;
+        __threadSetPendingFiles(__threadMergePendingFiles(st.pendingFiles, selected));
+        try { filesInput.value = ''; } catch (_) { }
       });
     }
 
@@ -1182,21 +1279,25 @@
       });
     }
 
+    var filesList = document.getElementById('infoThreadFilesList');
+    if (filesList) {
+      filesList.addEventListener('click', function (ev) {
+        var btn = ev.target.closest('[data-thread-action="remove-file"]');
+        if (!btn) return;
+        var st = __threadGetState();
+        if (!st) return;
+        var idx = parseInt(btn.getAttribute('data-index') || '0', 10) || 0;
+        st.pendingFiles = (st.pendingFiles || []).filter(function (_, i) { return i !== idx; });
+        __threadRenderComposerFiles();
+      });
+    }
+
     var list = document.getElementById('infoThreadList');
     if (list) {
       list.addEventListener('click', function (ev) {
         var btn = ev.target.closest('[data-thread-action]');
         if (!btn) return;
         var action = String(btn.getAttribute('data-thread-action') || '');
-
-        if (action === 'remove-file') {
-          var st = __threadGetState();
-          if (!st) return;
-          var idx = parseInt(btn.getAttribute('data-index') || '0', 10) || 0;
-          st.pendingFiles = (st.pendingFiles || []).filter(function (_, i) { return i !== idx; });
-          __threadRenderComposerFiles();
-          return;
-        }
 
         if (action === 'delete-doc') {
           var docId = parseInt(btn.getAttribute('data-doc-id') || '0', 10) || 0;
