@@ -319,30 +319,13 @@
     host.innerHTML = html;
   }
 
-  function __threadGetCsrfToken() {
-    try {
-      var m = document.querySelector('meta[name="csrf-token"]');
-      if (m && m.content) return String(m.content);
-    } catch (_) { }
-    try {
-      var list = String(document.cookie || '').split(/;\s*/);
-      for (var i = 0; i < list.length; i++) {
-        var part = list[i] || '';
-        if (part.indexOf('XSRF-TOKEN=') === 0) return decodeURIComponent(part.slice('XSRF-TOKEN='.length));
-      }
-    } catch (_) { }
-    return '';
-  }
-
   function __threadUploadFiles(eventId, messageId, files) {
     files = Array.isArray(files) ? files : [];
     if (!files.length) return Promise.resolve({ ok: true, documents: [] });
 
     var fd = new FormData();
-    var csrf = __threadGetCsrfToken();
     fd.append('event_id', String(eventId || ''));
     fd.append('message_id', String(messageId || ''));
-    if (csrf) fd.append('_csrf', csrf);
     for (var i = 0; i < files.length; i++) {
       var f = files[i];
       if (f) fd.append('documents[]', f, f.name);
@@ -609,6 +592,7 @@
         var merged = __threadAttachDocsToItems(state.items, docs);
         state.items = merged.items;
         state.docsByMessage = merged.byMsg;
+        __filesApplyDocuments(eventId, docs);
 
         state.loaded = true;
         __threadRender();
@@ -674,66 +658,36 @@
 
         var files = Array.isArray(state.pendingFiles) ? state.pendingFiles : [];
 
-        var finalize = function (statusMsg, statusType, autoClear) {
+        var finalize = function (statusMsg, statusType) {
           __threadSetPendingFiles([]);
           var fi = document.getElementById('infoThreadFilesInput');
           if (fi) { try { fi.value = ''; } catch (_) { } }
+          __threadRender();
           if (statusMsg) {
             __threadSetStatus(statusMsg, statusType || 'success');
-            if (autoClear === true) {
-              setTimeout(function () { __threadSetStatus('', ''); }, 1800);
-            }
+            setTimeout(function () { __threadSetStatus('', ''); }, 1800);
           }
-          __threadRender();
-        };
-
-        var reloadAfterCreate = function (statusMsg, statusType, autoClear) {
-          state.loaded = false;
-          state.loading = false;
-          return __threadFetchJson('/api/event-messages/list?event_id=' + encodeURIComponent(String(state.eventId || '')))
-            .then(function (messagesData) {
-              return __threadFetchJson('/api/documents/list-by-event?event_id=' + encodeURIComponent(String(state.eventId || '')) + '&limit=500')
-                .catch(function () { return { ok: true, items: [] }; })
-                .then(function (docsData) {
-                  state.items = Array.isArray(messagesData.items) ? messagesData.items : [];
-                  state.countValue = (messagesData && messagesData.total != null) ? (parseInt(messagesData.total, 10) || 0) : state.items.length;
-                  var merged = __threadAttachDocsToItems(state.items, (docsData && docsData.items) ? docsData.items : []);
-                  state.items = merged.items;
-                  state.docsByMessage = merged.byMsg;
-                  state.loaded = true;
-                  finalize(statusMsg, statusType, autoClear);
-                  return true;
-                });
-            });
-        };
-
-        var reconcileUploadFailure = function (error) {
-          return __threadFetchJson('/api/documents/list-by-message?message_id=' + encodeURIComponent(String(createdId || '')))
-            .then(function (docsData) {
-              var docs = (docsData && docsData.items) ? docsData.items : [];
-              if (docs.length > 0) {
-                return reloadAfterCreate('Коментар додано.', 'success', true);
-              }
-              throw error;
-            });
         };
 
         if (files.length && createdId > 0) {
           __threadSetStatus('Завантаження файлів…', '');
           __threadUploadFiles(state.eventId, createdId, files)
-            .then(function () {
-              return reloadAfterCreate('Коментар додано.', 'success', true);
+            .then(function (u) {
+              var docs = (u && u.documents) ? u.documents : [];
+              state.items = (state.items || []).map(function (it) {
+                var id = parseInt((it && it.id) || 0, 10) || 0;
+                if (id !== createdId) return it;
+                it.documents = (it.documents || []).concat(docs);
+                return it;
+              });
+              __filesAppendDocuments(state.eventId, docs);
+              finalize('Коментар додано.', 'success');
             })
             .catch(function (error) {
-              return reconcileUploadFailure(error).catch(function (finalError) {
-                finalize('Коментар створено, але файли не завантажились: ' + finalError.message, 'error', false);
-              });
+              finalize('Коментар створено, але файли не завантажились: ' + error.message, 'error');
             });
         } else {
-          reloadAfterCreate('Коментар додано.', 'success', true)
-            .catch(function () {
-              finalize('Коментар додано.', 'success', true);
-            });
+          finalize('Коментар додано.', 'success');
         }
       })
       .catch(function (error) {
@@ -864,6 +818,7 @@
           return it;
         });
         __threadRender();
+        __filesRemoveDocument(state.eventId, docId);
         __threadSetStatus('Файл видалено.', 'success');
         setTimeout(function () { __threadSetStatus('', ''); }, 1800);
       })
@@ -873,6 +828,262 @@
       .finally(function () {
         state.saving = false;
       });
+  }
+
+
+  function __filesGetState() {
+    if (!infoOverlay) return null;
+    if (!infoOverlay.__filesState) {
+      infoOverlay.__filesState = {
+        eventId: '',
+        loaded: false,
+        loading: false,
+        countLoading: false,
+        countValue: null,
+        items: []
+      };
+    }
+    return infoOverlay.__filesState;
+  }
+
+  function __filesReset(eventId) {
+    if (!infoOverlay) return;
+    infoOverlay.__filesState = {
+      eventId: String(eventId || ''),
+      loaded: false,
+      loading: false,
+      countLoading: false,
+      countValue: null,
+      items: []
+    };
+  }
+
+  function __filesSetCount(n) {
+    var el = document.getElementById('infoFilesCount');
+    if (!el) return;
+    if (n == null || n === '') {
+      el.textContent = '';
+      return;
+    }
+    el.textContent = '(' + String(n) + ')';
+  }
+
+  function __filesSetStatus(message, type) {
+    var el = document.getElementById('infoFilesStatus');
+    if (!el) return;
+    var text = String(message || '').trim();
+    if (!text) {
+      el.hidden = true;
+      el.textContent = '';
+      el.classList.remove('is-error', 'is-success');
+      return;
+    }
+    el.hidden = false;
+    el.textContent = text;
+    el.classList.toggle('is-error', type === 'error');
+    el.classList.toggle('is-success', type === 'success');
+  }
+
+  function __filesSortItems(items) {
+    return (Array.isArray(items) ? items.slice() : []).sort(function (a, b) {
+      var ad = String((a && a.created_at) || '');
+      var bd = String((b && b.created_at) || '');
+      if (ad === bd) return (parseInt((b && b.id) || 0, 10) || 0) - (parseInt((a && a.id) || 0, 10) || 0);
+      return bd.localeCompare(ad);
+    });
+  }
+
+  function __filesRenderEmpty() {
+    return ''
+      + '<div class="info-files-empty">'
+      +   '<div class="info-files-empty__title">Поки немає файлів</div>'
+      +   '<div class="info-files-empty__text">Файли до цієї події з’являться тут після завантаження у коментарях.</div>'
+      + '</div>';
+  }
+
+  function __filesDocCommentLabel(doc) {
+    var messageId = parseInt((doc && doc.message_id) || 0, 10) || 0;
+    return messageId > 0 ? ('Коментар #' + messageId) : 'Без коментаря';
+  }
+
+  function __filesRenderItem(doc) {
+    doc = doc || {};
+    var id = parseInt(doc.id || 0, 10) || 0;
+    if (id <= 0) return '';
+    var name = String(doc.original_name || 'file');
+    var size = __threadFormatBytes(doc.file_size || 0);
+    var uploader = String((((doc || {}).uploader || {}).display) || '—');
+    var created = __threadFormatDateTime(doc.created_at || '');
+    var commentLabel = __filesDocCommentLabel(doc);
+    var viewUrl = String(doc.view_url || ('/api/documents/view?id=' + id));
+    var downloadUrl = String(doc.download_url || ('/api/documents/download?id=' + id));
+    return ''
+      + '<article class="info-files-item" data-doc-id="' + id + '">'
+      +   '<div class="info-files-item__icon" aria-hidden="true">' + __threadEsc(__threadDocIcon(doc)) + '</div>'
+      +   '<div class="info-files-item__body">'
+      +     '<div class="info-files-item__top">'
+      +       '<a class="info-files-item__name" href="' + __threadEsc(viewUrl) + '" target="_blank" rel="noopener">' + __threadEsc(name) + '</a>'
+      +       '<span class="info-files-item__size">' + __threadEsc(size) + '</span>'
+      +     '</div>'
+      +     '<div class="info-files-item__meta">'
+      +       '<span>Завантажив: ' + __threadEsc(uploader) + '</span>'
+      +       '<time datetime="' + __threadEsc(doc.created_at || '') + '">' + __threadEsc(created) + '</time>'
+      +       '<span>' + __threadEsc(commentLabel) + '</span>'
+      +     '</div>'
+      +   '</div>'
+      +   '<div class="info-files-item__actions">'
+      +     '<a class="info-files-item__link" href="' + __threadEsc(viewUrl) + '" target="_blank" rel="noopener">Відкрити</a>'
+      +     '<a class="info-files-item__link" href="' + __threadEsc(downloadUrl) + '" target="_blank" rel="noopener">Завантажити</a>'
+      +   '</div>'
+      + '</article>';
+  }
+
+  function __filesRender() {
+    var state = __filesGetState();
+    var host = document.getElementById('infoFilesList');
+    if (!state || !host) return;
+    __filesSetCount(state.countValue == null ? state.items.length : state.countValue);
+    if (!state.items.length) {
+      host.innerHTML = __filesRenderEmpty();
+      return;
+    }
+    host.innerHTML = state.items.map(__filesRenderItem).join('');
+  }
+
+  function __filesApplyDocuments(eventId, docs) {
+    var state = __filesGetState();
+    if (!state) return;
+    if (String(state.eventId || '') !== String(eventId || '')) return;
+    state.items = __filesSortItems(docs);
+    state.countValue = state.items.length;
+    if (state.loaded) {
+      __filesRender();
+    } else {
+      __filesSetCount(state.countValue);
+    }
+  }
+
+  function __filesAppendDocuments(eventId, docs) {
+    var state = __filesGetState();
+    docs = Array.isArray(docs) ? docs : [];
+    if (!state || !docs.length) return;
+    if (String(state.eventId || '') !== String(eventId || '')) return;
+    var current = Array.isArray(state.items) ? state.items.slice() : [];
+    var byId = {};
+    for (var i = 0; i < current.length; i++) {
+      var curId = parseInt((current[i] && current[i].id) || 0, 10) || 0;
+      if (curId > 0) byId[curId] = current[i];
+    }
+    for (var j = 0; j < docs.length; j++) {
+      var doc = docs[j] || {};
+      var docId = parseInt(doc.id || 0, 10) || 0;
+      if (docId <= 0) continue;
+      byId[docId] = doc;
+    }
+    state.items = __filesSortItems(Object.keys(byId).map(function (k) { return byId[k]; }));
+    state.countValue = state.items.length;
+    if (state.loaded) {
+      __filesRender();
+    } else {
+      __filesSetCount(state.countValue);
+    }
+  }
+
+  function __filesRemoveDocument(eventId, docId) {
+    var state = __filesGetState();
+    if (!state) return;
+    if (String(state.eventId || '') !== String(eventId || '')) return;
+    if (!docId || docId <= 0) return;
+    state.items = (Array.isArray(state.items) ? state.items : []).filter(function (doc) {
+      return (parseInt((doc && doc.id) || 0, 10) || 0) !== docId;
+    });
+    state.countValue = Math.max(0, parseInt(state.countValue == null ? state.items.length : state.countValue, 10) || 0);
+    if (state.countValue > state.items.length) state.countValue = state.items.length;
+    if (state.loaded) {
+      __filesRender();
+    } else {
+      __filesSetCount(state.countValue);
+    }
+  }
+
+  function __filesLoad(eventId) {
+    var state = __filesGetState();
+    var host = document.getElementById('infoFilesList');
+    if (!state || !host) return;
+    if (state.loading) return;
+    state.loading = true;
+    host.innerHTML = '<div class="info-files-loading">Завантаження файлів…</div>';
+    __filesSetStatus('', '');
+    __threadFetchJson('/api/documents/list-by-event?event_id=' + encodeURIComponent(String(eventId || '')) + '&limit=500')
+      .then(function (data) {
+        state.items = __filesSortItems((data && data.items) ? data.items : []);
+        state.countValue = (data && data.total != null) ? (parseInt(data.total, 10) || 0) : state.items.length;
+        state.loaded = true;
+        __filesRender();
+      })
+      .catch(function (error) {
+        state.items = [];
+        state.loaded = false;
+        state.countValue = null;
+        host.innerHTML = __filesRenderEmpty();
+        __filesSetStatus('Не вдалося завантажити файли: ' + error.message, 'error');
+      })
+      .finally(function () {
+        state.loading = false;
+      });
+  }
+
+  function __filesPrefetchCount(eventId) {
+    var state = __filesGetState();
+    if (!state) return;
+    if (state.countLoading) return;
+    if (state.countValue != null && String(state.eventId || '') === String(eventId || '')) return;
+    state.countLoading = true;
+    __threadFetchJson('/api/documents/list-by-event?event_id=' + encodeURIComponent(String(eventId || '')) + '&limit=1')
+      .then(function (data) {
+        state.countValue = (data && data.total != null) ? (parseInt(data.total, 10) || 0) : (Array.isArray(data.items) ? data.items.length : 0);
+        __filesSetCount(state.countValue);
+      })
+      .catch(function () {
+        state.countValue = null;
+        __filesSetCount('');
+      })
+      .finally(function () {
+        state.countLoading = false;
+      });
+  }
+
+  function __infoFilesHtml() {
+    return ''
+      + '<details class="info-files-wrap" id="infoFilesWrap">'
+      +   '<summary class="info-files-head"><strong>Файли <span id="infoFilesCount" class="info-files-count"></span></strong></summary>'
+      +   '<div class="info-files-body">'
+      +     '<div id="infoFilesStatus" class="info-files-status" hidden></div>'
+      +     '<div id="infoFilesList" class="info-files-list">'
+      +       '<div class="info-files-hint">Відкрий цей блок — і файли події завантажаться лише в момент потреби.</div>'
+      +     '</div>'
+      +   '</div>'
+      + '</details>';
+  }
+
+  function __bindInfoFiles(eventId) {
+    var wrap = document.getElementById('infoFilesWrap');
+    if (!wrap || wrap.__filesBound) return;
+    wrap.__filesBound = true;
+
+    var state = __filesGetState();
+    if (state) state.eventId = String(eventId || '');
+
+    wrap.addEventListener('toggle', function () {
+      var st = __filesGetState();
+      if (!st) return;
+      if (wrap.open && !st.loaded && !st.loading) {
+        __filesLoad(eventId);
+      }
+    });
+
+    __filesSetCount('');
+    __filesPrefetchCount(eventId);
   }
 
 
@@ -2135,6 +2346,7 @@ function __renderEventHistory(host, items, currentEvent) {
       '<div class="info-seen-divider"></div>' +
       '<div id="infoSeenBlock" class="info-seen-block"><div class="muted">Завантаження переглядів…</div></div>' +
       __infoThreadHtml() +
+      __infoFilesHtml() +
       (__canShowEventHistory() ? (
         '<details class="info-history-wrap">' +
           '<summary class="info-history-head"><strong>Історія змін</strong></summary>' + // P15.34: whole block collapsible by triangle
@@ -2157,6 +2369,7 @@ if (infoContent) infoContent.innerHTML = html;
       infoOverlay.removeAttribute('inert');
 
       try { __threadReset(ev.id); __bindInfoThread(ev.id); } catch (_) { }
+      try { __filesReset(ev.id); __bindInfoFiles(ev.id); } catch (_) { }
 
       var el = document.querySelector('#editEvBtn');
       if (el) {

@@ -782,6 +782,134 @@ body.light #infoContent .info-seen-head,
 .info-thread-files-wrap {
   margin-top: 8px;
 }
+
+
+.info-files-wrap {
+  border-top: 1px solid var(--line);
+  margin-top: 14px;
+  padding-top: 14px;
+}
+.info-files-head {
+  cursor: pointer;
+  list-style: none;
+  font-weight: 800;
+  color: var(--text);
+  padding: 6px 0;
+}
+.info-files-count {
+  color: var(--muted);
+}
+.info-files-body {
+  padding-top: 8px;
+}
+.info-files-status {
+  margin: 0 0 10px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: rgba(99, 179, 237, .10);
+  border: 1px solid rgba(99, 179, 237, .24);
+  color: var(--text);
+}
+.info-files-status.is-error {
+  background: rgba(239, 68, 68, .18);
+  border-color: rgba(239, 68, 68, .40);
+  color: #ffd5d5;
+}
+.info-files-status.is-success {
+  background: rgba(34, 197, 94, .16);
+  border-color: rgba(34, 197, 94, .34);
+  color: #d8ffe7;
+}
+.info-files-list {
+  display: grid;
+  gap: 10px;
+}
+.info-files-hint,
+.info-files-loading,
+.info-files-empty {
+  color: var(--muted);
+  border: 1px dashed rgba(148, 163, 184, .22);
+  border-radius: 16px;
+  padding: 16px;
+}
+.info-files-empty__title {
+  font-weight: 800;
+  color: var(--text);
+  margin-bottom: 4px;
+}
+.info-files-empty__text,
+.info-files-hint,
+.info-files-loading {
+  color: var(--muted);
+}
+.info-files-item {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr) auto;
+  gap: 14px;
+  align-items: start;
+  border: 1px solid rgba(91, 139, 219, .20);
+  border-radius: 18px;
+  padding: 14px 16px;
+  background: rgba(3, 10, 24, .35);
+}
+.info-files-item__icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(37, 99, 235, .14);
+  border: 1px solid rgba(91, 139, 219, .24);
+  font-size: 20px;
+}
+.info-files-item__body {
+  min-width: 0;
+}
+.info-files-item__top {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+.info-files-item__name {
+  min-width: 0;
+  color: var(--text);
+  font-weight: 800;
+  text-decoration: none;
+  word-break: break-word;
+}
+.info-files-item__name:hover {
+  text-decoration: underline;
+}
+.info-files-item__size {
+  color: var(--muted);
+  font-size: 12px;
+  white-space: nowrap;
+}
+.info-files-item__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  margin-top: 6px;
+  color: var(--muted);
+  font-size: 12px;
+}
+.info-files-item__actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.info-files-item__link {
+  color: #9ec5ff;
+  text-decoration: none;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.info-files-item__link:hover {
+  text-decoration: underline;
+}
 .info-thread-files {
   display: grid;
   gap: 8px;
@@ -849,25 +977,34 @@ body.light #infoContent .info-seen-head,
     width: 100%;
     margin-left: 0;
   }
+  .info-files-item {
+    grid-template-columns: 1fr;
+  }
+  .info-files-item__actions {
+    justify-content: flex-start;
+  }
 }
 
 
 /* Consolidated disclosure triangle rules: single source of truth for history/thread headers */
 /* P16.11: larger disclosure triangles placed immediately after the heading text */
 .info-history-wrap > summary.info-history-head,
-.info-thread-wrap > summary.info-thread-head {
+.info-thread-wrap > summary.info-thread-head,
+.info-files-wrap > summary.info-files-head {
   display: flex;
   align-items: center;
   justify-content: flex-start;
   gap: 8px;
 }
 .info-history-wrap > summary.info-history-head::before,
-.info-thread-wrap > summary.info-thread-head::before {
+.info-thread-wrap > summary.info-thread-head::before,
+.info-files-wrap > summary.info-files-head::before {
   content: none !important;
   display: none !important;
 }
 .info-history-wrap > summary.info-history-head::after,
-.info-thread-wrap > summary.info-thread-head::after {
+.info-thread-wrap > summary.info-thread-head::after,
+.info-files-wrap > summary.info-files-head::after {
   content: '▸';
   display: inline-flex;
   align-items: center;
@@ -879,11 +1016,13 @@ body.light #infoContent .info-seen-head,
   transition: transform .16s ease;
 }
 .info-history-wrap[open] > summary.info-history-head::after,
-.info-thread-wrap[open] > summary.info-thread-head::after {
+.info-thread-wrap[open] > summary.info-thread-head::after,
+.info-files-wrap[open] > summary.info-files-head::after {
   transform: rotate(90deg);
 }
 .info-history-wrap > summary.info-history-head strong,
-.info-thread-wrap > summary.info-thread-head strong {
+.info-thread-wrap > summary.info-thread-head strong,
+.info-files-wrap > summary.info-files-head strong {
   min-width: 0;
 }
 
@@ -892,4 +1031,11 @@ body.light #infoContent .info-seen-head,
 .info-history-raw-inline > summary::before {
   font-size: 20px;
   line-height: 1;
+}
+
+/* P32A: separator line between Comments and Files blocks in event info modal */
+.info-files-wrap {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
 }
