@@ -83,7 +83,7 @@ final class DocumentMysqlRepository
                        u.name AS uploader_name, u.login AS uploader_login,
                        m.user_id AS message_user_id
                 FROM documents d
-                LEFT JOIN events e ON e.id = d.event_id
+                LEFT JOIN events e ON e.id COLLATE utf8mb4_unicode_ci = d.event_id
                 LEFT JOIN users u ON u.id = d.uploaded_by_user_id
                 LEFT JOIN event_messages m ON m.id = d.message_id
                 WHERE d.message_id = :message_id{$deletedSql}
@@ -104,7 +104,7 @@ final class DocumentMysqlRepository
                        u.name AS uploader_name, u.login AS uploader_login,
                        m.user_id AS message_user_id
                 FROM documents d
-                LEFT JOIN events e ON e.id = d.event_id
+                LEFT JOIN events e ON e.id COLLATE utf8mb4_unicode_ci = d.event_id
                 LEFT JOIN users u ON u.id = d.uploaded_by_user_id
                 LEFT JOIN event_messages m ON m.id = d.message_id
                 WHERE d.event_id = :event_id{$deletedSql}
@@ -148,7 +148,7 @@ final class DocumentMysqlRepository
                        u.name AS uploader_name, u.login AS uploader_login,
                        m.user_id AS message_user_id
                 FROM documents d
-                LEFT JOIN events e ON e.id = d.event_id
+                LEFT JOIN events e ON e.id COLLATE utf8mb4_unicode_ci = d.event_id
                 LEFT JOIN users u ON u.id = d.uploaded_by_user_id
                 LEFT JOIN event_messages m ON m.id = d.message_id
                 WHERE d.id = :id{$deletedSql}
@@ -168,7 +168,7 @@ final class DocumentMysqlRepository
                        u.name AS uploader_name, u.login AS uploader_login,
                        m.user_id AS message_user_id
                 FROM documents d
-                LEFT JOIN events e ON e.id = d.event_id
+                LEFT JOIN events e ON e.id COLLATE utf8mb4_unicode_ci = d.event_id
                 LEFT JOIN users u ON u.id = d.uploaded_by_user_id
                 LEFT JOIN event_messages m ON m.id = d.message_id
                 WHERE d.id = :id{$deletedSql}
@@ -181,10 +181,10 @@ final class DocumentMysqlRepository
         $mapped = $this->mapRow($row);
         $blob = $this->crypto->decrypt(
             (string)($row['file_blob'] ?? ''),
-            (string)($row['cipher'] ?? ''),
-            (int)($row['key_version'] ?? 0),
             (string)($row['iv'] ?? ''),
-            (string)($row['auth_tag'] ?? '')
+            (string)($row['auth_tag'] ?? ''),
+            (int)($row['key_version'] ?? 0),
+            (string)($row['cipher'] ?? '')
         );
         $mapped['blob'] = $blob;
         return $mapped;
@@ -218,7 +218,7 @@ final class DocumentMysqlRepository
                        u.name AS uploader_name, u.login AS uploader_login,
                        m.user_id AS message_user_id
                 FROM documents d
-                LEFT JOIN events e ON e.id = d.event_id
+                LEFT JOIN events e ON e.id COLLATE utf8mb4_unicode_ci = d.event_id
                 LEFT JOIN users u ON u.id = d.uploaded_by_user_id
                 LEFT JOIN event_messages m ON m.id = d.message_id
                 {$where}

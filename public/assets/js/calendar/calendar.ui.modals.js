@@ -319,13 +319,30 @@
     host.innerHTML = html;
   }
 
+  function __threadGetCsrfToken() {
+    try {
+      var m = document.querySelector('meta[name="csrf-token"]');
+      if (m && m.content) return String(m.content);
+    } catch (_) { }
+    try {
+      var list = String(document.cookie || '').split(/;\s*/);
+      for (var i = 0; i < list.length; i++) {
+        var part = list[i] || '';
+        if (part.indexOf('XSRF-TOKEN=') === 0) return decodeURIComponent(part.slice('XSRF-TOKEN='.length));
+      }
+    } catch (_) { }
+    return '';
+  }
+
   function __threadUploadFiles(eventId, messageId, files) {
     files = Array.isArray(files) ? files : [];
     if (!files.length) return Promise.resolve({ ok: true, documents: [] });
 
     var fd = new FormData();
+    var csrf = __threadGetCsrfToken();
     fd.append('event_id', String(eventId || ''));
     fd.append('message_id', String(messageId || ''));
+    if (csrf) fd.append('_csrf', csrf);
     for (var i = 0; i < files.length; i++) {
       var f = files[i];
       if (f) fd.append('documents[]', f, f.name);
@@ -657,35 +674,66 @@
 
         var files = Array.isArray(state.pendingFiles) ? state.pendingFiles : [];
 
-        var finalize = function (statusMsg, statusType) {
+        var finalize = function (statusMsg, statusType, autoClear) {
           __threadSetPendingFiles([]);
           var fi = document.getElementById('infoThreadFilesInput');
           if (fi) { try { fi.value = ''; } catch (_) { } }
-          __threadRender();
           if (statusMsg) {
             __threadSetStatus(statusMsg, statusType || 'success');
-            setTimeout(function () { __threadSetStatus('', ''); }, 1800);
+            if (autoClear === true) {
+              setTimeout(function () { __threadSetStatus('', ''); }, 1800);
+            }
           }
+          __threadRender();
+        };
+
+        var reloadAfterCreate = function (statusMsg, statusType, autoClear) {
+          state.loaded = false;
+          state.loading = false;
+          return __threadFetchJson('/api/event-messages/list?event_id=' + encodeURIComponent(String(state.eventId || '')))
+            .then(function (messagesData) {
+              return __threadFetchJson('/api/documents/list-by-event?event_id=' + encodeURIComponent(String(state.eventId || '')) + '&limit=500')
+                .catch(function () { return { ok: true, items: [] }; })
+                .then(function (docsData) {
+                  state.items = Array.isArray(messagesData.items) ? messagesData.items : [];
+                  state.countValue = (messagesData && messagesData.total != null) ? (parseInt(messagesData.total, 10) || 0) : state.items.length;
+                  var merged = __threadAttachDocsToItems(state.items, (docsData && docsData.items) ? docsData.items : []);
+                  state.items = merged.items;
+                  state.docsByMessage = merged.byMsg;
+                  state.loaded = true;
+                  finalize(statusMsg, statusType, autoClear);
+                  return true;
+                });
+            });
+        };
+
+        var reconcileUploadFailure = function (error) {
+          return __threadFetchJson('/api/documents/list-by-message?message_id=' + encodeURIComponent(String(createdId || '')))
+            .then(function (docsData) {
+              var docs = (docsData && docsData.items) ? docsData.items : [];
+              if (docs.length > 0) {
+                return reloadAfterCreate('Коментар додано.', 'success', true);
+              }
+              throw error;
+            });
         };
 
         if (files.length && createdId > 0) {
           __threadSetStatus('Завантаження файлів…', '');
           __threadUploadFiles(state.eventId, createdId, files)
-            .then(function (u) {
-              var docs = (u && u.documents) ? u.documents : [];
-              state.items = (state.items || []).map(function (it) {
-                var id = parseInt((it && it.id) || 0, 10) || 0;
-                if (id !== createdId) return it;
-                it.documents = (it.documents || []).concat(docs);
-                return it;
-              });
-              finalize('Коментар додано.', 'success');
+            .then(function () {
+              return reloadAfterCreate('Коментар додано.', 'success', true);
             })
             .catch(function (error) {
-              finalize('Коментар створено, але файли не завантажились: ' + error.message, 'error');
+              return reconcileUploadFailure(error).catch(function (finalError) {
+                finalize('Коментар створено, але файли не завантажились: ' + finalError.message, 'error', false);
+              });
             });
         } else {
-          finalize('Коментар додано.', 'success');
+          reloadAfterCreate('Коментар додано.', 'success', true)
+            .catch(function () {
+              finalize('Коментар додано.', 'success', true);
+            });
         }
       })
       .catch(function (error) {
