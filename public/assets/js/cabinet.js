@@ -43,6 +43,25 @@
         return null;
     }
 
+    function clearDeepLinkTab() {
+        try {
+            var u = new URL(window.location.href);
+            var changed = false;
+            if (u.searchParams.has('tab')) {
+                u.searchParams.delete('tab');
+                changed = true;
+            }
+            var h = (u.hash || '').replace(/^#/, '').toLowerCase();
+            if (h === 'settings' || h === 'security' || h === 'users' || h === 'journal' || h.indexOf('tab=') === 0) {
+                u.hash = '';
+                changed = true;
+            }
+            if (!changed) return;
+            var next = u.pathname + (u.searchParams.toString() ? ('?' + u.searchParams.toString()) : '') + (u.hash || '');
+            window.history.replaceState(window.history.state || {}, document.title, next);
+        } catch (e) { /* no-op */ }
+    }
+
     var initialTab = defaultTab;
     // P15.9: deep-link tab via ?tab=settings or #settings (priority over saved)
     var deep = getDeepLinkTab();
@@ -58,6 +77,7 @@
     }
 
     setTab(initialTab);
+    clearDeepLinkTab();
 })();
 
 

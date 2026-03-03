@@ -461,6 +461,33 @@
         return '';
     }
 
+    function getAuditEventTitle(it, ev) {
+        var direct = '';
+        try { direct = String((it && it.event_title) || '').trim(); } catch (e) { direct = ''; }
+        if (direct) return direct;
+        return getEventTitle(ev);
+    }
+
+    function getAuditEventId(it, ev) {
+        var direct = '';
+        try { direct = String((it && it.event_id) || (it && it.entity_id) || '').trim(); } catch (e) { direct = ''; }
+        if (direct) return direct;
+        try {
+            var fromEv = String((ev && ev.id) || '').trim();
+            if (fromEv) return fromEv;
+        } catch (e2) { /* no-op */ }
+        return '';
+    }
+
+    function buildAuditEventRef(it, ev) {
+        var title = getAuditEventTitle(it, ev);
+        var id = getAuditEventId(it, ev);
+        if (title && id) return 'Подія: «' + title + '» (#' + id + ')';
+        if (title) return 'Подія: «' + title + '»';
+        if (id) return 'Подія #' + id;
+        return '';
+    }
+
     function getEventType(ev) {
         if (!ev || typeof ev !== 'object') return '';
         var t = (ev.type !== undefined && ev.type !== null) ? String(ev.type) : '';
@@ -743,9 +770,10 @@
         var action = (it.action || '').toString();
         var label = uaActionLabel(action);
         var ev = pickEventSnapshot(it);
-        var evTitle = getEventTitle(ev);
+        var evTitle = getAuditEventTitle(it, ev);
         var evType = getEventType(ev);
         var evWhen = formatEventWhen(ev) || (it.date ? String(it.date) : '');
+        var evRef = buildAuditEventRef(it, ev);
 
         // Action-specific human labels
         if (action === 'calendar.event.done') {
@@ -864,7 +892,7 @@
             title = 'Додано коментар';
             var createPreview = messageAuditPreview(it, 'after');
             if (createPreview) sub = 'Коментар: ' + createPreview;
-            else if (it.entity_id) sub = 'Подія #' + String(it.entity_id);
+            if (evRef) sub = (sub ? (evRef + ' · ' + sub) : evRef);
         } else if (action === 'event.message.update') {
             title = 'Змінено коментар';
             var beforePreview = messageAuditPreview(it, 'before');
@@ -872,23 +900,25 @@
             if (beforePreview || afterPreview) {
                 sub = 'Було: ' + (beforePreview || '—') + ' → Стало: ' + (afterPreview || '—');
             }
+            if (evRef) sub = (sub ? (evRef + ' · ' + sub) : evRef);
         } else if (action === 'event.message.delete') {
             title = 'Видалено коментар';
             var deletedPreview = messageAuditPreview(it, 'after') || messageAuditPreview(it, 'single');
             var deletedDocs = parseInt((it && it.deleted_document_count) || 0, 10) || 0;
             if (deletedPreview) sub = 'Коментар: ' + deletedPreview;
             if (deletedDocs > 0) sub = (sub ? (sub + ' · ') : '') + 'Файлів видалено: ' + String(deletedDocs);
+            if (evRef) sub = (sub ? (evRef + ' · ' + sub) : evRef);
         } else if (action === 'document.upload') {
             title = 'Завантажено файл';
             var docsUp = documentAuditList(it);
             if (docsUp.length === 1) sub = 'Файл: ' + docsUp[0].name;
             else if (docsUp.length > 1) sub = 'Файлів: ' + String(docsUp.length);
-            if (!sub && it.entity_id) sub = 'Подія #' + String(it.entity_id);
+            if (evRef) sub = (sub ? (evRef + ' · ' + sub) : evRef);
         } else if (action === 'document.delete') {
             title = 'Видалено файл';
             var docsDel = documentAuditList(it);
             if (docsDel.length) sub = 'Файл: ' + docsDel[0].name;
-            if (!sub && it.entity_id) sub = 'Подія #' + String(it.entity_id);
+            if (evRef) sub = (sub ? (evRef + ' · ' + sub) : evRef);
         }
 
         if (!sub && evWhen) sub = 'Коли: ' + evWhen;
@@ -1957,8 +1987,13 @@
         body.innerHTML = '';
         var top = document.createElement('div');
         top.className = 'audit-modal__grid';
+        var evTitleAudit = getAuditEventTitle(it, ev);
+        var evIdAudit = getAuditEventId(it, ev);
+        var evRefAudit = buildAuditEventRef(it, ev);
+
         top.innerHTML =
             '<div class="audit-k">Подія</div><div class="audit-v">' + esc(sum.title) + '</div>' +
+            (evRefAudit ? '<div class="audit-k">Подія календаря</div><div class="audit-v">' + esc(evRefAudit) + '</div>' : '') +
             (sum.sub ? '<div class="audit-k">Деталі</div><div class="audit-v">' + esc(sum.sub) + '</div>' : '') +
             '<div class="audit-k">Час</div><div class="audit-v">' + esc(ts) + '</div>' +
             '<div class="audit-k">Тип</div><div class="audit-v">' + esc(action) + '</div>' +
