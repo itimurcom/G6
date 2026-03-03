@@ -170,6 +170,76 @@ final class EventMessageMysqlRepository implements EventMessageRepositoryInterfa
         return $this->getById($id);
     }
 
+
+
+    public function searchText(string $query, ?string $eventType = null, ?string $startDate = null, ?string $endDate = null, int $limit = 25, int $offset = 0): array
+    {
+        $query = trim($query);
+        if ($query === '') {
+            return [];
+        }
+
+        $limit = max(1, min(100, $limit));
+        $offset = max(0, $offset);
+
+        $params = ['q' => '%' . $query . '%'];
+        $where = ['m.deleted_at IS NULL', 'm.message_text LIKE :q'];
+
+        if ($eventType !== null && $eventType !== '' && $eventType !== 'all') {
+            $where[] = 'e.type = :event_type';
+            $params['event_type'] = $eventType;
+        }
+        if ($startDate !== null && $startDate !== '') {
+            $where[] = 'e.start_date >= :start_date';
+            $params['start_date'] = $startDate;
+        }
+        if ($endDate !== null && $endDate !== '') {
+            $where[] = 'e.start_date <= :end_date';
+            $params['end_date'] = $endDate;
+        }
+
+        $sql = "SELECT
+                    m.id,
+                    m.event_id,
+                    m.user_id,
+                    m.message_text,
+                    m.created_at,
+                    m.updated_at,
+                    m.edited_at,
+                    m.deleted_at,
+                    m.deleted_by_user_id,
+                    u.name  AS author_name,
+                    u.login AS author_login,
+                    u.role  AS author_role,
+                    u.is_admin AS author_is_admin,
+                    u.avatar_mime AS author_avatar_mime,
+                    u.avatar_filename AS author_avatar_filename,
+                    u.avatar_updated_at AS author_avatar_updated_at,
+                    e.title AS event_title,
+                    e.start_date AS event_date,
+                    e.time AS event_time,
+                    e.type AS event_type
+                FROM event_messages m
+                INNER JOIN events e ON e.id COLLATE utf8mb4_unicode_ci = m.event_id
+                LEFT JOIN users u ON u.id = m.user_id
+                WHERE " . implode(' AND ', $where) . "
+                ORDER BY m.created_at DESC, m.id DESC
+                LIMIT {$limit} OFFSET {$offset}";
+
+        $st = $this->db->prepare($sql);
+        $st->execute($params);
+        $rows = $st->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        $out = [];
+        foreach ($rows as $row) {
+            $mapped = $this->mapRow($row);
+            $mapped['event_title'] = (string)($row['event_title'] ?? '');
+            $mapped['event_date'] = (string)($row['event_date'] ?? '');
+            $mapped['event_time'] = (string)($row['event_time'] ?? '');
+            $mapped['event_type'] = (string)($row['event_type'] ?? '');
+            $out[] = $mapped;
+        }
+        return $out;
+    }
     public function softDeleteById(int $id, int $deleterUserId): ?array
     {
         if ($id <= 0) {

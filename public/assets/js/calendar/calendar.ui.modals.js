@@ -720,7 +720,8 @@
         editingText: '',
         editingFiles: [],
         pendingFiles: [],
-        docsByMessage: {}
+        docsByMessage: {},
+        focusMessageId: 0
       };
     }
     return infoOverlay.__threadState;
@@ -741,7 +742,8 @@
       editingText: '',
       editingFiles: [],
       pendingFiles: [],
-      docsByMessage: {}
+      docsByMessage: {},
+      focusMessageId: 0
     };
   }
 
@@ -924,6 +926,22 @@
     }
   }
 
+
+  function __threadFocusMessage(messageId) {
+    var host = document.getElementById('infoThreadList');
+    var state = __threadGetState();
+    var id = parseInt(messageId || 0, 10) || 0;
+    if (!host || !id || !state) return;
+    state.focusMessageId = id;
+    var node = host.querySelector('[data-message-id="' + id + '"]');
+    if (!node) return;
+    try { node.scrollIntoView({ block: 'center', behavior: 'smooth' }); } catch (_) { }
+    node.classList.add('info-thread-message--search-focus');
+    setTimeout(function () {
+      try { node.classList.remove('info-thread-message--search-focus'); } catch (_) { }
+    }, 2200);
+  }
+
   function __threadFetchJson(url, init) {
     return fetch(url, Object.assign({ credentials: 'same-origin' }, init || {}))
       .then(function (response) {
@@ -965,6 +983,7 @@
 
         state.loaded = true;
         __threadRender();
+        if (state.focusMessageId > 0) { __threadFocusMessage(state.focusMessageId); }
       })
       .catch(function (error) {
         state.items = [];
@@ -2379,7 +2398,9 @@
   }
 
   function openInfo(
-    dateISO, id) {
+    dateISO, id, options) {
+    options = (options && typeof options === 'object') ? options : {};
+    var focusMessageId = parseInt(options.focusMessageId || 0, 10) || 0;
     try { if (infoOverlay && infoOverlay.dataset) { infoOverlay.dataset.pdfEventId = String(id || ''); } } catch (_) { }
     // Move header edit button to footer and restyle (green, text "редагувати")
     try {
@@ -2977,7 +2998,7 @@ if (infoContent) infoContent.innerHTML = html;
       infoOverlay.setAttribute('aria-hidden', 'false');
       infoOverlay.removeAttribute('inert');
 
-      try { __threadReset(ev.id); __bindInfoThread(ev.id); } catch (_) { }
+      try { __threadReset(ev.id); var __ts = __threadGetState(); if (__ts) { __ts.focusMessageId = focusMessageId; } __bindInfoThread(ev.id); } catch (_) { }
       try { __filesReset(ev.id); __bindInfoFiles(ev.id); } catch (_) { }
       try { __threadPreviewReset(); __threadPreviewRender(); } catch (_) { }
 

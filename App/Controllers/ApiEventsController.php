@@ -5,6 +5,8 @@ namespace App\Controllers;
 
 use App\Models\EventMysqlRepository; // <--- ЗМІНЕНО: Використовуємо MySQL репозиторій
 use App\Models\LoggingEventRepository;
+use App\Models\EventMessageMysqlRepository;
+use App\Models\DocumentMysqlRepository;
 
 final class ApiEventsController
 {
@@ -237,6 +239,44 @@ final class ApiEventsController
     }
 
 
+
+
+    public function searchExtended(): void
+    {
+        $q = trim((string)($_GET['q'] ?? ($_GET['text'] ?? '')));
+        if ($q === '') {
+            $this->json(['ok' => true, 'comments' => [], 'files' => []]);
+            return;
+        }
+
+        $type = trim((string)($_GET['type'] ?? ''));
+        if ($type === '' || $type === 'all' || $type === 'assigned' || $type === 'my' || $type === 'overdue') {
+            $type = null;
+        }
+        $start = trim((string)($_GET['start'] ?? ''));
+        $end = trim((string)($_GET['end'] ?? ''));
+        $limit = isset($_GET['limit']) ? (int)$_GET['limit'] : 20;
+        $limit = max(1, min(50, $limit));
+
+        try {
+            $messages = new EventMessageMysqlRepository();
+            $documents = new DocumentMysqlRepository();
+
+            $comments = $messages->searchText($q, $type, ($start !== '' ? $start : null), ($end !== '' ? $end : null), $limit, 0);
+            $files = $documents->searchByOriginalName($q, $type, ($start !== '' ? $start : null), ($end !== '' ? $end : null), $limit, 0);
+
+            $this->json([
+                'ok' => true,
+                'comments' => $comments,
+                'files' => $files,
+                'query' => $q,
+                'type' => $type,
+                'limit' => $limit,
+            ]);
+        } catch (\Throwable $e) {
+            $this->json(['ok'=>false,'error'=>'internal','message'=>$e->getMessage()], 500);
+        }
+    }
     public function search(): void
     {
         $filters = [

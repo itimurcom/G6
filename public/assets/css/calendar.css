@@ -1530,3 +1530,70 @@ body.light .ev--multi,
 .btn.btn--pdf {
   white-space: nowrap;
 }
+
+/* P16.1: extended calendar search results (comments + files) */
+.calendar-search-section {
+  margin-top: 16px;
+}
+
+.calendar-search-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: color-mix(in oklab, var(--bg) 92%, var(--event-bg));
+  box-shadow: 0 10px 24px rgba(0,0,0,.08);
+}
+
+.calendar-search-card + .calendar-search-card {
+  margin-top: 10px;
+}
+
+.calendar-search-card__meta,
+.calendar-search-card__sub {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.calendar-search-card__title {
+  font-weight: 700;
+  color: var(--fg);
+  word-break: break-word;
+}
+
+.calendar-search-card__text {
+  color: var(--fg);
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.calendar-search-card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 2px;
+}
+
+.calendar-search-card__btn {
+  text-decoration: none;
+}
+
+:root[data-theme="light"] .calendar-search-card {
+  background: #fff;
+  border-color: color-mix(in oklab, var(--border) 78%, #ffffff);
+  box-shadow: 0 12px 28px rgba(15, 23, 42, .08);
+}
+
+@media (max-width: 760px) {
+  .calendar-search-card {
+    padding: 12px 13px;
+    border-radius: 14px;
+  }
+
+  .calendar-search-card__actions {
+    gap: 6px;
+  }
+}

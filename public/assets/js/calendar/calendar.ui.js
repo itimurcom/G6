@@ -176,6 +176,7 @@
 
   var __fullSearchActive = false;
   var __fullSearchLastQuery = '';
+  var __fullSearchRequestId = 0;
 
   function __setCalendarContentHidden(hidden) {
     if (calendarWeekdays) calendarWeekdays.style.display = hidden ? 'none' : '';
@@ -210,6 +211,17 @@
     return h * 60 + m;
   }
 
+
+  function __searchFormatBytes(n) {
+    var num = parseInt(n || 0, 10) || 0;
+    if (num <= 0) return '0 B';
+    var units = ['B', 'KB', 'MB', 'GB', 'TB'];
+    var i = 0;
+    var v = num;
+    while (v >= 1024 && i < units.length - 1) { v = v / 1024; i++; }
+    return v.toFixed((v >= 10 || i === 0) ? 0 : 1) + ' ' + units[i];
+  }
+
   function __renderSearchEmpty(container, query) {
     var sec = document.createElement('div');
     sec.className = 'planning-section';
@@ -220,7 +232,7 @@
 
     var empty = document.createElement('div');
     empty.className = 'planning-empty';
-    empty.textContent = 'Нічого не знайдено';
+    empty.textContent = 'Події не знайдено';
 
     sec.appendChild(h);
     sec.appendChild(empty);
@@ -235,7 +247,7 @@
     h.className = 'planning-section__title';
 
     var title = document.createElement('span');
-    title.textContent = 'Результати пошуку: "' + (query || '') + '"';
+    title.textContent = 'Події';
 
     var meta = document.createElement('span');
     meta.className = 'planning-section__date';
@@ -258,11 +270,10 @@
       if (ev.urgent) li.classList.add('urgent');
       if (ev.done) li.classList.add('done');
 
-      // multi-day hint
       try {
-        var s = (ev.start_date || dateISO || '').slice(0, 10);
-        var e = (ev.end_date || '').slice(0, 10);
-        if (e && s && e !== s) li.classList.add('ev--multi');
+        var sDate = (ev.start_date || dateISO || '').slice(0, 10);
+        var eDate = (ev.end_date || '').slice(0, 10);
+        if (eDate && sDate && eDate !== sDate) li.classList.add('ev--multi');
       } catch (_) { }
 
       var time = document.createElement('div');
@@ -298,7 +309,6 @@
       li.appendChild(time);
       li.appendChild(details);
 
-      // click -> open info (shift-click -> edit)
       (function (dISO, id) {
         li.addEventListener('click', function (e) {
           var ui = (window.CalendarApp && window.CalendarApp.ui) || {};
@@ -315,6 +325,261 @@
     sec.appendChild(h);
     sec.appendChild(ul);
     container.appendChild(sec);
+  }
+
+  function __escapeText(value) {
+    return String(value == null ? '' : value)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  function __searchSnippet(value, query, limit) {
+    var src = String(value || '').replace(/\s+/g, ' ').trim();
+    if (!src) return '—';
+    var q = String(query || '').trim().toLowerCase();
+    var max = Math.max(40, parseInt(limit || 140, 10) || 140);
+    if (!q) return src.length > max ? (src.slice(0, max - 1) + '…') : src;
+    var idx = src.toLowerCase().indexOf(q);
+    if (idx < 0) return src.length > max ? (src.slice(0, max - 1) + '…') : src;
+    var start = Math.max(0, idx - Math.floor(max * 0.35));
+    var end = Math.min(src.length, start + max);
+    var out = src.slice(start, end);
+    if (start > 0) out = '…' + out;
+    if (end < src.length) out += '…';
+    return out;
+  }
+
+  function __searchResultMeta(dateISO, time, eventTitle) {
+    var parts = [];
+    if (eventTitle) parts.push(String(eventTitle));
+    if (dateISO) parts.push(__isoToShortDM(dateISO) + (time ? (' ' + String(time)) : ''));
+    return parts.join(' · ');
+  }
+
+
+  function __cacheEventForSearch(ev, fallbackDateISO) {
+    try {
+      if (!ev || !Data || typeof Data._getCache !== 'function' || typeof Data._setCache !== 'function') return false;
+      var dateISO = String((ev._date || ev.start_date || fallbackDateISO || '')).slice(0, 10);
+      if (!dateISO) return false;
+      var store = Data._getCache() || {};
+      var next = {};
+      for (var k in store) {
+        if (Object.prototype.hasOwnProperty.call(store, k)) next[k] = Array.isArray(store[k]) ? store[k].slice() : store[k];
+      }
+      var arr = Array.isArray(next[dateISO]) ? next[dateISO].slice() : [];
+      var found = false;
+      for (var i = 0; i < arr.length; i++) {
+        if (arr[i] && arr[i].id === ev.id) { arr[i] = ev; found = true; break; }
+      }
+      if (!found) arr.push(ev);
+      next[dateISO] = arr;
+      Data._setCache(next);
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  function __openSearchResult(eventId, dateISO, focusMessageId) {
+    var ui = (window.CalendarApp && window.CalendarApp.ui) || {};
+    if (!ui || typeof ui.openInfo !== 'function') return;
+    var dISO = String(dateISO || '').slice(0, 10);
+    var arr = (Data && typeof Data.getEventsFor === 'function' && dISO) ? (Data.getEventsFor(dISO) || []) : [];
+    var exists = false;
+    for (var i = 0; i < arr.length; i++) {
+      if (arr[i] && arr[i].id === eventId) { exists = true; break; }
+    }
+    if (exists) {
+      ui.openInfo(dISO, eventId, focusMessageId ? { focusMessageId: focusMessageId } : null);
+      return;
+    }
+    fetch('/api/events/get?id=' + encodeURIComponent(String(eventId || '')), { credentials: 'same-origin' })
+      .then(function (r) { return r.json().catch(function () { return null; }).then(function (data) { if (!r.ok || !data || data.ok === false) throw new Error((data && (data.message || data.error)) || ('HTTP ' + r.status)); return data; }); })
+      .then(function (data) {
+        if (data && data.event) __cacheEventForSearch(data.event, dISO);
+        ui.openInfo(String(((data && data.event && (data.event._date || data.event.start_date)) || dISO || '')).slice(0, 10), eventId, focusMessageId ? { focusMessageId: focusMessageId } : null);
+      })
+      .catch(function () {
+        ui.openInfo(dISO, eventId, focusMessageId ? { focusMessageId: focusMessageId } : null);
+      });
+  }
+
+  function __renderExtendedSection(container, titleText, count, buildRows) {
+    var sec = document.createElement('div');
+    sec.className = 'planning-section calendar-search-section';
+    var h = document.createElement('div');
+    h.className = 'planning-section__title';
+    var title = document.createElement('span');
+    title.textContent = titleText;
+    var meta = document.createElement('span');
+    meta.className = 'planning-section__date';
+    meta.textContent = 'знайдено: ' + String(count || 0);
+    h.appendChild(title);
+    h.appendChild(meta);
+    sec.appendChild(h);
+    buildRows(sec);
+    container.appendChild(sec);
+  }
+
+  function __renderSearchComments(container, query, items) {
+    if (!Array.isArray(items) || !items.length) return;
+    __renderExtendedSection(container, 'Коментарі', items.length, function (sec) {
+      for (var i = 0; i < items.length; i++) {
+        var item = items[i] || {};
+        var row = document.createElement('div');
+        row.className = 'calendar-search-card calendar-search-card--comment';
+
+        var meta = document.createElement('div');
+        meta.className = 'calendar-search-card__meta';
+        meta.textContent = __searchResultMeta(item.event_date || '', item.event_time || '', item.event_title || '');
+
+        var text = document.createElement('div');
+        text.className = 'calendar-search-card__text';
+        text.textContent = __searchSnippet(item.message_text || '', query, 180);
+
+        var author = document.createElement('div');
+        author.className = 'calendar-search-card__sub';
+        var disp = (((item.author || {}).display) || ((item.author || {}).name) || ((item.author || {}).login) || '').trim();
+        author.textContent = disp ? ('Автор: ' + disp) : 'Коментар';
+
+        var actions = document.createElement('div');
+        actions.className = 'calendar-search-card__actions';
+        var btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'btn btn--green calendar-search-card__btn';
+        btn.textContent = 'До коментаря';
+        (function (it) {
+          btn.addEventListener('click', function () {
+            var ui = (window.CalendarApp && window.CalendarApp.ui) || {};
+            if (ui && typeof ui.openInfo === 'function') {
+              __openSearchResult(it.event_id, String(it.event_date || ''), it.id);
+            }
+          });
+        })(item);
+        actions.appendChild(btn);
+
+        row.appendChild(meta);
+        row.appendChild(text);
+        row.appendChild(author);
+        row.appendChild(actions);
+        sec.appendChild(row);
+      }
+    });
+  }
+
+  function __renderSearchFiles(container, query, items) {
+    if (!Array.isArray(items) || !items.length) return;
+    __renderExtendedSection(container, 'Файли', items.length, function (sec) {
+      for (var i = 0; i < items.length; i++) {
+        var item = items[i] || {};
+        var row = document.createElement('div');
+        row.className = 'calendar-search-card calendar-search-card--file';
+
+        var meta = document.createElement('div');
+        meta.className = 'calendar-search-card__meta';
+        meta.textContent = __searchResultMeta(item.event_date || '', item.event_time || '', item.event_title || '');
+
+        var name = document.createElement('div');
+        name.className = 'calendar-search-card__title';
+        name.textContent = String(item.original_name || '(без назви файла)');
+
+        var sub = document.createElement('div');
+        sub.className = 'calendar-search-card__sub';
+        var parts = [];
+        if (item.mime_type) parts.push(String(item.mime_type));
+        if (item.file_size != null) parts.push(__searchFormatBytes(item.file_size));
+        if (item.message_text) parts.push(__searchSnippet(item.message_text || '', query, 120));
+        sub.textContent = parts.join(' · ');
+
+        var actions = document.createElement('div');
+        actions.className = 'calendar-search-card__actions';
+
+        var aView = document.createElement('a');
+        aView.className = 'btn calendar-search-card__btn';
+        aView.href = item.view_url || ('/api/documents/view?id=' + encodeURIComponent(String(item.id || '')));
+        aView.target = '_blank';
+        aView.rel = 'noopener';
+        aView.textContent = 'Переглянути';
+
+        var aDownload = document.createElement('a');
+        aDownload.className = 'btn calendar-search-card__btn';
+        aDownload.href = item.download_url || ('/api/documents/download?id=' + encodeURIComponent(String(item.id || '')));
+        aDownload.textContent = 'Завантажити';
+
+        actions.appendChild(aView);
+        actions.appendChild(aDownload);
+
+        var msgId = parseInt(item.message_id || 0, 10) || 0;
+        if (msgId > 0) {
+          var btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'btn btn--green calendar-search-card__btn';
+          btn.textContent = 'До коментаря';
+          (function (it) {
+            btn.addEventListener('click', function () {
+              var ui = (window.CalendarApp && window.CalendarApp.ui) || {};
+              if (ui && typeof ui.openInfo === 'function') {
+                __openSearchResult(it.event_id, String(it.event_date || ''), it.message_id);
+              }
+            });
+          })(item);
+          actions.appendChild(btn);
+        }
+
+        row.appendChild(meta);
+        row.appendChild(name);
+        row.appendChild(sub);
+        row.appendChild(actions);
+        sec.appendChild(row);
+      }
+    });
+  }
+
+  function __extendedSearchTypeValue() {
+    var t = String(currentType || 'all').trim();
+    return (t === 'mi' || t === 'nas' || t === 'evt' || t === 'other') ? t : 'all';
+  }
+
+  function __loadExtendedSearchResults(query, requestId) {
+    if (!calendarSearchResults) return;
+    var q = String(query || '').trim();
+    if (!q) return;
+
+    var params = new URLSearchParams();
+    params.set('q', q);
+    params.set('limit', '20');
+    var tp = __extendedSearchTypeValue();
+    if (tp && tp !== 'all') params.set('type', tp);
+
+    fetch('/api/events/search-extended?' + params.toString(), { credentials: 'same-origin' })
+      .then(function (r) {
+        return r.json().catch(function () { return null; }).then(function (data) {
+          if (!r.ok || !data || data.ok === false) {
+            var msg = data && (data.message || data.error) ? (data.message || data.error) : ('HTTP ' + r.status);
+            throw new Error(String(msg));
+          }
+          return data;
+        });
+      })
+      .then(function (data) {
+        if (!__fullSearchActive || requestId !== __fullSearchRequestId) return;
+        var comments = Array.isArray(data.comments) ? data.comments : [];
+        var files = Array.isArray(data.files) ? data.files : [];
+        if (!comments.length && !files.length) return;
+        __renderSearchComments(calendarSearchResults, q, comments);
+        __renderSearchFiles(calendarSearchResults, q, files);
+      })
+      .catch(function (err) {
+        if (!__fullSearchActive || requestId !== __fullSearchRequestId) return;
+        var warn = document.createElement('div');
+        warn.className = 'planning-section calendar-search-section';
+        warn.innerHTML = '<div class="planning-empty">Розширений пошук недоступний: ' + __escapeText(err && err.message ? err.message : 'помилка') + '</div>';
+        calendarSearchResults.appendChild(warn);
+      });
   }
 
   function __collectFullSearchMatches(query) {
@@ -404,6 +669,8 @@
 
     __fullSearchActive = true;
     __fullSearchLastQuery = q;
+    __fullSearchRequestId++;
+    var requestId = __fullSearchRequestId;
 
     __setCalendarContentHidden(true);
     calendarSearchResults.hidden = false;
@@ -415,8 +682,8 @@
     } else {
       __renderSearchResults(calendarSearchResults, q, matches);
     }
+    __loadExtendedSearchResults(q, requestId);
 
-    // Ensure we start at the top of results
     try { calendarSearchResults.scrollIntoView({ block: 'start', behavior: 'smooth' }); } catch (_) { }
   }
 
@@ -436,14 +703,17 @@
     var q = String(__fullSearchLastQuery || '').trim();
     if (!q) return;
 
-    // Preserve scroll position while re-rendering
     var prevTop = 0;
     try { prevTop = calendarSearchResults.scrollTop || 0; } catch (_) { prevTop = 0; }
+
+    __fullSearchRequestId++;
+    var requestId = __fullSearchRequestId;
 
     calendarSearchResults.innerHTML = '';
     var matches = __collectFullSearchMatches(q);
     if (!matches.length) __renderSearchEmpty(calendarSearchResults, q);
     else __renderSearchResults(calendarSearchResults, q, matches);
+    __loadExtendedSearchResults(q, requestId);
 
     try { calendarSearchResults.scrollTop = prevTop; } catch (_) { }
   }

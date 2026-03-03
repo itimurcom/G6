@@ -86,6 +86,7 @@ $router->post('/api/notify/seen-all',     [\App\Controllers\ApiNotifyController:
 $router->get('/api/audit/list',             [\App\Controllers\ApiAuditController::class,     'list']); // AUDIT: ADD ONLY
 $router->get('/api/events/get',             [\App\Controllers\ApiEventsController::class,       'get']);
 $router->get('/api/events/search',          [\App\Controllers\ApiEventsController::class,       'search']);
+$router->get('/api/events/search-extended', [\App\Controllers\ApiEventsController::class,       'searchExtended']);
 
 $router->post('/api/events/create',         [\App\Controllers\ApiEventsController::class,       'create']);
 $router->post('/api/events/update',         [\App\Controllers\ApiEventsController::class,       'update']);
