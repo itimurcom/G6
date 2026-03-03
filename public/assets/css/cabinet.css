@@ -1,7 +1,8 @@
-/* P15.5: Cabinet cards on Profile/Security/Users 
+/* P15.5: Cabinet cards on Profile/Security/Users */
 /* ----- THEME TOKENS (light by default) ----- */
 :root {
   --cabinet-text: #0b1220;
+  --cabinet-muted: #6b7280;
   --cabinet-card-bg: #ffffff;
   --cabinet-border: #d1d5db;
   --cabinet-input-bg: #ffffff;
@@ -18,6 +19,7 @@
 .theme-dark,
 .dark {
   --cabinet-text: #e6e9ef;
+  --cabinet-muted: #9ca3af;
   --cabinet-card-bg: #111418;
   --cabinet-border: #2a2f36;
   --cabinet-input-bg: #0e1116;
@@ -33,6 +35,7 @@
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]):not(.theme-light):not(.light) {
     --cabinet-text: #e6e9ef;
+    --cabinet-muted: #9ca3af;
     --cabinet-card-bg: #111418;
     --cabinet-border: #2a2f36;
     --cabinet-input-bg: #0e1116;

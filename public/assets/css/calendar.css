@@ -1026,7 +1026,6 @@ select,
 
 .done-switch.active {
   background: color-mix(in oklab, var(--done) 20%, var(--event-bg));
-  background: color-mix(in oklab, var(--done) 20%, var(--event-bg));
 }
 
 :root[data-theme=dark] .urgent-switch.active {

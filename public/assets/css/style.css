@@ -239,6 +239,10 @@
   --border: #1f2937;
   --today: #fbbf24;
   --event-bg: #0f172a;
+  --text: var(--fg);
+  --line: var(--border);
+  --panel: color-mix(in oklab, var(--bg) 88%, var(--event-bg));
+  --card: color-mix(in oklab, var(--bg) 92%, var(--event-bg));
 
   --type-mi: #3b82f6;
   /* --type-nas:#f97316; */
@@ -271,7 +275,10 @@
   --border: #e5e7eb;
   --today: #f59e0b;
   --event-bg: #f8fafc;
-
+  --text: var(--fg);
+  --line: var(--border);
+  --panel: color-mix(in oklab, var(--bg) 86%, var(--event-bg));
+  --card: color-mix(in oklab, var(--bg) 94%, var(--event-bg));
 
   --scrollbar-track: color-mix(in oklab, var(--bg) 92%, var(--border));
   --scrollbar-thumb: color-mix(in oklab, var(--muted) 45%, var(--border));
