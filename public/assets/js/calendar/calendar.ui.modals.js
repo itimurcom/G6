@@ -240,8 +240,34 @@
     return /\.pdf$/i.test(name);
   }
 
+  function __threadDocIsText(doc) {
+    var mime = String((doc && doc.mime_type) || '').toLowerCase();
+    if (mime.indexOf('text/') === 0) return true;
+    if (mime === 'application/json' || mime === 'application/xml' || mime === 'text/xml' || mime === 'application/javascript' || mime === 'application/x-sh' || mime === 'application/x-httpd-php') return true;
+    var name = String((doc && doc.original_name) || '').toLowerCase();
+    return /\.(txt|log|md|csv|json|xml|ya?ml|ini|cfg|conf|ps1|cmd|bat|sh|php|js|ts|css|html|htm|sql)$/i.test(name);
+  }
+
+  function __threadDocPreviewKind(doc) {
+    if (__threadDocIsImage(doc)) return 'image';
+    if (__threadDocIsPdf(doc)) return 'pdf';
+    if (__threadDocIsText(doc)) return 'text';
+    return '';
+  }
+
   function __threadDocCanInlinePreview(doc) {
-    return __threadDocIsImage(doc) || __threadDocIsPdf(doc);
+    return !!__threadDocPreviewKind(doc);
+  }
+
+  function __threadDocTypeLabel(doc) {
+    var name = String((doc && doc.original_name) || '').trim();
+    var mime = String((doc && doc.mime_type) || '').trim();
+    var ext = '';
+    var m = name.match(/\.([a-z0-9]{1,10})$/i);
+    if (m && m[1]) ext = String(m[1]).toUpperCase();
+    if (ext) return ext;
+    if (mime) return mime;
+    return 'FILE';
   }
 
   function __threadDocIcon(doc) {
@@ -257,7 +283,13 @@
         docName: '',
         viewUrl: '',
         downloadUrl: '',
-        kind: ''
+        kind: '',
+        typeLabel: '',
+        mime: '',
+        textContent: '',
+        textLoading: false,
+        requestKey: 0,
+        fullscreen: false
       };
     }
     return infoOverlay.__threadPreviewState;
@@ -271,7 +303,13 @@
       docName: '',
       viewUrl: '',
       downloadUrl: '',
-      kind: ''
+      kind: '',
+      typeLabel: '',
+      mime: '',
+      textContent: '',
+      textLoading: false,
+      requestKey: 0,
+      fullscreen: false
     };
   }
 
@@ -301,11 +339,20 @@
     var overlayEl = document.getElementById('infoThreadPreview');
     if (!state || !overlayEl) return;
     var titleEl = document.getElementById('infoThreadPreviewTitle');
+    var metaEl = document.getElementById('infoThreadPreviewMeta');
     var bodyEl = document.getElementById('infoThreadPreviewBody');
     var downloadEl = document.getElementById('infoThreadPreviewDownload');
+    var fullscreenEl = document.getElementById('infoThreadPreviewFullscreen');
     if (titleEl) titleEl.textContent = state.docName || 'Перегляд файла';
+    if (metaEl) metaEl.textContent = state.typeLabel || state.mime || '';
     if (downloadEl) downloadEl.href = state.downloadUrl || '#';
     if (downloadEl) downloadEl.setAttribute('aria-disabled', state.downloadUrl ? 'false' : 'true');
+    if (fullscreenEl) {
+      fullscreenEl.hidden = !state.open;
+      fullscreenEl.setAttribute('aria-pressed', state.fullscreen ? 'true' : 'false');
+      fullscreenEl.title = state.fullscreen ? 'Вийти з повноекранного режиму' : 'На весь екран';
+      fullscreenEl.setAttribute('aria-label', state.fullscreen ? 'Вийти з повноекранного режиму' : 'На весь екран');
+    }
     if (bodyEl) {
       if (!state.open) {
         bodyEl.innerHTML = '';
@@ -313,12 +360,17 @@
         bodyEl.innerHTML = '<img class="info-thread-preview__image" src="' + __threadEsc(state.viewUrl) + '" alt="' + __threadEsc(state.docName || 'Зображення') + '">';
       } else if (state.kind === 'pdf') {
         bodyEl.innerHTML = '<iframe class="info-thread-preview__frame" src="' + __threadEsc(state.viewUrl) + '" title="' + __threadEsc(state.docName || 'PDF') + '"></iframe>';
+      } else if (state.kind === 'text') {
+        bodyEl.innerHTML = state.textLoading
+          ? '<div class="info-thread-preview__fallback">Завантаження текстового перегляду…</div>'
+          : '<pre class="info-thread-preview__text">' + __threadEsc(state.textContent || '') + '</pre>';
       } else {
         bodyEl.innerHTML = '<div class="info-thread-preview__fallback">Для цього типу файла вбудований перегляд недоступний.</div>';
       }
     }
     overlayEl.hidden = !state.open;
     overlayEl.classList.toggle('is-open', !!state.open);
+    overlayEl.classList.toggle('is-fullscreen', !!state.fullscreen);
     overlayEl.setAttribute('aria-hidden', state.open ? 'false' : 'true');
   }
 
@@ -337,23 +389,95 @@
     state.docName = String(doc.original_name || 'file');
     state.viewUrl = viewUrl;
     state.downloadUrl = downloadUrl;
-    state.kind = __threadDocIsImage(doc) ? 'image' : (__threadDocIsPdf(doc) ? 'pdf' : '');
+    state.kind = __threadDocPreviewKind(doc);
+    state.typeLabel = __threadDocTypeLabel(doc);
+    state.mime = String(doc.mime_type || '');
+    state.textContent = '';
+    state.textLoading = state.kind === 'text';
+    state.requestKey = (parseInt(state.requestKey || 0, 10) || 0) + 1;
+    var requestKey = state.requestKey;
+    state.fullscreen = false;
     __threadPreviewRender();
+    if (state.kind === 'text') {
+      fetch(viewUrl, { credentials: 'same-origin' })
+        .then(function (res) {
+          if (!res.ok) throw new Error('HTTP ' + res.status);
+          return res.text();
+        })
+        .then(function (text) {
+          var current = __threadPreviewGetState();
+          if (!current || current.requestKey !== requestKey) return;
+          current.textContent = String(text || '');
+          current.textLoading = false;
+          __threadPreviewRender();
+        })
+        .catch(function () {
+          var current = __threadPreviewGetState();
+          if (!current || current.requestKey !== requestKey) return;
+          current.textContent = 'Не вдалося завантажити текстовий перегляд.';
+          current.textLoading = false;
+          __threadPreviewRender();
+        });
+    }
     setTimeout(function () {
       var closeBtn = document.getElementById('infoThreadPreviewClose');
       if (closeBtn) { try { closeBtn.focus(); } catch (_) { } }
     }, 0);
   }
 
-  function __threadClosePreview() {
+  function __threadPreviewSetFullscreen(enabled) {
     var state = __threadPreviewGetState();
     if (!state) return;
+    state.fullscreen = !!enabled;
+    __threadPreviewRender();
+  }
+
+  function __threadPreviewToggleFullscreen() {
+    var state = __threadPreviewGetState();
+    var overlayEl = document.getElementById('infoThreadPreview');
+    var dialogEl = document.querySelector('#infoThreadPreview .info-thread-preview__dialog');
+    if (!state || !overlayEl || !dialogEl || !state.open) return;
+    var fullscreenTarget = document.fullscreenElement || null;
+    if (fullscreenTarget === dialogEl) {
+      if (document.exitFullscreen) {
+        document.exitFullscreen().catch(function () {
+          __threadPreviewSetFullscreen(false);
+        });
+      } else {
+        __threadPreviewSetFullscreen(false);
+      }
+      return;
+    }
+    if (dialogEl.requestFullscreen) {
+      dialogEl.requestFullscreen().then(function () {
+        __threadPreviewSetFullscreen(true);
+      }).catch(function () {
+        __threadPreviewSetFullscreen(!state.fullscreen);
+      });
+      return;
+    }
+    __threadPreviewSetFullscreen(!state.fullscreen);
+  }
+
+  function __threadClosePreview() {
+    var state = __threadPreviewGetState();
+    var dialogEl = document.querySelector('#infoThreadPreview .info-thread-preview__dialog');
+    if (!state) return;
+    if ((document.fullscreenElement || null) === dialogEl && document.exitFullscreen) {
+      try { document.exitFullscreen(); } catch (_) { }
+    }
     state.open = false;
     state.docId = 0;
     state.docName = '';
     state.viewUrl = '';
     state.downloadUrl = '';
     state.kind = '';
+    state.typeLabel = '';
+    state.mime = '';
+    state.textContent = '';
+    state.textLoading = false;
+    state.requestKey = (parseInt(state.requestKey || 0, 10) || 0) + 1;
+    state.fullscreen = false;
     __threadPreviewRender();
   }
 
@@ -383,6 +507,8 @@
         return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Zm9.5 3a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
       case 'download':
         return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4.5v10m0 0 4-4m-4 4-4-4M5 18.5h14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+      case 'fullscreen':
+        return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 4.5H4.5V8M16 4.5h3.5V8M8 19.5H4.5V16M16 19.5h3.5V16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
       default:
         return '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="7" fill="none" stroke="currentColor" stroke-width="1.8"/></svg>';
     }
@@ -406,10 +532,14 @@
       html += ''
         + '<div class="info-thread-attachment" data-doc-id="' + id + '">'
         +   '<span class="info-thread-attachment__icon" aria-hidden="true">' + __threadEsc(__threadDocIcon(d)) + '</span>'
-        +   '<a class="info-thread-attachment__name" href="' + __threadEsc(viewUrl) + '" target="_blank" rel="noopener" data-thread-action="preview-doc" data-doc-id="' + id + '">' + __threadEsc(name) + '</a>'
+        +   (__threadDocCanInlinePreview(d)
+        ? '<button type="button" class="info-thread-attachment__name info-thread-attachment__name--button" data-thread-action="preview-doc" data-doc-id="' + id + '">' + __threadEsc(name) + '</button>'
+        : '<a class="info-thread-attachment__name" href="' + __threadEsc(viewUrl) + '" target="_blank" rel="noopener" data-thread-action="preview-doc" data-doc-id="' + id + '">' + __threadEsc(name) + '</a>')
         +   '<span class="info-thread-attachment__size">' + __threadEsc(size) + '</span>'
         +   '<span class="info-thread-attachment__actions">'
-        +     '<a class="info-thread-icon-action info-thread-icon-action--preview" href="' + __threadEsc(viewUrl) + '" target="_blank" rel="noopener" data-thread-action="preview-doc" data-doc-id="' + id + '" title="Переглянути файл" aria-label="Переглянути файл">' + __threadActionSvg('preview') + '</a>'
+        +     (__threadDocCanInlinePreview(d)
+        ? '<button type="button" class="info-thread-icon-action info-thread-icon-action--preview" data-thread-action="preview-doc" data-doc-id="' + id + '" title="Переглянути файл" aria-label="Переглянути файл">' + __threadActionSvg('preview') + '</button>'
+        : '<a class="info-thread-icon-action info-thread-icon-action--preview" href="' + __threadEsc(viewUrl) + '" target="_blank" rel="noopener" data-thread-action="preview-doc" data-doc-id="' + id + '" title="Переглянути файл" aria-label="Переглянути файл">' + __threadActionSvg('preview') + '</a>')
         +     '<a class="info-thread-icon-action info-thread-icon-action--download" href="' + __threadEsc(downloadUrl) + '" target="_blank" rel="noopener" title="Завантажити файл" aria-label="Завантажити файл">' + __threadActionSvg('download') + '</a>'
         +     (canDeleteDoc ? '<button type="button" class="info-thread-icon-action info-thread-icon-action--danger" data-thread-action="delete-doc" data-doc-id="' + id + '" title="Видалити файл" aria-label="Видалити файл">' + __threadActionSvg('delete') + '</button>' : '')
         +   '</span>'
@@ -1239,7 +1369,9 @@
       +   '<div class="info-files-item__icon" aria-hidden="true">' + __threadEsc(__threadDocIcon(doc)) + '</div>'
       +   '<div class="info-files-item__body">'
       +     '<div class="info-files-item__top">'
-      +       '<a class="info-files-item__name" href="' + __threadEsc(viewUrl) + '" target="_blank" rel="noopener" data-thread-action="preview-doc" data-doc-id="' + id + '">' + __threadEsc(name) + '</a>'
+      +       (__threadDocCanInlinePreview(doc)
+      ? '<button type="button" class="info-files-item__name info-files-item__name--button" data-thread-action="preview-doc" data-doc-id="' + id + '">' + __threadEsc(name) + '</button>'
+      : '<a class="info-files-item__name" href="' + __threadEsc(viewUrl) + '" target="_blank" rel="noopener" data-thread-action="preview-doc" data-doc-id="' + id + '">' + __threadEsc(name) + '</a>')
       +       '<span class="info-files-item__size">' + __threadEsc(size) + '</span>'
       +     '</div>'
       +     '<div class="info-files-item__meta">'
@@ -1249,7 +1381,9 @@
       +     '</div>'
       +   '</div>'
       +   '<div class="info-files-item__actions">'
-      +     '<a class="info-thread-icon-action info-thread-icon-action--preview" href="' + __threadEsc(viewUrl) + '" target="_blank" rel="noopener" data-thread-action="preview-doc" data-doc-id="' + id + '" title="Переглянути файл" aria-label="Переглянути файл">' + __threadActionSvg('preview') + '</a>'
+      +     (__threadDocCanInlinePreview(doc)
+      ? '<button type="button" class="info-thread-icon-action info-thread-icon-action--preview" data-thread-action="preview-doc" data-doc-id="' + id + '" title="Переглянути файл" aria-label="Переглянути файл">' + __threadActionSvg('preview') + '</button>'
+      : '<a class="info-thread-icon-action info-thread-icon-action--preview" href="' + __threadEsc(viewUrl) + '" target="_blank" rel="noopener" data-thread-action="preview-doc" data-doc-id="' + id + '" title="Переглянути файл" aria-label="Переглянути файл">' + __threadActionSvg('preview') + '</a>')
       +     '<a class="info-thread-icon-action info-thread-icon-action--download" href="' + __threadEsc(downloadUrl) + '" target="_blank" rel="noopener" title="Завантажити файл" aria-label="Завантажити файл">' + __threadActionSvg('download') + '</a>'
       +     (canDeleteDoc ? '<button type="button" class="info-thread-icon-action info-thread-icon-action--danger" data-thread-action="delete-doc" data-doc-id="' + id + '" title="Видалити файл" aria-label="Видалити файл">' + __threadActionSvg('delete') + '</button>' : '')
       +   '</div>'
@@ -1481,7 +1615,6 @@
       +     '<div id="infoThreadList" class="info-thread-list">'
       +       '<div class="info-thread-hint">Відкрий цей блок — і коментарі завантажаться тільки в момент потреби.</div>'
       +     '</div>'
-      +     __infoThreadPreviewHtml()
       +   '</div>'
       + '</details>';
   }
@@ -1492,8 +1625,12 @@
       +   '<div class="info-thread-preview__backdrop" data-thread-action="close-preview"></div>'
       +   '<div class="info-thread-preview__dialog" role="dialog" aria-modal="true" aria-label="Перегляд файла">'
       +     '<div class="info-thread-preview__head">'
-      +       '<div id="infoThreadPreviewTitle" class="info-thread-preview__title">Перегляд файла</div>'
+      +       '<div class="info-thread-preview__title-wrap">'
+      +         '<div id="infoThreadPreviewTitle" class="info-thread-preview__title">Перегляд файла</div>'
+      +         '<div id="infoThreadPreviewMeta" class="info-thread-preview__meta"></div>'
+      +       '</div>'
       +       '<div class="info-thread-preview__actions">'
+      +         '<button type="button" id="infoThreadPreviewFullscreen" class="info-thread-icon-action info-thread-icon-action--neutral" data-thread-action="toggle-preview-fullscreen" title="На весь екран" aria-label="На весь екран">' + __threadActionSvg('fullscreen') + '</button>'
       +         '<a id="infoThreadPreviewDownload" class="info-thread-icon-action info-thread-icon-action--download" href="#" target="_blank" rel="noopener" title="Завантажити файл" aria-label="Завантажити файл">' + __threadActionSvg('download') + '</a>'
       +         '<button type="button" id="infoThreadPreviewClose" class="info-thread-icon-action info-thread-icon-action--neutral" data-thread-action="close-preview" title="Закрити перегляд" aria-label="Закрити перегляд">' + __threadActionSvg('cancel') + '</button>'
       +       '</div>'
@@ -1602,6 +1739,12 @@
           return;
         }
 
+        if (action === 'toggle-preview-fullscreen') {
+          ev.preventDefault();
+          __threadPreviewToggleFullscreen();
+          return;
+        }
+
         if (action === 'delete-doc') {
           var docId = parseInt(btn.getAttribute('data-doc-id') || '0', 10) || 0;
           if (docId > 0) __threadDeleteDoc(docId);
@@ -1673,10 +1816,22 @@
     if (preview && !preview.__previewBound) {
       preview.__previewBound = true;
       preview.addEventListener('click', function (ev) {
-        var btn = ev.target.closest('[data-thread-action="close-preview"]');
+        var btn = ev.target.closest('[data-thread-action]');
         if (!btn) return;
-        ev.preventDefault();
-        __threadClosePreview();
+        var action = String(btn.getAttribute('data-thread-action') || '');
+        if (action === 'close-preview') {
+          ev.preventDefault();
+          __threadClosePreview();
+          return;
+        }
+        if (action === 'toggle-preview-fullscreen') {
+          ev.preventDefault();
+          __threadPreviewToggleFullscreen();
+        }
+      });
+      document.addEventListener('fullscreenchange', function () {
+        var dialogEl = document.querySelector('#infoThreadPreview .info-thread-preview__dialog');
+        __threadPreviewSetFullscreen((document.fullscreenElement || null) === dialogEl);
       });
     }
 
@@ -2279,6 +2434,8 @@
 
       var canMarkViewed = (!meInSeen && (parseInt(meId || 0, 10) > 0));
 
+      html += '<div class="info-seen-grid">';
+      html += '<section class="info-seen-col info-seen-col--seen">';
       html += '<div class="info-seen-head">'
             + '<strong>Переглянули:</strong>'
             + (canMarkViewed
@@ -2306,9 +2463,12 @@
         }
         html += '</div>';
       }
-
-      if (unseen.length > 0) {
-        html += '<div style="margin-top:10px;"><strong>Не переглянули:</strong></div>';
+      html += '</section>';
+      html += '<section class="info-seen-col info-seen-col--unseen">';
+      html += '<div class="info-seen-head"><strong>Не переглянули:</strong></div>';
+      if (unseen.length === 0) {
+        html += '<div class="muted">Усі вже переглянули</div>';
+      } else {
         html += '<div class="info-seen-list">';
         for (var j = 0; j < unseen.length; j++) {
           var u = unseen[j] || {};
@@ -2317,6 +2477,8 @@
         }
         html += '</div>';
       }
+      html += '</section>';
+      html += '</div>';
 
       targetEl.innerHTML = html;
 
@@ -2793,6 +2955,7 @@ function __renderEventHistory(host, items, currentEvent) {
       '<div id="infoSeenBlock" class="info-seen-block"><div class="muted">Завантаження переглядів…</div></div>' +
       __infoThreadHtml() +
       __infoFilesHtml() +
+      __infoThreadPreviewHtml() +
       (__canShowEventHistory() ? (
         '<details class="info-history-wrap">' +
           '<summary class="info-history-head"><strong>Історія змін</strong></summary>' + // P15.34: whole block collapsible by triangle
