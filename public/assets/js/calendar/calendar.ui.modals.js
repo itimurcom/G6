@@ -2394,6 +2394,40 @@ function __historyBuildLine(it, currentEvent) {
     }
   } else if (action === 'calendar.event.close') {
     line = 'Користувач "' + actor + '" закрив подію';
+  } else if (action === 'event.message.create') {
+    var msgCreate = String((it && it.message_preview) || ((it && __historyAsObj(it.payload) || {}).message_preview) || '');
+    line = 'Користувач "' + actor + '" додав коментар' + (msgCreate ? (': "' + msgCreate + '"') : '');
+  } else if (action === 'event.message.update') {
+    var payloadUpdate = __historyAsObj(it && it.payload) || {};
+    var beforeMsg = String((it && it.before_preview) || payloadUpdate.before_preview || '');
+    var afterMsg = String((it && it.after_preview) || (it && it.message_preview) || payloadUpdate.after_preview || payloadUpdate.message_preview || '');
+    if (beforeMsg || afterMsg) {
+      line = 'Користувач "' + actor + '" змінив коментар (' + '"' + (beforeMsg || '—') + '" → "' + (afterMsg || '—') + '"' + ')';
+    } else {
+      line = 'Користувач "' + actor + '" змінив коментар';
+    }
+  } else if (action === 'event.message.delete') {
+    var payloadDelete = __historyAsObj(it && it.payload) || {};
+    var deletedMsg = String((it && (it.deleted_message_preview || it.message_preview)) || payloadDelete.deleted_message_preview || payloadDelete.message_preview || '');
+    var deletedCount = parseInt((it && it.deleted_document_count) || payloadDelete.deleted_document_count || 0, 10) || 0;
+    line = 'Користувач "' + actor + '" видалив коментар' + (deletedMsg ? (': "' + deletedMsg + '"') : '');
+    if (deletedCount > 0) line += ' (файлів видалено: ' + deletedCount + ')';
+  } else if (action === 'document.upload') {
+    var payloadUpload = __historyAsObj(it && it.payload) || {};
+    var uploadDocs = Object.prototype.toString.call(payloadUpload.documents) === '[object Array]' ? payloadUpload.documents : [];
+    if (uploadDocs.length === 1) {
+      var uploadName = String(uploadDocs[0].original_name || uploadDocs[0].name || 'Файл');
+      line = 'Користувач "' + actor + '" додав файл "' + uploadName + '"';
+    } else if (uploadDocs.length > 1) {
+      line = 'Користувач "' + actor + '" додав ' + uploadDocs.length + ' файли';
+    } else {
+      line = 'Користувач "' + actor + '" додав файл';
+    }
+  } else if (action === 'document.delete') {
+    var payloadDocDelete = __historyAsObj(it && it.payload) || {};
+    var docDel = payloadDocDelete.document || null;
+    var docDelName = docDel ? String(docDel.original_name || docDel.name || 'Файл') : '';
+    line = 'Користувач "' + actor + '" видалив файл' + (docDelName ? (' "' + docDelName + '"') : '');
   } else {
     line = (action || 'Подія');
   }

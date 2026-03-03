@@ -72,6 +72,16 @@ class AuditLabels
                 'css'  => 't-delete',
                 'tags' => 'message delete remove коментар'
             ],
+            'document.upload' => [
+                'text' => 'Завантажено файл',
+                'css'  => 't-create',
+                'tags' => 'document file upload файл документ'
+            ],
+            'document.delete' => [
+                'text' => 'Видалено файл',
+                'css'  => 't-delete',
+                'tags' => 'document file delete remove файл документ'
+            ],
 
             // --- Адмінка ---
             'user.create' => [

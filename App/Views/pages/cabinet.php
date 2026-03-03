@@ -412,6 +412,11 @@ $__toastErr = \App\Core\Session::flash('toast_error');
             <option value="calendar.event.create">Створення події</option>
             <option value="calendar.event.update">Зміна події</option>
             <option value="calendar.event.delete">Видалення події</option>
+            <option value="event.message.create">Додано коментар</option>
+            <option value="event.message.update">Змінено коментар</option>
+            <option value="event.message.delete">Видалено коментар</option>
+            <option value="document.upload">Завантажено файл</option>
+            <option value="document.delete">Видалено файл</option>
           </select>
           <select id="audit-limit"><option>20</option><option selected>50</option><option>100</option></select>
           <button id="audit-refresh"  class='btn' type="button">Оновити</button>

@@ -394,6 +394,11 @@
         if (action === 'user.create') return 'Створення користувача (Адмін)';
         if (action === 'user.update') return 'Редагування користувача (Адмін)';
         if (action === 'user.password') return 'Зміна пароля користувача (Адмін)';
+        if (action === 'event.message.create') return 'Додано коментар';
+        if (action === 'event.message.update') return 'Змінено коментар';
+        if (action === 'event.message.delete') return 'Видалено коментар';
+        if (action === 'document.upload') return 'Завантажено файл';
+        if (action === 'document.delete') return 'Видалено файл';
         return action || 'Подія';
     }
 
@@ -426,6 +431,11 @@
         if (it.action === 'user.create') return 't-create';
         if (it.action === 'user.update') return 't-update';
         if (it.action === 'user.password') return 't-update';
+        if (it.action === 'event.message.create') return 't-create';
+        if (it.action === 'event.message.update') return 't-update';
+        if (it.action === 'event.message.delete') return 't-delete';
+        if (it.action === 'document.upload') return 't-create';
+        if (it.action === 'document.delete') return 't-delete';
         return 't-other';
     }
 
@@ -682,6 +692,53 @@
         return [{ key: 'password', label: 'Пароль', from: '—', to: 'змінено' }];
     }
 
+    function messageAuditPreview(it, mode) {
+        var payload = asObj(it && it.payload);
+        if (mode === 'before') {
+            return String((it && (it.before_preview || it.message_before_preview))
+                || (payload && payload.before_preview)
+                || (payload && payload.before && payload.before.preview)
+                || '');
+        }
+        if (mode === 'after') {
+            return String((it && (it.after_preview || it.message_preview || it.deleted_message_preview))
+                || (payload && payload.after_preview)
+                || (payload && payload.message_preview)
+                || (payload && payload.deleted_message_preview)
+                || (payload && payload.message && payload.message.preview)
+                || (payload && payload.after && payload.after.preview)
+                || '');
+        }
+        return String((it && (it.message_preview || it.deleted_message_preview || it.after_preview || it.before_preview))
+            || (payload && payload.message_preview)
+            || (payload && payload.deleted_message_preview)
+            || (payload && payload.after_preview)
+            || (payload && payload.before_preview)
+            || (payload && payload.message && payload.message.preview)
+            || (payload && payload.after && payload.after.preview)
+            || (payload && payload.before && payload.before.preview)
+            || '');
+    }
+
+    function documentAuditList(it) {
+        var payload = asObj(it && it.payload);
+        var out = [];
+        function pushDoc(doc) {
+            if (!doc || typeof doc !== 'object') return;
+            var name = String(doc.original_name || doc.name || doc.file_name || '').trim();
+            if (!name) name = 'Файл';
+            var size = (doc.size_bytes !== undefined && doc.size_bytes !== null) ? String(doc.size_bytes) : '';
+            var mime = String(doc.mime_type || doc.mime || '').trim();
+            out.push({ name: name, size: size, mime: mime });
+        }
+        if (payload && payload.document && typeof payload.document === 'object') pushDoc(payload.document);
+        if (payload && Object.prototype.toString.call(payload.documents) === '[object Array]') {
+            payload.documents.forEach(pushDoc);
+        }
+        if (!out.length && it && it.document && typeof it.document === 'object') pushDoc(it.document);
+        return out;
+    }
+
     function buildHumanSummary(it) {
         var action = (it.action || '').toString();
         var label = uaActionLabel(action);
@@ -801,6 +858,37 @@
                     sub = 'Дані користувача оновлено.';
                 }
             }
+        }
+
+        if (action === 'event.message.create') {
+            title = 'Додано коментар';
+            var createPreview = messageAuditPreview(it, 'after');
+            if (createPreview) sub = 'Коментар: ' + createPreview;
+            else if (it.entity_id) sub = 'Подія #' + String(it.entity_id);
+        } else if (action === 'event.message.update') {
+            title = 'Змінено коментар';
+            var beforePreview = messageAuditPreview(it, 'before');
+            var afterPreview = messageAuditPreview(it, 'after');
+            if (beforePreview || afterPreview) {
+                sub = 'Було: ' + (beforePreview || '—') + ' → Стало: ' + (afterPreview || '—');
+            }
+        } else if (action === 'event.message.delete') {
+            title = 'Видалено коментар';
+            var deletedPreview = messageAuditPreview(it, 'after') || messageAuditPreview(it, 'single');
+            var deletedDocs = parseInt((it && it.deleted_document_count) || 0, 10) || 0;
+            if (deletedPreview) sub = 'Коментар: ' + deletedPreview;
+            if (deletedDocs > 0) sub = (sub ? (sub + ' · ') : '') + 'Файлів видалено: ' + String(deletedDocs);
+        } else if (action === 'document.upload') {
+            title = 'Завантажено файл';
+            var docsUp = documentAuditList(it);
+            if (docsUp.length === 1) sub = 'Файл: ' + docsUp[0].name;
+            else if (docsUp.length > 1) sub = 'Файлів: ' + String(docsUp.length);
+            if (!sub && it.entity_id) sub = 'Подія #' + String(it.entity_id);
+        } else if (action === 'document.delete') {
+            title = 'Видалено файл';
+            var docsDel = documentAuditList(it);
+            if (docsDel.length) sub = 'Файл: ' + docsDel[0].name;
+            if (!sub && it.entity_id) sub = 'Подія #' + String(it.entity_id);
         }
 
         if (!sub && evWhen) sub = 'Коли: ' + evWhen;
@@ -1892,6 +1980,42 @@
             html += '</tbody></table>';
             box.innerHTML = html;
             body.appendChild(box);
+        }
+
+        if (actKey === 'event.message.create' || actKey === 'event.message.update' || actKey === 'event.message.delete') {
+            var msgBox = document.createElement('div');
+            msgBox.className = 'audit-diff';
+            var beforeMsg = messageAuditPreview(it, 'before');
+            var afterMsg = messageAuditPreview(it, 'after');
+            var msgHtml = '<table><tbody>';
+            if (actKey === 'event.message.update') {
+                msgHtml += '<tr><th>Було</th><td>' + esc(beforeMsg || '—') + '</td></tr>';
+                msgHtml += '<tr><th>Стало</th><td>' + esc(afterMsg || '—') + '</td></tr>';
+            } else {
+                msgHtml += '<tr><th>Коментар</th><td>' + esc(afterMsg || messageAuditPreview(it, 'single') || '—') + '</td></tr>';
+            }
+            if (actKey === 'event.message.delete') {
+                var deletedDocs2 = parseInt((it && it.deleted_document_count) || 0, 10) || 0;
+                if (deletedDocs2 > 0) msgHtml += '<tr><th>Видалено файлів</th><td>' + esc(String(deletedDocs2)) + '</td></tr>';
+            }
+            msgHtml += '</tbody></table>';
+            msgBox.innerHTML = msgHtml;
+            body.appendChild(msgBox);
+        }
+
+        if (actKey === 'document.upload' || actKey === 'document.delete') {
+            var docs = documentAuditList(it);
+            if (docs.length) {
+                var docBox = document.createElement('div');
+                docBox.className = 'audit-diff';
+                var docHtml = '<table><thead><tr><th>Назва</th><th>Розмір</th><th>MIME</th></tr></thead><tbody>';
+                docs.forEach(function (d) {
+                    docHtml += '<tr><td>' + esc(d.name) + '</td><td>' + esc(d.size || '—') + '</td><td>' + esc(d.mime || '—') + '</td></tr>';
+                });
+                docHtml += '</tbody></table>';
+                docBox.innerHTML = docHtml;
+                body.appendChild(docBox);
+            }
         }
 
         var raw = document.createElement('div');
