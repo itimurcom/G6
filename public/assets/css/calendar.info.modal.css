@@ -14,11 +14,11 @@
   margin: 0 0 12px 0;
 }
 
-#infoOverlay .modal > header {
+#infoOverlay .modal>header {
   gap: 16px;
 }
 
-#infoOverlay .modal > header .info-modal__header-main {
+#infoOverlay .modal>header .info-modal__header-main {
   min-width: 0;
   flex: 1 1 auto;
   flex-wrap: wrap;
@@ -87,7 +87,7 @@
   isolation: isolate;
 }
 
-#infoHeaderBadges .info-badge--overdue.ev--overdue-flash > * {
+#infoHeaderBadges .info-badge--overdue.ev--overdue-flash>* {
   position: relative;
   z-index: 2;
 }
@@ -103,7 +103,7 @@
 }
 
 @media (max-width: 720px) {
-  #infoOverlay .modal > header .info-modal__header-main {
+  #infoOverlay .modal>header .info-modal__header-main {
     align-items: flex-start;
   }
 
@@ -191,8 +191,8 @@
 
 /* Seen block header: title + "mark viewed" icon button (same style as Activities) */
 #infoContent .info-seen-head {
-  --info-icon-color: rgba(255,255,255,.92);
-  --info-icon-color-light: rgba(0,0,0,.55);
+  --info-icon-color: rgba(255, 255, 255, .92);
+  --info-icon-color-light: rgba(0, 0, 0, .55);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -301,6 +301,7 @@ body.light #infoContent .info-seen-head,
 .info-thread-file {
   grid-template-columns: 18px minmax(0, 1fr) auto auto;
 }
+
 .info-thread-editor__actions {
   align-items: center;
 }
@@ -309,9 +310,11 @@ body.light #infoContent .info-seen-head,
   #infoContent .info-row {
     grid-template-columns: 1fr;
   }
+
   #infoContent .info-row--meta3 {
     grid-template-columns: 1fr;
   }
+
   #infoContent .info-meta3 {
     grid-template-columns: 1fr;
   }
@@ -329,6 +332,7 @@ body.light #infoContent .info-seen-head,
   padding-top: 12px;
   border-top: 1px solid var(--border);
 }
+
 .info-history-head {
   display: flex;
   align-items: center;
@@ -336,11 +340,13 @@ body.light #infoContent .info-seen-head,
   gap: 10px;
   margin-bottom: 8px;
 }
+
 .info-history-head strong {
   font-size: 14px;
 }
+
 /* P15.34: collapse whole history block by default (details/summary) */
-.info-history-wrap > summary.info-history-head {
+.info-history-wrap>summary.info-history-head {
   cursor: pointer;
   margin-bottom: 0;
   user-select: none;
@@ -349,19 +355,24 @@ body.light #infoContent .info-seen-head,
   align-items: center;
   gap: 0;
 }
-.info-history-wrap > summary.info-history-head::-webkit-details-marker {
+
+.info-history-wrap>summary.info-history-head::-webkit-details-marker {
   display: none;
 }
-.info-history-wrap > summary.info-history-head::before {
+
+.info-history-wrap>summary.info-history-head::before {
   display: none;
   content: '';
 }
-.info-history-wrap[open] > summary.info-history-head::before {
+
+.info-history-wrap[open]>summary.info-history-head::before {
   content: '▾';
 }
-.info-history-wrap[open] > summary.info-history-head {
+
+.info-history-wrap[open]>summary.info-history-head {
   margin-bottom: 8px;
 }
+
 .info-history-list {
   max-height: 220px;
   overflow: auto;
@@ -369,16 +380,22 @@ body.light #infoContent .info-seen-head,
   border-radius: 12px;
   background: color-mix(in srgb, var(--card) 92%, transparent);
 }
+
 .info-history-item {
   padding: 10px 12px;
   border-bottom: 1px solid var(--border);
 }
-.info-history-item:last-child { border-bottom: 0; }
+
+.info-history-item:last-child {
+  border-bottom: 0;
+}
+
 .info-history-line {
   line-height: 1.35;
   font-size: 13px;
   display: block;
 }
+
 .info-history-ts {
   color: var(--muted);
   white-space: nowrap;
@@ -387,13 +404,17 @@ body.light #infoContent .info-seen-head,
   display: inline-block;
   vertical-align: baseline;
 }
+
 .info-history-sub {
   margin-top: 5px;
   color: var(--muted);
   font-size: 12px;
   line-height: 1.35;
 }
-.info-history-empty, .info-history-error, .info-history-loading {
+
+.info-history-empty,
+.info-history-error,
+.info-history-loading {
   padding: 12px;
   color: var(--muted);
   font-size: 13px;
@@ -406,7 +427,8 @@ body.light #infoContent .info-seen-head,
   border-radius: 10px;
   background: color-mix(in srgb, var(--card) 86%, transparent);
 }
-.info-history-raw > summary {
+
+.info-history-raw>summary {
   cursor: pointer;
   padding: 7px 10px;
   color: var(--muted);
@@ -414,19 +436,26 @@ body.light #infoContent .info-seen-head,
   user-select: none;
   list-style: none;
 }
-.info-history-raw > summary::-webkit-details-marker { display: none; }
-.info-history-raw > summary::before {
+
+.info-history-raw>summary::-webkit-details-marker {
+  display: none;
+}
+
+.info-history-raw>summary::before {
   content: '▸';
   display: inline-block;
   color: var(--muted);
 }
-.info-history-raw[open] > summary::before {
+
+.info-history-raw[open]>summary::before {
   content: '▾';
 }
-.info-history-raw[open] > summary {
+
+.info-history-raw[open]>summary {
   border-bottom: 1px dashed var(--border);
 }
-.info-history-raw > pre {
+
+.info-history-raw>pre {
   margin: 0;
   padding: 10px;
   max-height: 180px;
@@ -437,6 +466,7 @@ body.light #infoContent .info-seen-head,
   white-space: pre-wrap;
   word-break: break-word;
 }
+
 /* P15.35: raw JSON toggle inline after line, expands below */
 .info-history-raw-inline {
   margin-top: 0;
@@ -446,15 +476,18 @@ body.light #infoContent .info-seen-head,
   background: transparent;
   margin-left: 2px;
 }
-.info-history-raw-inline > summary {
+
+.info-history-raw-inline>summary {
   display: inline-block;
   vertical-align: baseline;
   padding: 0 1px;
   line-height: 1;
 }
-.info-history-raw-inline > summary::before {
+
+.info-history-raw-inline>summary::before {
   font-size: 12px;
 }
+
 .info-history-raw-inline[open] {
   display: block;
   flex: 1 0 100%;
@@ -463,16 +496,18 @@ body.light #infoContent .info-seen-head,
   border-radius: 10px;
   background: color-mix(in srgb, var(--card) 86%, transparent);
 }
-.info-history-raw-inline[open] > summary {
+
+.info-history-raw-inline[open]>summary {
   display: block;
   padding: 7px 10px;
 }
-.info-history-raw-inline[open] > summary::before {
+
+.info-history-raw-inline[open]>summary::before {
   margin-right: 0;
 }
 
 
-.info-history-wrap > summary.info-history-head strong {
+.info-history-wrap>summary.info-history-head strong {
   margin: 0;
 }
 
@@ -484,7 +519,7 @@ body.light #infoContent .info-seen-head,
 }
 
 /* Row looks clickable, but JSON keeps text cursor for copy */
-.info-history-item.has-raw .info-history-raw > pre {
+.info-history-item.has-raw .info-history-raw>pre {
   cursor: text;
 }
 
@@ -495,7 +530,8 @@ body.light #infoContent .info-seen-head,
   background: transparent;
   margin-top: 0;
 }
-.info-history-item.has-raw .info-history-raw-inline[open] > summary {
+
+.info-history-item.has-raw .info-history-raw-inline[open]>summary {
   display: inline-block;
   vertical-align: baseline;
   padding: 0 2px;
@@ -504,7 +540,7 @@ body.light #infoContent .info-seen-head,
 }
 
 /* Move dashed frame from <details> to <pre> in inline-open mode */
-.info-history-item.has-raw .info-history-raw-inline[open] > pre {
+.info-history-item.has-raw .info-history-raw-inline[open]>pre {
   margin-top: 6px;
   border: 1px dashed var(--border);
   border-radius: 10px;
@@ -579,8 +615,8 @@ body.light #infoContent .info-seen-head,
   list-style: none;
 }
 
-.info-thread-wrap > summary.info-thread-head::-webkit-details-marker,
-.info-files-wrap > summary.info-files-head::-webkit-details-marker {
+.info-thread-wrap>summary.info-thread-head::-webkit-details-marker,
+.info-files-wrap>summary.info-files-head::-webkit-details-marker {
   display: none;
 }
 
@@ -593,25 +629,25 @@ body.light #infoContent .info-seen-head,
   gap: 6px;
 }
 
-.info-history-wrap > summary.info-history-head,
-.info-thread-wrap > summary.info-thread-head,
-.info-files-wrap > summary.info-files-head {
+.info-history-wrap>summary.info-history-head,
+.info-thread-wrap>summary.info-thread-head,
+.info-files-wrap>summary.info-files-head {
   display: flex;
   align-items: center;
   justify-content: flex-start;
   gap: 8px;
 }
 
-.info-history-wrap > summary.info-history-head::before,
-.info-thread-wrap > summary.info-thread-head::before,
-.info-files-wrap > summary.info-files-head::before {
+.info-history-wrap>summary.info-history-head::before,
+.info-thread-wrap>summary.info-thread-head::before,
+.info-files-wrap>summary.info-files-head::before {
   content: none !important;
   display: none !important;
 }
 
-.info-history-wrap > summary.info-history-head::after,
-.info-thread-wrap > summary.info-thread-head::after,
-.info-files-wrap > summary.info-files-head::after {
+.info-history-wrap>summary.info-history-head::after,
+.info-thread-wrap>summary.info-thread-head::after,
+.info-files-wrap>summary.info-files-head::after {
   content: '▸';
   display: inline-flex;
   align-items: center;
@@ -623,14 +659,14 @@ body.light #infoContent .info-seen-head,
   transition: transform .16s ease;
 }
 
-.info-history-wrap[open] > summary.info-history-head::after,
-.info-thread-wrap[open] > summary.info-thread-head::after,
-.info-files-wrap[open] > summary.info-files-head::after {
+.info-history-wrap[open]>summary.info-history-head::after,
+.info-thread-wrap[open]>summary.info-thread-head::after,
+.info-files-wrap[open]>summary.info-files-head::after {
   transform: rotate(90deg);
 }
 
-.info-history-raw > summary::before,
-.info-history-raw-inline > summary::before {
+.info-history-raw>summary::before,
+.info-history-raw-inline>summary::before {
   font-size: 20px;
   line-height: 1;
 }
@@ -718,7 +754,7 @@ body.light #infoContent .info-seen-head,
   font-weight: 900;
   color: #fff;
   background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 82%, #1e3a5f), color-mix(in srgb, var(--accent) 58%, #0f2740));
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.08);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .08);
 }
 
 .info-thread-composer__avatar img,
@@ -1197,12 +1233,9 @@ body.light #infoContent .info-seen-head,
 }
 
 .info-thread-preview__body {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 18px;
   overflow: auto;
   background: var(--info-preview-body);
+  padding: 18px;
 }
 
 .info-thread-preview__image {
@@ -1277,6 +1310,7 @@ body.light #infoContent .info-seen-head,
 }
 
 @media (max-width: 780px) {
+
   .info-thread-composer,
   .info-thread-message,
   .info-files-item {
