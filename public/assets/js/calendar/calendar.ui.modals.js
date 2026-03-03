@@ -233,8 +233,132 @@
     return !!((doc && doc.is_image) || (mime && mime.indexOf('image/') === 0));
   }
 
+  function __threadDocIsPdf(doc) {
+    var mime = String((doc && doc.mime_type) || '').toLowerCase();
+    if (mime === 'application/pdf') return true;
+    var name = String((doc && doc.original_name) || '').toLowerCase();
+    return /\.pdf$/i.test(name);
+  }
+
+  function __threadDocCanInlinePreview(doc) {
+    return __threadDocIsImage(doc) || __threadDocIsPdf(doc);
+  }
+
   function __threadDocIcon(doc) {
     return __threadDocIsImage(doc) ? '🖼' : '📎';
+  }
+
+  function __threadPreviewGetState() {
+    if (!infoOverlay) return null;
+    if (!infoOverlay.__threadPreviewState) {
+      infoOverlay.__threadPreviewState = {
+        open: false,
+        docId: 0,
+        docName: '',
+        viewUrl: '',
+        downloadUrl: '',
+        kind: ''
+      };
+    }
+    return infoOverlay.__threadPreviewState;
+  }
+
+  function __threadPreviewReset() {
+    if (!infoOverlay) return;
+    infoOverlay.__threadPreviewState = {
+      open: false,
+      docId: 0,
+      docName: '',
+      viewUrl: '',
+      downloadUrl: '',
+      kind: ''
+    };
+  }
+
+  function __threadFindDocById(docId) {
+    docId = parseInt(docId || 0, 10) || 0;
+    if (docId <= 0) return null;
+    var threadState = __threadGetState();
+    var items = (threadState && Array.isArray(threadState.items)) ? threadState.items : [];
+    for (var i = 0; i < items.length; i++) {
+      var docs = Array.isArray(items[i] && items[i].documents) ? items[i].documents : [];
+      for (var j = 0; j < docs.length; j++) {
+        var d = docs[j] || {};
+        if ((parseInt(d.id || 0, 10) || 0) === docId) return d;
+      }
+    }
+    var filesState = __filesGetState();
+    var files = (filesState && Array.isArray(filesState.items)) ? filesState.items : [];
+    for (var k = 0; k < files.length; k++) {
+      var fd = files[k] || {};
+      if ((parseInt(fd.id || 0, 10) || 0) === docId) return fd;
+    }
+    return null;
+  }
+
+  function __threadPreviewRender() {
+    var state = __threadPreviewGetState();
+    var overlayEl = document.getElementById('infoThreadPreview');
+    if (!state || !overlayEl) return;
+    var titleEl = document.getElementById('infoThreadPreviewTitle');
+    var bodyEl = document.getElementById('infoThreadPreviewBody');
+    var downloadEl = document.getElementById('infoThreadPreviewDownload');
+    if (titleEl) titleEl.textContent = state.docName || 'Перегляд файла';
+    if (downloadEl) downloadEl.href = state.downloadUrl || '#';
+    if (downloadEl) downloadEl.setAttribute('aria-disabled', state.downloadUrl ? 'false' : 'true');
+    if (bodyEl) {
+      if (!state.open) {
+        bodyEl.innerHTML = '';
+      } else if (state.kind === 'image') {
+        bodyEl.innerHTML = '<img class="info-thread-preview__image" src="' + __threadEsc(state.viewUrl) + '" alt="' + __threadEsc(state.docName || 'Зображення') + '">';
+      } else if (state.kind === 'pdf') {
+        bodyEl.innerHTML = '<iframe class="info-thread-preview__frame" src="' + __threadEsc(state.viewUrl) + '" title="' + __threadEsc(state.docName || 'PDF') + '"></iframe>';
+      } else {
+        bodyEl.innerHTML = '<div class="info-thread-preview__fallback">Для цього типу файла вбудований перегляд недоступний.</div>';
+      }
+    }
+    overlayEl.hidden = !state.open;
+    overlayEl.classList.toggle('is-open', !!state.open);
+    overlayEl.setAttribute('aria-hidden', state.open ? 'false' : 'true');
+  }
+
+  function __threadOpenPreview(doc) {
+    doc = doc || {};
+    var viewUrl = String(doc.view_url || ('/api/documents/view?id=' + (parseInt(doc.id || 0, 10) || 0)));
+    var downloadUrl = String(doc.download_url || ('/api/documents/download?id=' + (parseInt(doc.id || 0, 10) || 0)));
+    if (!__threadDocCanInlinePreview(doc)) {
+      if (viewUrl) window.open(viewUrl, '_blank', 'noopener');
+      return;
+    }
+    var state = __threadPreviewGetState();
+    if (!state) return;
+    state.open = true;
+    state.docId = parseInt(doc.id || 0, 10) || 0;
+    state.docName = String(doc.original_name || 'file');
+    state.viewUrl = viewUrl;
+    state.downloadUrl = downloadUrl;
+    state.kind = __threadDocIsImage(doc) ? 'image' : (__threadDocIsPdf(doc) ? 'pdf' : '');
+    __threadPreviewRender();
+    setTimeout(function () {
+      var closeBtn = document.getElementById('infoThreadPreviewClose');
+      if (closeBtn) { try { closeBtn.focus(); } catch (_) { } }
+    }, 0);
+  }
+
+  function __threadClosePreview() {
+    var state = __threadPreviewGetState();
+    if (!state) return;
+    state.open = false;
+    state.docId = 0;
+    state.docName = '';
+    state.viewUrl = '';
+    state.downloadUrl = '';
+    state.kind = '';
+    __threadPreviewRender();
+  }
+
+  function __threadShouldBypassPreview(ev) {
+    return !!(ev && (ev.defaultPrevented || ev.button !== 0 || ev.metaKey || ev.ctrlKey || ev.shiftKey || ev.altKey));
   }
 
   function __threadActionSvg(name) {
@@ -282,10 +406,10 @@
       html += ''
         + '<div class="info-thread-attachment" data-doc-id="' + id + '">'
         +   '<span class="info-thread-attachment__icon" aria-hidden="true">' + __threadEsc(__threadDocIcon(d)) + '</span>'
-        +   '<a class="info-thread-attachment__name" href="' + __threadEsc(viewUrl) + '" target="_blank" rel="noopener">' + __threadEsc(name) + '</a>'
+        +   '<a class="info-thread-attachment__name" href="' + __threadEsc(viewUrl) + '" target="_blank" rel="noopener" data-thread-action="preview-doc" data-doc-id="' + id + '">' + __threadEsc(name) + '</a>'
         +   '<span class="info-thread-attachment__size">' + __threadEsc(size) + '</span>'
         +   '<span class="info-thread-attachment__actions">'
-        +     '<a class="info-thread-icon-action info-thread-icon-action--preview" href="' + __threadEsc(viewUrl) + '" target="_blank" rel="noopener" title="Переглянути файл" aria-label="Переглянути файл">' + __threadActionSvg('preview') + '</a>'
+        +     '<a class="info-thread-icon-action info-thread-icon-action--preview" href="' + __threadEsc(viewUrl) + '" target="_blank" rel="noopener" data-thread-action="preview-doc" data-doc-id="' + id + '" title="Переглянути файл" aria-label="Переглянути файл">' + __threadActionSvg('preview') + '</a>'
         +     '<a class="info-thread-icon-action info-thread-icon-action--download" href="' + __threadEsc(downloadUrl) + '" target="_blank" rel="noopener" title="Завантажити файл" aria-label="Завантажити файл">' + __threadActionSvg('download') + '</a>'
         +     (canDeleteDoc ? '<button type="button" class="info-thread-icon-action info-thread-icon-action--danger" data-thread-action="delete-doc" data-doc-id="' + id + '" title="Видалити файл" aria-label="Видалити файл">' + __threadActionSvg('delete') + '</button>' : '')
         +   '</span>'
@@ -1115,7 +1239,7 @@
       +   '<div class="info-files-item__icon" aria-hidden="true">' + __threadEsc(__threadDocIcon(doc)) + '</div>'
       +   '<div class="info-files-item__body">'
       +     '<div class="info-files-item__top">'
-      +       '<a class="info-files-item__name" href="' + __threadEsc(viewUrl) + '" target="_blank" rel="noopener">' + __threadEsc(name) + '</a>'
+      +       '<a class="info-files-item__name" href="' + __threadEsc(viewUrl) + '" target="_blank" rel="noopener" data-thread-action="preview-doc" data-doc-id="' + id + '">' + __threadEsc(name) + '</a>'
       +       '<span class="info-files-item__size">' + __threadEsc(size) + '</span>'
       +     '</div>'
       +     '<div class="info-files-item__meta">'
@@ -1125,7 +1249,7 @@
       +     '</div>'
       +   '</div>'
       +   '<div class="info-files-item__actions">'
-      +     '<a class="info-thread-icon-action info-thread-icon-action--preview" href="' + __threadEsc(viewUrl) + '" target="_blank" rel="noopener" title="Переглянути файл" aria-label="Переглянути файл">' + __threadActionSvg('preview') + '</a>'
+      +     '<a class="info-thread-icon-action info-thread-icon-action--preview" href="' + __threadEsc(viewUrl) + '" target="_blank" rel="noopener" data-thread-action="preview-doc" data-doc-id="' + id + '" title="Переглянути файл" aria-label="Переглянути файл">' + __threadActionSvg('preview') + '</a>'
       +     '<a class="info-thread-icon-action info-thread-icon-action--download" href="' + __threadEsc(downloadUrl) + '" target="_blank" rel="noopener" title="Завантажити файл" aria-label="Завантажити файл">' + __threadActionSvg('download') + '</a>'
       +     (canDeleteDoc ? '<button type="button" class="info-thread-icon-action info-thread-icon-action--danger" data-thread-action="delete-doc" data-doc-id="' + id + '" title="Видалити файл" aria-label="Видалити файл">' + __threadActionSvg('delete') + '</button>' : '')
       +   '</div>'
@@ -1303,6 +1427,16 @@
     if (list && !list.__filesClickBound) {
       list.__filesClickBound = true;
       list.addEventListener('click', function (ev) {
+        var previewLink = ev.target.closest('[data-thread-action="preview-doc"]');
+        if (previewLink) {
+          var previewDocId = parseInt(previewLink.getAttribute('data-doc-id') || '0', 10) || 0;
+          var previewDoc = __threadFindDocById(previewDocId);
+          if (previewDoc && __threadDocCanInlinePreview(previewDoc) && !__threadShouldBypassPreview(ev)) {
+            ev.preventDefault();
+            __threadOpenPreview(previewDoc);
+            return;
+          }
+        }
         var btn = ev.target.closest('[data-thread-action="delete-doc"]');
         if (!btn) return;
         var docId = parseInt(btn.getAttribute('data-doc-id') || '0', 10) || 0;
@@ -1347,8 +1481,26 @@
       +     '<div id="infoThreadList" class="info-thread-list">'
       +       '<div class="info-thread-hint">Відкрий цей блок — і коментарі завантажаться тільки в момент потреби.</div>'
       +     '</div>'
+      +     __infoThreadPreviewHtml()
       +   '</div>'
       + '</details>';
+  }
+
+  function __infoThreadPreviewHtml() {
+    return ''
+      + '<div id="infoThreadPreview" class="info-thread-preview" hidden aria-hidden="true">'
+      +   '<div class="info-thread-preview__backdrop" data-thread-action="close-preview"></div>'
+      +   '<div class="info-thread-preview__dialog" role="dialog" aria-modal="true" aria-label="Перегляд файла">'
+      +     '<div class="info-thread-preview__head">'
+      +       '<div id="infoThreadPreviewTitle" class="info-thread-preview__title">Перегляд файла</div>'
+      +       '<div class="info-thread-preview__actions">'
+      +         '<a id="infoThreadPreviewDownload" class="info-thread-icon-action info-thread-icon-action--download" href="#" target="_blank" rel="noopener" title="Завантажити файл" aria-label="Завантажити файл">' + __threadActionSvg('download') + '</a>'
+      +         '<button type="button" id="infoThreadPreviewClose" class="info-thread-icon-action info-thread-icon-action--neutral" data-thread-action="close-preview" title="Закрити перегляд" aria-label="Закрити перегляд">' + __threadActionSvg('cancel') + '</button>'
+      +       '</div>'
+      +     '</div>'
+      +     '<div id="infoThreadPreviewBody" class="info-thread-preview__body"></div>'
+      +   '</div>'
+      + '</div>';
   }
 
   function __bindInfoThread(eventId) {
@@ -1434,6 +1586,22 @@
         if (!btn) return;
         var action = String(btn.getAttribute('data-thread-action') || '');
 
+        if (action === 'preview-doc') {
+          var previewDocId = parseInt(btn.getAttribute('data-doc-id') || '0', 10) || 0;
+          var previewDoc = __threadFindDocById(previewDocId);
+          if (previewDoc && __threadDocCanInlinePreview(previewDoc) && !__threadShouldBypassPreview(ev)) {
+            ev.preventDefault();
+            __threadOpenPreview(previewDoc);
+            return;
+          }
+        }
+
+        if (action === 'close-preview') {
+          ev.preventDefault();
+          __threadClosePreview();
+          return;
+        }
+
         if (action === 'delete-doc') {
           var docId = parseInt(btn.getAttribute('data-doc-id') || '0', 10) || 0;
           if (docId > 0) __threadDeleteDoc(docId);
@@ -1498,6 +1666,17 @@
           var id = parseInt(inputEl.getAttribute('data-id') || '0', 10) || 0;
           if (id > 0) __threadSaveEdit(id);
         }
+      });
+    }
+
+    var preview = document.getElementById('infoThreadPreview');
+    if (preview && !preview.__previewBound) {
+      preview.__previewBound = true;
+      preview.addEventListener('click', function (ev) {
+        var btn = ev.target.closest('[data-thread-action="close-preview"]');
+        if (!btn) return;
+        ev.preventDefault();
+        __threadClosePreview();
       });
     }
 
@@ -2394,40 +2573,6 @@ function __historyBuildLine(it, currentEvent) {
     }
   } else if (action === 'calendar.event.close') {
     line = 'Користувач "' + actor + '" закрив подію';
-  } else if (action === 'event.message.create') {
-    var msgCreate = String((it && it.message_preview) || ((it && __historyAsObj(it.payload) || {}).message_preview) || '');
-    line = 'Користувач "' + actor + '" додав коментар' + (msgCreate ? (': "' + msgCreate + '"') : '');
-  } else if (action === 'event.message.update') {
-    var payloadUpdate = __historyAsObj(it && it.payload) || {};
-    var beforeMsg = String((it && it.before_preview) || payloadUpdate.before_preview || '');
-    var afterMsg = String((it && it.after_preview) || (it && it.message_preview) || payloadUpdate.after_preview || payloadUpdate.message_preview || '');
-    if (beforeMsg || afterMsg) {
-      line = 'Користувач "' + actor + '" змінив коментар (' + '"' + (beforeMsg || '—') + '" → "' + (afterMsg || '—') + '"' + ')';
-    } else {
-      line = 'Користувач "' + actor + '" змінив коментар';
-    }
-  } else if (action === 'event.message.delete') {
-    var payloadDelete = __historyAsObj(it && it.payload) || {};
-    var deletedMsg = String((it && (it.deleted_message_preview || it.message_preview)) || payloadDelete.deleted_message_preview || payloadDelete.message_preview || '');
-    var deletedCount = parseInt((it && it.deleted_document_count) || payloadDelete.deleted_document_count || 0, 10) || 0;
-    line = 'Користувач "' + actor + '" видалив коментар' + (deletedMsg ? (': "' + deletedMsg + '"') : '');
-    if (deletedCount > 0) line += ' (файлів видалено: ' + deletedCount + ')';
-  } else if (action === 'document.upload') {
-    var payloadUpload = __historyAsObj(it && it.payload) || {};
-    var uploadDocs = Object.prototype.toString.call(payloadUpload.documents) === '[object Array]' ? payloadUpload.documents : [];
-    if (uploadDocs.length === 1) {
-      var uploadName = String(uploadDocs[0].original_name || uploadDocs[0].name || 'Файл');
-      line = 'Користувач "' + actor + '" додав файл "' + uploadName + '"';
-    } else if (uploadDocs.length > 1) {
-      line = 'Користувач "' + actor + '" додав ' + uploadDocs.length + ' файли';
-    } else {
-      line = 'Користувач "' + actor + '" додав файл';
-    }
-  } else if (action === 'document.delete') {
-    var payloadDocDelete = __historyAsObj(it && it.payload) || {};
-    var docDel = payloadDocDelete.document || null;
-    var docDelName = docDel ? String(docDel.original_name || docDel.name || 'Файл') : '';
-    line = 'Користувач "' + actor + '" видалив файл' + (docDelName ? (' "' + docDelName + '"') : '');
   } else {
     line = (action || 'Подія');
   }
@@ -2671,6 +2816,7 @@ if (infoContent) infoContent.innerHTML = html;
 
       try { __threadReset(ev.id); __bindInfoThread(ev.id); } catch (_) { }
       try { __filesReset(ev.id); __bindInfoFiles(ev.id); } catch (_) { }
+      try { __threadPreviewReset(); __threadPreviewRender(); } catch (_) { }
 
       var el = document.querySelector('#editEvBtn');
       if (el) {
@@ -2694,11 +2840,21 @@ if (infoContent) infoContent.innerHTML = html;
 
   function closeInfo() {
     if (!infoOverlay) return;
+    try { __threadClosePreview(); } catch (_) { }
     if (infoOverlay.contains(document.activeElement)) { try { document.activeElement.blur(); } catch (_) { } }
     infoOverlay.classList.remove('show');
     infoOverlay.setAttribute('aria-hidden', 'true');
     infoOverlay.setAttribute('inert', '');
   }
+
+  document.addEventListener('keydown', function (e) {
+    if (e.key !== 'Escape') return;
+    var previewState = __threadPreviewGetState();
+    if (previewState && previewState.open) {
+      e.preventDefault();
+      __threadClosePreview();
+    }
+  });
 
   if (modal) modal.addEventListener('submit', function (e) {
     e.preventDefault();
