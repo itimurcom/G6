@@ -1189,24 +1189,19 @@ body.light #infoContent .info-seen-head,
 .info-thread-preview__body {
   min-height: 0;
   min-width: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  display: grid;
+  place-items: center;
   padding: 18px;
   overflow: hidden;
   background:
     linear-gradient(180deg, color-mix(in srgb, var(--card) 92%, transparent), color-mix(in srgb, var(--card) 84%, #000 16%));
 }
 .info-thread-preview__image {
-  display: block;
-  width: 100%;
-  height: 100%;
-  min-width: 0;
-  min-height: 0;
   max-width: 100%;
   max-height: 100%;
+  width: 100%;
+  height: 100%;
   object-fit: contain;
-  object-position: center center;
   border-radius: 14px;
   box-shadow: 0 18px 50px rgba(0,0,0,.24);
 }
@@ -1288,4 +1283,348 @@ body.light #infoContent .info-seen-head,
 .info-thread-attachment__name--button:hover,
 .info-files-item__name--button:hover {
   text-decoration: underline;
+}
+
+
+/* P11.2: light-theme file cards + opaque preview + robust image/text preview */
+html.light #infoContent .info-files-item,
+body.light #infoContent .info-files-item,
+.theme-light #infoContent .info-files-item,
+:root[data-theme="light"] #infoContent .info-files-item,
+[data-theme="light"] #infoContent .info-files-item {
+  background: #ffffff;
+  border-color: rgba(148, 163, 184, .34);
+  box-shadow: 0 10px 24px rgba(15, 23, 42, .08);
+}
+html.light #infoContent .info-files-item__icon,
+body.light #infoContent .info-files-item__icon,
+.theme-light #infoContent .info-files-item__icon,
+:root[data-theme="light"] #infoContent .info-files-item__icon,
+[data-theme="light"] #infoContent .info-files-item__icon {
+  background: rgba(37, 99, 235, .08);
+  border-color: rgba(37, 99, 235, .18);
+}
+html.light #infoContent .info-thread-files,
+body.light #infoContent .info-thread-files,
+.theme-light #infoContent .info-thread-files,
+:root[data-theme="light"] #infoContent .info-thread-files,
+[data-theme="light"] #infoContent .info-thread-files {
+  background: #ffffff;
+  border-color: rgba(148, 163, 184, .34);
+}
+html.light #infoContent .info-thread-preview__backdrop,
+body.light #infoContent .info-thread-preview__backdrop,
+.theme-light #infoContent .info-thread-preview__backdrop,
+:root[data-theme="light"] #infoContent .info-thread-preview__backdrop,
+[data-theme="light"] #infoContent .info-thread-preview__backdrop {
+  background: rgba(15, 23, 42, .52);
+  backdrop-filter: blur(3px);
+}
+html.light #infoContent .info-thread-preview__dialog,
+body.light #infoContent .info-thread-preview__dialog,
+.theme-light #infoContent .info-thread-preview__dialog,
+:root[data-theme="light"] #infoContent .info-thread-preview__dialog,
+[data-theme="light"] #infoContent .info-thread-preview__dialog {
+  background: #ffffff;
+  border-color: rgba(148, 163, 184, .34);
+}
+html.light #infoContent .info-thread-preview__head,
+body.light #infoContent .info-thread-preview__head,
+.theme-light #infoContent .info-thread-preview__head,
+:root[data-theme="light"] #infoContent .info-thread-preview__head,
+[data-theme="light"] #infoContent .info-thread-preview__head {
+  background: #ffffff;
+  border-bottom-color: rgba(148, 163, 184, .30);
+}
+html.light #infoContent .info-thread-preview__body,
+body.light #infoContent .info-thread-preview__body,
+.theme-light #infoContent .info-thread-preview__body,
+:root[data-theme="light"] #infoContent .info-thread-preview__body,
+[data-theme="light"] #infoContent .info-thread-preview__body {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f8fafc;
+}
+html.light #infoContent .info-thread-preview__image,
+body.light #infoContent .info-thread-preview__image,
+.theme-light #infoContent .info-thread-preview__image,
+:root[data-theme="light"] #infoContent .info-thread-preview__image,
+[data-theme="light"] #infoContent .info-thread-preview__image,
+html.dark #infoContent .info-thread-preview__image,
+body.dark #infoContent .info-thread-preview__image,
+.theme-dark #infoContent .info-thread-preview__image,
+:root[data-theme="dark"] #infoContent .info-thread-preview__image,
+[data-theme="dark"] #infoContent .info-thread-preview__image {
+  width: auto;
+  height: auto;
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  object-position: center center;
+}
+html.light #infoContent .info-thread-preview__text,
+body.light #infoContent .info-thread-preview__text,
+.theme-light #infoContent .info-thread-preview__text,
+:root[data-theme="light"] #infoContent .info-thread-preview__text,
+[data-theme="light"] #infoContent .info-thread-preview__text {
+  background: #ffffff;
+  color: #0f172a;
+  border-color: rgba(148, 163, 184, .38);
+}
+
+/* P12: consolidated comments/files/preview theme normalization */
+#infoContent,
+.info-thread-preview {
+  --text: var(--fg);
+  --card: var(--bg);
+  --line: var(--border);
+  --info-surface-1: color-mix(in srgb, var(--bg) 96%, var(--fg) 4%);
+  --info-surface-2: color-mix(in srgb, var(--bg) 92%, var(--fg) 8%);
+  --info-surface-3: color-mix(in srgb, var(--bg) 88%, var(--fg) 12%);
+  --info-border-strong: color-mix(in srgb, var(--border) 82%, var(--fg) 18%);
+  --info-shadow-soft: 0 12px 28px color-mix(in srgb, #0f172a 12%, transparent);
+}
+
+#infoContent .info-thread-hint,
+#infoContent .info-thread-loading,
+#infoContent .info-thread-empty,
+#infoContent .info-thread-message__body,
+#infoContent .info-thread-attachment,
+#infoContent .info-thread-files,
+#infoContent .info-files-item,
+#infoContent .info-files-hint,
+#infoContent .info-files-loading,
+#infoContent .info-files-empty {
+  background: var(--info-surface-1);
+  color: var(--fg);
+  border-color: color-mix(in srgb, var(--border) 88%, transparent);
+}
+
+#infoContent .info-thread-empty__title,
+#infoContent .info-files-empty__title,
+#infoContent .info-files-head,
+#infoContent .info-files-item__name,
+#infoContent .info-thread-file__name,
+#infoContent .info-thread-preview__title,
+#infoContent .info-thread-attachment__name,
+#infoContent .info-thread-attachment__name--button,
+#infoContent .info-files-item__name--button {
+  color: var(--fg);
+}
+
+#infoContent .info-thread-attachment__name:hover,
+#infoContent .info-thread-attachment__name--button:hover,
+#infoContent .info-files-item__name:hover,
+#infoContent .info-files-item__name--button:hover {
+  color: color-mix(in srgb, var(--accent) 72%, var(--fg) 28%);
+}
+
+#infoContent .info-files-wrap {
+  border-top-color: var(--border);
+}
+
+#infoContent .info-files-status {
+  background: color-mix(in srgb, var(--accent) 10%, var(--bg) 90%);
+  border-color: color-mix(in srgb, var(--accent) 24%, var(--border) 76%);
+  color: var(--fg);
+}
+
+#infoContent .info-files-status.is-error {
+  background: color-mix(in srgb, #ef4444 12%, var(--bg) 88%);
+  border-color: color-mix(in srgb, #ef4444 28%, var(--border) 72%);
+  color: var(--fg);
+}
+
+#infoContent .info-files-status.is-success {
+  background: color-mix(in srgb, #22c55e 12%, var(--bg) 88%);
+  border-color: color-mix(in srgb, #22c55e 28%, var(--border) 72%);
+  color: var(--fg);
+}
+
+#infoContent .info-thread-icon-action {
+  --thread-action-fg: var(--fg);
+  --thread-action-bg: var(--info-surface-2);
+  --thread-action-border: color-mix(in srgb, var(--border) 84%, var(--fg) 16%);
+  background: var(--thread-action-bg);
+  color: var(--thread-action-fg);
+  border-color: var(--thread-action-border);
+  box-shadow: 0 1px 2px color-mix(in srgb, #0f172a 10%, transparent);
+}
+
+#infoContent .info-thread-icon-action:hover {
+  background: color-mix(in srgb, var(--thread-action-bg) 92%, var(--fg) 8%);
+  border-color: color-mix(in srgb, var(--thread-action-border) 88%, var(--fg) 12%);
+  color: var(--thread-action-fg);
+}
+
+#infoContent .info-thread-icon-action--compose,
+#infoContent .info-thread-icon-action--send,
+#infoContent .info-thread-icon-action--save,
+#infoContent .info-thread-icon-action--edit {
+  --thread-action-fg: #ffffff;
+  --thread-action-bg: #16a34a;
+  --thread-action-border: #15803d;
+}
+
+#infoContent .info-thread-icon-action--files {
+  --thread-action-fg: #ffffff;
+  --thread-action-bg: #2563eb;
+  --thread-action-border: #1d4ed8;
+}
+
+#infoContent .info-thread-icon-action--download {
+  --thread-action-fg: #ffffff;
+  --thread-action-bg: #2563eb;
+  --thread-action-border: #1d4ed8;
+}
+
+#infoContent .info-thread-icon-action--danger {
+  --thread-action-fg: #ffffff;
+  --thread-action-bg: #ef4444;
+  --thread-action-border: #dc2626;
+}
+
+#infoContent .info-thread-icon-action--preview,
+#infoContent .info-thread-icon-action--neutral {
+  --thread-action-fg: var(--fg);
+  --thread-action-bg: color-mix(in srgb, var(--bg) 94%, var(--fg) 6%);
+  --thread-action-border: color-mix(in srgb, var(--border) 86%, var(--fg) 14%);
+}
+
+#infoContent .info-thread-icon-action:focus-visible,
+.info-thread-preview .info-thread-icon-action:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--accent) 72%, #ffffff 28%);
+  outline-offset: 2px;
+}
+
+#infoContent .info-files-item,
+#infoContent .info-thread-attachment,
+#infoContent .info-thread-files,
+#infoContent .info-thread-message__body {
+  box-shadow: var(--info-shadow-soft);
+}
+
+.info-thread-preview__backdrop {
+  background: color-mix(in srgb, #020617 72%, transparent);
+  backdrop-filter: blur(4px);
+}
+
+.info-thread-preview__dialog {
+  background: var(--bg);
+  border-color: color-mix(in srgb, var(--border) 88%, var(--fg) 12%);
+}
+
+.info-thread-preview__head {
+  background: var(--bg);
+  border-bottom-color: color-mix(in srgb, var(--border) 86%, transparent);
+}
+
+.info-thread-preview__title,
+.info-thread-preview__meta {
+  color: var(--fg);
+}
+
+.info-thread-preview__meta {
+  opacity: .8;
+}
+
+.info-thread-preview__body {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 18px;
+  overflow: auto;
+  background: var(--info-surface-2);
+}
+
+.info-thread-preview__image {
+  display: block;
+  width: auto;
+  height: auto;
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  object-position: center center;
+  margin: auto;
+  background: transparent;
+}
+
+.info-thread-preview__frame {
+  width: 100%;
+  height: 100%;
+  background: #ffffff;
+}
+
+.info-thread-preview__text {
+  width: 100%;
+  height: 100%;
+  background: var(--bg);
+  color: var(--fg);
+  border-color: color-mix(in srgb, var(--border) 88%, transparent);
+}
+
+html.light .info-thread-preview__backdrop,
+body.light .info-thread-preview__backdrop,
+.theme-light .info-thread-preview__backdrop,
+:root[data-theme="light"] .info-thread-preview__backdrop,
+[data-theme="light"] .info-thread-preview__backdrop {
+  background: rgba(15, 23, 42, .45);
+}
+
+html.light .info-thread-preview__dialog,
+body.light .info-thread-preview__dialog,
+.theme-light .info-thread-preview__dialog,
+:root[data-theme="light"] .info-thread-preview__dialog,
+[data-theme="light"] .info-thread-preview__dialog {
+  box-shadow: 0 26px 60px rgba(15, 23, 42, .18);
+}
+
+html.light #infoContent .info-thread-message__body,
+body.light #infoContent .info-thread-message__body,
+.theme-light #infoContent .info-thread-message__body,
+:root[data-theme="light"] #infoContent .info-thread-message__body,
+[data-theme="light"] #infoContent .info-thread-message__body,
+html.light #infoContent .info-thread-attachment,
+body.light #infoContent .info-thread-attachment,
+.theme-light #infoContent .info-thread-attachment,
+:root[data-theme="light"] #infoContent .info-thread-attachment,
+[data-theme="light"] #infoContent .info-thread-attachment,
+html.light #infoContent .info-thread-files,
+body.light #infoContent .info-thread-files,
+.theme-light #infoContent .info-thread-files,
+:root[data-theme="light"] #infoContent .info-thread-files,
+[data-theme="light"] #infoContent .info-thread-files,
+html.light #infoContent .info-files-item,
+body.light #infoContent .info-files-item,
+.theme-light #infoContent .info-files-item,
+:root[data-theme="light"] #infoContent .info-files-item,
+[data-theme="light"] #infoContent .info-files-item {
+  background: #ffffff;
+  border-color: rgba(148, 163, 184, .34);
+  box-shadow: 0 10px 24px rgba(15, 23, 42, .08);
+}
+
+html.light #infoContent .info-thread-icon-action--preview,
+body.light #infoContent .info-thread-icon-action--preview,
+.theme-light #infoContent .info-thread-icon-action--preview,
+:root[data-theme="light"] #infoContent .info-thread-icon-action--preview,
+[data-theme="light"] #infoContent .info-thread-icon-action--preview,
+html.light #infoContent .info-thread-icon-action--neutral,
+body.light #infoContent .info-thread-icon-action--neutral,
+.theme-light #infoContent .info-thread-icon-action--neutral,
+:root[data-theme="light"] #infoContent .info-thread-icon-action--neutral,
+[data-theme="light"] #infoContent .info-thread-icon-action--neutral {
+  --thread-action-bg: #ffffff;
+  --thread-action-fg: #0f172a;
+  --thread-action-border: rgba(148, 163, 184, .48);
+}
+
+html.light #infoContent .info-thread-preview__text,
+body.light #infoContent .info-thread-preview__text,
+.theme-light #infoContent .info-thread-preview__text,
+:root[data-theme="light"] #infoContent .info-thread-preview__text,
+[data-theme="light"] #infoContent .info-thread-preview__text {
+  background: #ffffff;
+  color: #0f172a;
 }
