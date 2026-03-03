@@ -3,20 +3,24 @@ declare(strict_types=1);
 
 namespace App\Controllers;
 
+use App\Models\DocumentMysqlRepository;
+use App\Models\EventMessageMysqlRepository;
 use App\Models\EventMysqlRepository; // <--- ЗМІНЕНО: Використовуємо MySQL репозиторій
 use App\Models\LoggingEventRepository;
-use App\Models\EventMessageMysqlRepository;
-use App\Models\DocumentMysqlRepository;
 
 final class ApiEventsController
 {
     /** @var \App\Models\EventRepositoryInterface */
     private $repo;
+    private EventMessageMysqlRepository $messageRepo;
+    private DocumentMysqlRepository $documentRepo;
 
     public function __construct()
     {
         // <--- ЗМІНЕНО: Передаємо MySQL версію всередину логера
         $this->repo = new LoggingEventRepository(new EventMysqlRepository());
+        $this->messageRepo = new EventMessageMysqlRepository();
+        $this->documentRepo = new DocumentMysqlRepository();
     }
 
     private function json($data, int $code = 200): void
@@ -239,44 +243,35 @@ final class ApiEventsController
     }
 
 
-
-
     public function searchExtended(): void
     {
-        $q = trim((string)($_GET['q'] ?? ($_GET['text'] ?? '')));
+        $q = trim((string)($_GET['q'] ?? ''));
+        $type = trim((string)($_GET['type'] ?? ''));
+        $limit = isset($_GET['limit']) ? (int)$_GET['limit'] : 20;
+        $limit = max(1, min(100, $limit));
+        $offset = isset($_GET['offset']) ? (int)$_GET['offset'] : 0;
+        $offset = max(0, $offset);
+
         if ($q === '') {
             $this->json(['ok' => true, 'comments' => [], 'files' => []]);
             return;
         }
 
-        $type = trim((string)($_GET['type'] ?? ''));
-        if ($type === '' || $type === 'all' || $type === 'assigned' || $type === 'my' || $type === 'overdue') {
-            $type = null;
-        }
-        $start = trim((string)($_GET['start'] ?? ''));
-        $end = trim((string)($_GET['end'] ?? ''));
-        $limit = isset($_GET['limit']) ? (int)$_GET['limit'] : 20;
-        $limit = max(1, min(50, $limit));
-
         try {
-            $messages = new EventMessageMysqlRepository();
-            $documents = new DocumentMysqlRepository();
-
-            $comments = $messages->searchText($q, $type, ($start !== '' ? $start : null), ($end !== '' ? $end : null), $limit, 0);
-            $files = $documents->searchByOriginalName($q, $type, ($start !== '' ? $start : null), ($end !== '' ? $end : null), $limit, 0);
-
+            $comments = $this->messageRepo->searchText($q, $type !== '' ? $type : null, $limit, $offset);
+            $files = $this->documentRepo->searchByOriginalName($q, $type !== '' ? $type : null, $limit, $offset);
             $this->json([
                 'ok' => true,
                 'comments' => $comments,
                 'files' => $files,
-                'query' => $q,
-                'type' => $type,
                 'limit' => $limit,
+                'offset' => $offset,
             ]);
         } catch (\Throwable $e) {
             $this->json(['ok'=>false,'error'=>'internal','message'=>$e->getMessage()], 500);
         }
     }
+
     public function search(): void
     {
         $filters = [

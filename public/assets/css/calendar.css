@@ -1308,6 +1308,173 @@ body.light .ev--multi,
   padding: 8px 4px;
 }
 
+/* Extended search: comments/files */
+#calendarSearchResults {
+  --info-surface-0: color-mix(in srgb, var(--bg) 94%, var(--fg) 6%);
+  --info-surface-1: color-mix(in srgb, var(--bg) 90%, var(--fg) 10%);
+  --info-border-soft: color-mix(in srgb, var(--border) 82%, transparent);
+  --info-shadow-card: 0 10px 22px color-mix(in srgb, #020617 14%, transparent);
+  --info-btn-neutral-bg: color-mix(in srgb, var(--bg) 88%, var(--fg) 12%);
+  --info-btn-neutral-fg: var(--fg);
+  --info-btn-neutral-border: color-mix(in srgb, var(--border) 82%, transparent);
+  --info-btn-green-bg: #16a34a;
+  --info-btn-green-border: #15803d;
+  --info-btn-blue-bg: #2563eb;
+  --info-btn-blue-border: #1d4ed8;
+  --info-btn-red-bg: #ef4444;
+  --info-btn-red-border: #dc2626;
+}
+
+:root[data-theme="light"] #calendarSearchResults {
+  --info-surface-0: #ffffff;
+  --info-surface-1: color-mix(in srgb, var(--bg) 98%, var(--fg) 2%);
+  --info-border-soft: rgba(148, 163, 184, .34);
+  --info-shadow-card: 0 10px 24px rgba(15, 23, 42, .08);
+  --info-btn-neutral-bg: #ffffff;
+  --info-btn-neutral-fg: #0f172a;
+  --info-btn-neutral-border: rgba(148, 163, 184, .48);
+}
+
+.calendar-search-comments,
+.calendar-search-files {
+  display: grid;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.calendar-search-comment {
+  display: grid;
+  gap: 8px;
+  padding: 14px 16px;
+  border: 1px solid var(--info-border-soft);
+  border-radius: 16px;
+  background: var(--info-surface-0);
+  box-shadow: var(--info-shadow-card);
+}
+
+.calendar-search-comment__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.calendar-search-comment__title {
+  font-size: var(--fs-lg);
+  font-weight: 900;
+}
+
+.calendar-search-comment__type,
+.calendar-search-comment__meta {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.calendar-search-comment__text {
+  white-space: pre-wrap;
+  line-height: 1.45;
+}
+
+.calendar-search-comment__actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.calendar-search-file .info-files-item__actions,
+.calendar-search-comment__actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.calendar-search-file {
+  background: var(--info-surface-0);
+  border: 1px solid var(--info-border-soft);
+  box-shadow: var(--info-shadow-card);
+}
+
+.calendar-search-file__title-group {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  min-width: 0;
+}
+
+.calendar-search-file .info-files-item__name {
+  font-weight: 900;
+}
+
+.calendar-search-file .info-files-item__meta {
+  color: var(--muted);
+}
+
+#calendarSearchResults .info-thread-icon-action {
+  --thread-action-fg: var(--info-btn-neutral-fg);
+  --thread-action-bg: var(--info-btn-neutral-bg);
+  --thread-action-border: var(--info-btn-neutral-border);
+  appearance: none;
+  border: 1px solid var(--thread-action-border);
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
+  min-height: 32px;
+  padding: 0;
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--thread-action-bg);
+  color: var(--thread-action-fg);
+  cursor: pointer;
+  text-decoration: none;
+  box-shadow: 0 1px 2px color-mix(in srgb, #0f172a 10%, transparent);
+}
+
+#calendarSearchResults .info-thread-icon-action svg {
+  width: 16px;
+  height: 16px;
+  display: block;
+  pointer-events: none;
+}
+
+#calendarSearchResults .info-thread-icon-action--edit {
+  --thread-action-fg: #ffffff;
+  --thread-action-bg: var(--info-btn-green-bg);
+  --thread-action-border: var(--info-btn-green-border);
+}
+
+#calendarSearchResults .info-thread-icon-action--download {
+  --thread-action-fg: #ffffff;
+  --thread-action-bg: var(--info-btn-blue-bg);
+  --thread-action-border: var(--info-btn-blue-border);
+}
+
+#calendarSearchResults .info-thread-icon-action--preview,
+#calendarSearchResults .info-thread-icon-action--neutral {
+  --thread-action-fg: var(--info-btn-neutral-fg);
+  --thread-action-bg: var(--info-btn-neutral-bg);
+  --thread-action-border: var(--info-btn-neutral-border);
+}
+
+#calendarSearchResults .info-thread-icon-action:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px color-mix(in srgb, #0f172a 12%, transparent);
+}
+
+@media (max-width: 720px) {
+  .calendar-search-comment,
+  .calendar-search-file {
+    padding: 14px;
+  }
+  .calendar-search-file__title-group {
+    flex-wrap: wrap;
+    gap: 6px 10px;
+  }
+}
 
 /* TEMP: приховано кнопку чату (btnChat) */
 #btnChat{display:none !important;}
@@ -1529,71 +1696,4 @@ body.light .ev--multi,
 
 .btn.btn--pdf {
   white-space: nowrap;
-}
-
-/* P16.1: extended calendar search results (comments + files) */
-.calendar-search-section {
-  margin-top: 16px;
-}
-
-.calendar-search-card {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 14px 16px;
-  border: 1px solid var(--border);
-  border-radius: 16px;
-  background: color-mix(in oklab, var(--bg) 92%, var(--event-bg));
-  box-shadow: 0 10px 24px rgba(0,0,0,.08);
-}
-
-.calendar-search-card + .calendar-search-card {
-  margin-top: 10px;
-}
-
-.calendar-search-card__meta,
-.calendar-search-card__sub {
-  color: var(--muted);
-  font-size: 13px;
-}
-
-.calendar-search-card__title {
-  font-weight: 700;
-  color: var(--fg);
-  word-break: break-word;
-}
-
-.calendar-search-card__text {
-  color: var(--fg);
-  line-height: 1.5;
-  white-space: pre-wrap;
-  word-break: break-word;
-}
-
-.calendar-search-card__actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 2px;
-}
-
-.calendar-search-card__btn {
-  text-decoration: none;
-}
-
-:root[data-theme="light"] .calendar-search-card {
-  background: #fff;
-  border-color: color-mix(in oklab, var(--border) 78%, #ffffff);
-  box-shadow: 0 12px 28px rgba(15, 23, 42, .08);
-}
-
-@media (max-width: 760px) {
-  .calendar-search-card {
-    padding: 12px 13px;
-    border-radius: 14px;
-  }
-
-  .calendar-search-card__actions {
-    gap: 6px;
-  }
 }

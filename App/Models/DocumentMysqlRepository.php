@@ -210,69 +210,6 @@ final class DocumentMysqlRepository
         return $mapped;
     }
 
-
-
-    public function searchByOriginalName(string $query, ?string $eventType = null, ?string $startDate = null, ?string $endDate = null, int $limit = 25, int $offset = 0): array
-    {
-        $query = trim($query);
-        if ($query === '') {
-            return [];
-        }
-
-        $limit = max(1, min(100, $limit));
-        $offset = max(0, $offset);
-
-        $params = ['q' => '%' . $query . '%'];
-        $where = [
-            'd.deleted_at IS NULL',
-            '(d.message_id IS NULL OR m.deleted_at IS NULL)',
-            'd.original_name LIKE :q'
-        ];
-
-        if ($eventType !== null && $eventType !== '' && $eventType !== 'all') {
-            $where[] = 'e.type = :event_type';
-            $params['event_type'] = $eventType;
-        }
-        if ($startDate !== null && $startDate !== '') {
-            $where[] = 'e.start_date >= :start_date';
-            $params['start_date'] = $startDate;
-        }
-        if ($endDate !== null && $endDate !== '') {
-            $where[] = 'e.start_date <= :end_date';
-            $params['end_date'] = $endDate;
-        }
-
-        $sql = "SELECT d.*, e.title AS event_title,
-                       e.start_date AS event_date,
-                       e.time AS event_time,
-                       e.type AS event_type,
-                       u.name AS uploader_name, u.login AS uploader_login,
-                       m.user_id AS message_user_id,
-                       m.message_text AS message_text
-                FROM documents d
-                INNER JOIN events e ON e.id COLLATE utf8mb4_unicode_ci = d.event_id
-                LEFT JOIN users u ON u.id = d.uploaded_by_user_id
-                LEFT JOIN event_messages m ON m.id = d.message_id
-                WHERE " . implode(' AND ', $where) . "
-                ORDER BY d.created_at DESC, d.id DESC
-                LIMIT {$limit} OFFSET {$offset}";
-        $st = $this->db->prepare($sql);
-        $st->execute($params);
-        $rows = $st->fetchAll(PDO::FETCH_ASSOC) ?: [];
-        $out = [];
-        foreach ($rows as $row) {
-            $mapped = $this->mapRow($row);
-            $mapped['event_title'] = (string)($row['event_title'] ?? '');
-            $mapped['event_date'] = (string)($row['event_date'] ?? '');
-            $mapped['event_time'] = (string)($row['event_time'] ?? '');
-            $mapped['event_type'] = (string)($row['event_type'] ?? '');
-            $mapped['message_text'] = (string)($row['message_text'] ?? '');
-            $mapped['view_url'] = '/api/documents/view?id=' . (int)($mapped['id'] ?? 0);
-            $mapped['download_url'] = '/api/documents/download?id=' . (int)($mapped['id'] ?? 0);
-            $out[] = $mapped;
-        }
-        return $out;
-    }
     public function softDeleteById(int $id, int $deleterUserId): ?array
     {
         if ($id <= 0) throw new \InvalidArgumentException('id required');
@@ -308,6 +245,45 @@ final class DocumentMysqlRepository
         ]);
 
         return (int)$st->rowCount();
+    }
+
+    public function searchByOriginalName(string $query, ?string $eventType = null, int $limit = 50, int $offset = 0): array
+    {
+        $query = trim($query);
+        if ($query === '') return [];
+
+        $limit = max(1, min(200, $limit));
+        $offset = max(0, $offset);
+        $params = [
+            'q' => '%' . $query . '%',
+        ];
+
+        $typeSql = '';
+        $eventType = trim((string)($eventType ?? ''));
+        if ($eventType !== '' && $eventType !== 'all') {
+            $typeSql = ' AND e.type = :event_type';
+            $params['event_type'] = $eventType;
+        }
+
+        $sql = "SELECT d.*, e.title AS event_title,
+                       e.start_date AS event_date,
+                       e.time AS event_time,
+                       e.type AS event_type,
+                       u.name AS uploader_name, u.login AS uploader_login,
+                       m.user_id AS message_user_id,
+                       m.message_text AS message_text
+                FROM documents d
+                LEFT JOIN events e ON e.id COLLATE utf8mb4_unicode_ci = d.event_id
+                LEFT JOIN users u ON u.id = d.uploaded_by_user_id
+                LEFT JOIN event_messages m ON m.id = d.message_id
+                WHERE d.deleted_at IS NULL
+                  AND (d.message_id IS NULL OR m.deleted_at IS NULL)
+                  AND d.original_name LIKE :q{$typeSql}
+                ORDER BY d.created_at DESC, d.id DESC
+                LIMIT {$limit} OFFSET {$offset}";
+        $st = $this->db->prepare($sql);
+        $st->execute($params);
+        return array_map([$this, 'mapRow'], $st->fetchAll(PDO::FETCH_ASSOC) ?: []);
     }
 
     public function listForCabinet(int $viewerUserId, bool $isAdmin, int $limit = 200, int $offset = 0): array
@@ -357,6 +333,10 @@ final class DocumentMysqlRepository
             'deleted_at' => $row['deleted_at'] ?? null,
             'deleted_by_user_id' => isset($row['deleted_by_user_id']) ? (int)$row['deleted_by_user_id'] : null,
             'event_title' => (string)($row['event_title'] ?? ''),
+            'event_date' => (string)($row['event_date'] ?? ''),
+            'event_time' => (string)($row['event_time'] ?? ''),
+            'event_type' => (string)($row['event_type'] ?? ''),
+            'message_preview' => (string)($row['message_text'] ?? ''),
             'uploader' => [
                 'id' => (int)($row['uploaded_by_user_id'] ?? 0),
                 'name' => $uploaderName,

@@ -334,6 +334,38 @@
     return null;
   }
 
+  function __threadFocusMessage(messageId) {
+    messageId = parseInt(messageId || 0, 10) || 0;
+    if (messageId <= 0) return false;
+    var el = document.querySelector('.info-thread-message[data-message-id="' + messageId + '"]');
+    if (!el) return false;
+    try { el.scrollIntoView({ block: 'center', behavior: 'smooth' }); } catch (_) { try { el.scrollIntoView(); } catch (_) { } }
+    el.classList.add('is-search-target');
+    setTimeout(function () { try { el.classList.remove('is-search-target'); } catch (_) { } }, 2200);
+    return true;
+  }
+
+  function __threadApplyPendingFocus() {
+    var state = __threadGetState();
+    if (!state) return;
+    var messageId = parseInt(state.pendingFocusMessageId || 0, 10) || 0;
+    if (messageId <= 0) return;
+    if (__threadFocusMessage(messageId)) {
+      state.pendingFocusMessageId = 0;
+    }
+  }
+
+  function __filesApplyPendingPreview() {
+    var state = __filesGetState();
+    if (!state) return;
+    var docId = parseInt(state.pendingPreviewDocId || 0, 10) || 0;
+    if (docId <= 0) return;
+    var doc = __threadFindDocById(docId);
+    if (!doc) return;
+    state.pendingPreviewDocId = 0;
+    __threadOpenPreview(doc);
+  }
+
   function __threadPreviewRender() {
     var state = __threadPreviewGetState();
     var overlayEl = document.getElementById('infoThreadPreview');
@@ -721,7 +753,7 @@
         editingFiles: [],
         pendingFiles: [],
         docsByMessage: {},
-        focusMessageId: 0
+        pendingFocusMessageId: 0
       };
     }
     return infoOverlay.__threadState;
@@ -742,8 +774,7 @@
       editingText: '',
       editingFiles: [],
       pendingFiles: [],
-      docsByMessage: {},
-      focusMessageId: 0
+      docsByMessage: {}
     };
   }
 
@@ -918,28 +949,13 @@
       host.innerHTML = state.items.map(function (item) { return __threadRenderItem(item, state); }).join('');
     }
     __threadSetComposerVisible(state.composerOpen);
+    __threadApplyPendingFocus();
     if (state.editingId > 0) {
       var input = host.querySelector('[data-thread-role="edit-input"][data-id="' + state.editingId + '"]');
       if (input) {
         try { input.focus(); input.setSelectionRange(input.value.length, input.value.length); } catch (_) { }
       }
     }
-  }
-
-
-  function __threadFocusMessage(messageId) {
-    var host = document.getElementById('infoThreadList');
-    var state = __threadGetState();
-    var id = parseInt(messageId || 0, 10) || 0;
-    if (!host || !id || !state) return;
-    state.focusMessageId = id;
-    var node = host.querySelector('[data-message-id="' + id + '"]');
-    if (!node) return;
-    try { node.scrollIntoView({ block: 'center', behavior: 'smooth' }); } catch (_) { }
-    node.classList.add('info-thread-message--search-focus');
-    setTimeout(function () {
-      try { node.classList.remove('info-thread-message--search-focus'); } catch (_) { }
-    }, 2200);
   }
 
   function __threadFetchJson(url, init) {
@@ -983,7 +999,7 @@
 
         state.loaded = true;
         __threadRender();
-        if (state.focusMessageId > 0) { __threadFocusMessage(state.focusMessageId); }
+        __threadApplyPendingFocus();
       })
       .catch(function (error) {
         state.items = [];
@@ -1305,7 +1321,8 @@
         loading: false,
         countLoading: false,
         countValue: null,
-        items: []
+        items: [],
+        pendingPreviewDocId: 0
       };
     }
     return infoOverlay.__filesState;
@@ -1319,7 +1336,8 @@
       loading: false,
       countLoading: false,
       countValue: null,
-      items: []
+      items: [],
+      pendingPreviewDocId: 0
     };
   }
 
@@ -1514,6 +1532,7 @@
         state.countValue = (data && data.total != null) ? (parseInt(data.total, 10) || 0) : state.items.length;
         state.loaded = true;
         __filesRender();
+        __filesApplyPendingPreview();
       })
       .catch(function (error) {
         state.items = [];
@@ -2400,7 +2419,8 @@
   function openInfo(
     dateISO, id, options) {
     options = (options && typeof options === 'object') ? options : {};
-    var focusMessageId = parseInt(options.focusMessageId || 0, 10) || 0;
+    var __focusMessageId = parseInt(options.focusMessageId || 0, 10) || 0;
+    var __previewDocId = parseInt(options.previewDocId || 0, 10) || 0;
     try { if (infoOverlay && infoOverlay.dataset) { infoOverlay.dataset.pdfEventId = String(id || ''); } } catch (_) { }
     // Move header edit button to footer and restyle (green, text "редагувати")
     try {
@@ -2998,9 +3018,29 @@ if (infoContent) infoContent.innerHTML = html;
       infoOverlay.setAttribute('aria-hidden', 'false');
       infoOverlay.removeAttribute('inert');
 
-      try { __threadReset(ev.id); var __ts = __threadGetState(); if (__ts) { __ts.focusMessageId = focusMessageId; } __bindInfoThread(ev.id); } catch (_) { }
-      try { __filesReset(ev.id); __bindInfoFiles(ev.id); } catch (_) { }
+      try { __threadReset(ev.id); var __threadState = __threadGetState(); if (__threadState) { __threadState.pendingFocusMessageId = __focusMessageId; } __bindInfoThread(ev.id); } catch (_) { }
+      try { __filesReset(ev.id); var __filesState = __filesGetState(); if (__filesState) { __filesState.pendingPreviewDocId = __previewDocId; } __bindInfoFiles(ev.id); } catch (_) { }
       try { __threadPreviewReset(); __threadPreviewRender(); } catch (_) { }
+
+      try {
+        var __threadWrap = document.getElementById('infoThreadWrap');
+        if (__threadWrap && __focusMessageId > 0) {
+          __threadWrap.open = true;
+          var __ts = __threadGetState();
+          if (__ts && !__ts.loaded && !__ts.loading) __threadLoad(ev.id);
+          else __threadApplyPendingFocus();
+        }
+      } catch (_) { }
+
+      try {
+        var __filesWrap = document.getElementById('infoFilesWrap');
+        if (__filesWrap && __previewDocId > 0) {
+          __filesWrap.open = true;
+          var __fs = __filesGetState();
+          if (__fs && !__fs.loaded && !__fs.loading) __filesLoad(ev.id);
+          else __filesApplyPendingPreview();
+        }
+      } catch (_) { }
 
       var el = document.querySelector('#editEvBtn');
       if (el) {

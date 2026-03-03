@@ -1360,10 +1360,9 @@ body.light #infoContent .info-seen-head,
     padding: 10px;
   }
 }
-/* P16.1: search -> focus comment highlight */
-.info-thread-message--search-focus {
-  outline: 2px solid color-mix(in oklab, var(--accent) 72%, white);
+.info-thread-message.is-search-target {
+  outline: 2px solid color-mix(in oklab, var(--accent) 70%, #22c55e);
   outline-offset: 2px;
-  box-shadow: 0 0 0 4px color-mix(in oklab, var(--accent) 18%, transparent);
-  border-radius: 16px;
+  border-radius: 18px;
+  box-shadow: 0 0 0 6px color-mix(in oklab, var(--accent) 18%, transparent);
 }

@@ -176,7 +176,6 @@
 
   var __fullSearchActive = false;
   var __fullSearchLastQuery = '';
-  var __fullSearchRequestId = 0;
 
   function __setCalendarContentHidden(hidden) {
     if (calendarWeekdays) calendarWeekdays.style.display = hidden ? 'none' : '';
@@ -211,17 +210,6 @@
     return h * 60 + m;
   }
 
-
-  function __searchFormatBytes(n) {
-    var num = parseInt(n || 0, 10) || 0;
-    if (num <= 0) return '0 B';
-    var units = ['B', 'KB', 'MB', 'GB', 'TB'];
-    var i = 0;
-    var v = num;
-    while (v >= 1024 && i < units.length - 1) { v = v / 1024; i++; }
-    return v.toFixed((v >= 10 || i === 0) ? 0 : 1) + ' ' + units[i];
-  }
-
   function __renderSearchEmpty(container, query) {
     var sec = document.createElement('div');
     sec.className = 'planning-section';
@@ -232,7 +220,7 @@
 
     var empty = document.createElement('div');
     empty.className = 'planning-empty';
-    empty.textContent = 'Події не знайдено';
+    empty.textContent = 'Нічого не знайдено';
 
     sec.appendChild(h);
     sec.appendChild(empty);
@@ -247,7 +235,7 @@
     h.className = 'planning-section__title';
 
     var title = document.createElement('span');
-    title.textContent = 'Події';
+    title.textContent = 'Результати пошуку: "' + (query || '') + '"';
 
     var meta = document.createElement('span');
     meta.className = 'planning-section__date';
@@ -270,10 +258,11 @@
       if (ev.urgent) li.classList.add('urgent');
       if (ev.done) li.classList.add('done');
 
+      // multi-day hint
       try {
-        var sDate = (ev.start_date || dateISO || '').slice(0, 10);
-        var eDate = (ev.end_date || '').slice(0, 10);
-        if (eDate && sDate && eDate !== sDate) li.classList.add('ev--multi');
+        var s = (ev.start_date || dateISO || '').slice(0, 10);
+        var e = (ev.end_date || '').slice(0, 10);
+        if (e && s && e !== s) li.classList.add('ev--multi');
       } catch (_) { }
 
       var time = document.createElement('div');
@@ -309,6 +298,7 @@
       li.appendChild(time);
       li.appendChild(details);
 
+      // click -> open info (shift-click -> edit)
       (function (dISO, id) {
         li.addEventListener('click', function (e) {
           var ui = (window.CalendarApp && window.CalendarApp.ui) || {};
@@ -325,261 +315,6 @@
     sec.appendChild(h);
     sec.appendChild(ul);
     container.appendChild(sec);
-  }
-
-  function __escapeText(value) {
-    return String(value == null ? '' : value)
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#39;');
-  }
-
-  function __searchSnippet(value, query, limit) {
-    var src = String(value || '').replace(/\s+/g, ' ').trim();
-    if (!src) return '—';
-    var q = String(query || '').trim().toLowerCase();
-    var max = Math.max(40, parseInt(limit || 140, 10) || 140);
-    if (!q) return src.length > max ? (src.slice(0, max - 1) + '…') : src;
-    var idx = src.toLowerCase().indexOf(q);
-    if (idx < 0) return src.length > max ? (src.slice(0, max - 1) + '…') : src;
-    var start = Math.max(0, idx - Math.floor(max * 0.35));
-    var end = Math.min(src.length, start + max);
-    var out = src.slice(start, end);
-    if (start > 0) out = '…' + out;
-    if (end < src.length) out += '…';
-    return out;
-  }
-
-  function __searchResultMeta(dateISO, time, eventTitle) {
-    var parts = [];
-    if (eventTitle) parts.push(String(eventTitle));
-    if (dateISO) parts.push(__isoToShortDM(dateISO) + (time ? (' ' + String(time)) : ''));
-    return parts.join(' · ');
-  }
-
-
-  function __cacheEventForSearch(ev, fallbackDateISO) {
-    try {
-      if (!ev || !Data || typeof Data._getCache !== 'function' || typeof Data._setCache !== 'function') return false;
-      var dateISO = String((ev._date || ev.start_date || fallbackDateISO || '')).slice(0, 10);
-      if (!dateISO) return false;
-      var store = Data._getCache() || {};
-      var next = {};
-      for (var k in store) {
-        if (Object.prototype.hasOwnProperty.call(store, k)) next[k] = Array.isArray(store[k]) ? store[k].slice() : store[k];
-      }
-      var arr = Array.isArray(next[dateISO]) ? next[dateISO].slice() : [];
-      var found = false;
-      for (var i = 0; i < arr.length; i++) {
-        if (arr[i] && arr[i].id === ev.id) { arr[i] = ev; found = true; break; }
-      }
-      if (!found) arr.push(ev);
-      next[dateISO] = arr;
-      Data._setCache(next);
-      return true;
-    } catch (_) {
-      return false;
-    }
-  }
-
-  function __openSearchResult(eventId, dateISO, focusMessageId) {
-    var ui = (window.CalendarApp && window.CalendarApp.ui) || {};
-    if (!ui || typeof ui.openInfo !== 'function') return;
-    var dISO = String(dateISO || '').slice(0, 10);
-    var arr = (Data && typeof Data.getEventsFor === 'function' && dISO) ? (Data.getEventsFor(dISO) || []) : [];
-    var exists = false;
-    for (var i = 0; i < arr.length; i++) {
-      if (arr[i] && arr[i].id === eventId) { exists = true; break; }
-    }
-    if (exists) {
-      ui.openInfo(dISO, eventId, focusMessageId ? { focusMessageId: focusMessageId } : null);
-      return;
-    }
-    fetch('/api/events/get?id=' + encodeURIComponent(String(eventId || '')), { credentials: 'same-origin' })
-      .then(function (r) { return r.json().catch(function () { return null; }).then(function (data) { if (!r.ok || !data || data.ok === false) throw new Error((data && (data.message || data.error)) || ('HTTP ' + r.status)); return data; }); })
-      .then(function (data) {
-        if (data && data.event) __cacheEventForSearch(data.event, dISO);
-        ui.openInfo(String(((data && data.event && (data.event._date || data.event.start_date)) || dISO || '')).slice(0, 10), eventId, focusMessageId ? { focusMessageId: focusMessageId } : null);
-      })
-      .catch(function () {
-        ui.openInfo(dISO, eventId, focusMessageId ? { focusMessageId: focusMessageId } : null);
-      });
-  }
-
-  function __renderExtendedSection(container, titleText, count, buildRows) {
-    var sec = document.createElement('div');
-    sec.className = 'planning-section calendar-search-section';
-    var h = document.createElement('div');
-    h.className = 'planning-section__title';
-    var title = document.createElement('span');
-    title.textContent = titleText;
-    var meta = document.createElement('span');
-    meta.className = 'planning-section__date';
-    meta.textContent = 'знайдено: ' + String(count || 0);
-    h.appendChild(title);
-    h.appendChild(meta);
-    sec.appendChild(h);
-    buildRows(sec);
-    container.appendChild(sec);
-  }
-
-  function __renderSearchComments(container, query, items) {
-    if (!Array.isArray(items) || !items.length) return;
-    __renderExtendedSection(container, 'Коментарі', items.length, function (sec) {
-      for (var i = 0; i < items.length; i++) {
-        var item = items[i] || {};
-        var row = document.createElement('div');
-        row.className = 'calendar-search-card calendar-search-card--comment';
-
-        var meta = document.createElement('div');
-        meta.className = 'calendar-search-card__meta';
-        meta.textContent = __searchResultMeta(item.event_date || '', item.event_time || '', item.event_title || '');
-
-        var text = document.createElement('div');
-        text.className = 'calendar-search-card__text';
-        text.textContent = __searchSnippet(item.message_text || '', query, 180);
-
-        var author = document.createElement('div');
-        author.className = 'calendar-search-card__sub';
-        var disp = (((item.author || {}).display) || ((item.author || {}).name) || ((item.author || {}).login) || '').trim();
-        author.textContent = disp ? ('Автор: ' + disp) : 'Коментар';
-
-        var actions = document.createElement('div');
-        actions.className = 'calendar-search-card__actions';
-        var btn = document.createElement('button');
-        btn.type = 'button';
-        btn.className = 'btn btn--green calendar-search-card__btn';
-        btn.textContent = 'До коментаря';
-        (function (it) {
-          btn.addEventListener('click', function () {
-            var ui = (window.CalendarApp && window.CalendarApp.ui) || {};
-            if (ui && typeof ui.openInfo === 'function') {
-              __openSearchResult(it.event_id, String(it.event_date || ''), it.id);
-            }
-          });
-        })(item);
-        actions.appendChild(btn);
-
-        row.appendChild(meta);
-        row.appendChild(text);
-        row.appendChild(author);
-        row.appendChild(actions);
-        sec.appendChild(row);
-      }
-    });
-  }
-
-  function __renderSearchFiles(container, query, items) {
-    if (!Array.isArray(items) || !items.length) return;
-    __renderExtendedSection(container, 'Файли', items.length, function (sec) {
-      for (var i = 0; i < items.length; i++) {
-        var item = items[i] || {};
-        var row = document.createElement('div');
-        row.className = 'calendar-search-card calendar-search-card--file';
-
-        var meta = document.createElement('div');
-        meta.className = 'calendar-search-card__meta';
-        meta.textContent = __searchResultMeta(item.event_date || '', item.event_time || '', item.event_title || '');
-
-        var name = document.createElement('div');
-        name.className = 'calendar-search-card__title';
-        name.textContent = String(item.original_name || '(без назви файла)');
-
-        var sub = document.createElement('div');
-        sub.className = 'calendar-search-card__sub';
-        var parts = [];
-        if (item.mime_type) parts.push(String(item.mime_type));
-        if (item.file_size != null) parts.push(__searchFormatBytes(item.file_size));
-        if (item.message_text) parts.push(__searchSnippet(item.message_text || '', query, 120));
-        sub.textContent = parts.join(' · ');
-
-        var actions = document.createElement('div');
-        actions.className = 'calendar-search-card__actions';
-
-        var aView = document.createElement('a');
-        aView.className = 'btn calendar-search-card__btn';
-        aView.href = item.view_url || ('/api/documents/view?id=' + encodeURIComponent(String(item.id || '')));
-        aView.target = '_blank';
-        aView.rel = 'noopener';
-        aView.textContent = 'Переглянути';
-
-        var aDownload = document.createElement('a');
-        aDownload.className = 'btn calendar-search-card__btn';
-        aDownload.href = item.download_url || ('/api/documents/download?id=' + encodeURIComponent(String(item.id || '')));
-        aDownload.textContent = 'Завантажити';
-
-        actions.appendChild(aView);
-        actions.appendChild(aDownload);
-
-        var msgId = parseInt(item.message_id || 0, 10) || 0;
-        if (msgId > 0) {
-          var btn = document.createElement('button');
-          btn.type = 'button';
-          btn.className = 'btn btn--green calendar-search-card__btn';
-          btn.textContent = 'До коментаря';
-          (function (it) {
-            btn.addEventListener('click', function () {
-              var ui = (window.CalendarApp && window.CalendarApp.ui) || {};
-              if (ui && typeof ui.openInfo === 'function') {
-                __openSearchResult(it.event_id, String(it.event_date || ''), it.message_id);
-              }
-            });
-          })(item);
-          actions.appendChild(btn);
-        }
-
-        row.appendChild(meta);
-        row.appendChild(name);
-        row.appendChild(sub);
-        row.appendChild(actions);
-        sec.appendChild(row);
-      }
-    });
-  }
-
-  function __extendedSearchTypeValue() {
-    var t = String(currentType || 'all').trim();
-    return (t === 'mi' || t === 'nas' || t === 'evt' || t === 'other') ? t : 'all';
-  }
-
-  function __loadExtendedSearchResults(query, requestId) {
-    if (!calendarSearchResults) return;
-    var q = String(query || '').trim();
-    if (!q) return;
-
-    var params = new URLSearchParams();
-    params.set('q', q);
-    params.set('limit', '20');
-    var tp = __extendedSearchTypeValue();
-    if (tp && tp !== 'all') params.set('type', tp);
-
-    fetch('/api/events/search-extended?' + params.toString(), { credentials: 'same-origin' })
-      .then(function (r) {
-        return r.json().catch(function () { return null; }).then(function (data) {
-          if (!r.ok || !data || data.ok === false) {
-            var msg = data && (data.message || data.error) ? (data.message || data.error) : ('HTTP ' + r.status);
-            throw new Error(String(msg));
-          }
-          return data;
-        });
-      })
-      .then(function (data) {
-        if (!__fullSearchActive || requestId !== __fullSearchRequestId) return;
-        var comments = Array.isArray(data.comments) ? data.comments : [];
-        var files = Array.isArray(data.files) ? data.files : [];
-        if (!comments.length && !files.length) return;
-        __renderSearchComments(calendarSearchResults, q, comments);
-        __renderSearchFiles(calendarSearchResults, q, files);
-      })
-      .catch(function (err) {
-        if (!__fullSearchActive || requestId !== __fullSearchRequestId) return;
-        var warn = document.createElement('div');
-        warn.className = 'planning-section calendar-search-section';
-        warn.innerHTML = '<div class="planning-empty">Розширений пошук недоступний: ' + __escapeText(err && err.message ? err.message : 'помилка') + '</div>';
-        calendarSearchResults.appendChild(warn);
-      });
   }
 
   function __collectFullSearchMatches(query) {
@@ -662,6 +397,359 @@
     return out;
   }
 
+  function __searchActionSvg(name) {
+    switch (String(name || '')) {
+      case 'preview':
+        return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Zm9.5 3a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+      case 'download':
+        return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4.5v10m0 0 4-4m-4 4-4-4M5 18.5h14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+      case 'comment':
+        return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 18.5V7.8A2.8 2.8 0 0 1 7.8 5h8.4A2.8 2.8 0 0 1 19 7.8v5.4A2.8 2.8 0 0 1 16.2 16H10l-5 2.5Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+      default:
+        return '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="7" fill="none" stroke="currentColor" stroke-width="1.8"/></svg>';
+    }
+  }
+
+  function __searchEsc(v) {
+    return String(v == null ? '' : v)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  function __searchTypeLabel(type) {
+    try { return Ev.labelForType ? Ev.labelForType(type || 'evt') : String(type || ''); } catch (_) { return String(type || ''); }
+  }
+
+  function __searchFormatDateTime(dateISO, time) {
+    var d = String(dateISO || '').slice(0, 10);
+    var t = String(time || '').trim();
+    return __isoToShortDM(d) + (t ? (' ' + t) : '');
+  }
+
+  function __searchSnippet(text, limit) {
+    var raw = String(text || '').replace(/\s+/g, ' ').trim();
+    var max = Math.max(40, parseInt(limit || 0, 10) || 140);
+    if (raw.length <= max) return raw;
+    return raw.slice(0, max - 1).trim() + '…';
+  }
+
+  function __searchFormatBytes(n) {
+    var num = Number(n || 0);
+    if (!isFinite(num) || num < 0) num = 0;
+    if (num < 1024) return num + ' B';
+    if (num < 1024 * 1024) return (Math.round((num / 1024) * 10) / 10) + ' KB';
+    if (num < 1024 * 1024 * 1024) return (Math.round((num / 1024 / 1024) * 10) / 10) + ' MB';
+    return (Math.round((num / 1024 / 1024 / 1024) * 10) / 10) + ' GB';
+  }
+
+
+  function __searchFileIcon(item) {
+    item = item || {};
+    var mime = String(item.mime_type || '').toLowerCase();
+    var name = String(item.original_name || '').toLowerCase();
+    if ((item.is_image) || (mime.indexOf('image/') === 0) || /\.(png|jpe?g|gif|webp|bmp|svg)$/i.test(name)) return '🖼';
+    if (mime === 'application/pdf' || /\.pdf$/i.test(name)) return '📄';
+    if (mime.indexOf('text/') === 0 || mime === 'application/json' || mime === 'application/xml' || mime === 'text/xml' || /\.(txt|log|md|csv|json|xml|ya?ml|ini|cfg|conf|sql)$/i.test(name)) return '📄';
+    return '📎';
+  }
+
+  function __searchFetchExtended(query) {
+    var params = new URLSearchParams();
+    params.set('q', String(query || '').trim());
+    params.set('limit', '20');
+    if (currentType && currentType !== 'all') params.set('type', currentType);
+    return fetch('/api/events/search-extended?' + params.toString(), {
+      method: 'GET',
+      credentials: 'same-origin',
+      headers: { 'Accept': 'application/json' }
+    }).then(function (response) {
+      return response.json().catch(function () { return null; }).then(function (data) {
+        if (!response.ok || !data || data.ok === false) {
+          var msg = data && (data.message || data.error) ? String(data.message || data.error) : ('HTTP ' + response.status);
+          throw new Error(msg);
+        }
+        return data;
+      });
+    });
+  }
+
+  function __searchEnsureEventInStore(eventId) {
+    eventId = String(eventId || '').trim();
+    if (!eventId) return Promise.reject(new Error('event id required'));
+    var store = (Data && Data.readStore) ? (Data.readStore() || {}) : {};
+    for (var dateISO in store) {
+      if (!Object.prototype.hasOwnProperty.call(store, dateISO)) continue;
+      var arr = Array.isArray(store[dateISO]) ? store[dateISO] : [];
+      for (var i = 0; i < arr.length; i++) {
+        var ev = arr[i];
+        if (ev && String(ev.id || '') === eventId) {
+          return Promise.resolve({ event: ev, dateISO: String((ev._date || ev.start_date || dateISO) || '').slice(0, 10) });
+        }
+      }
+    }
+
+    return fetch('/api/events/get?id=' + encodeURIComponent(eventId), {
+      method: 'GET',
+      credentials: 'same-origin',
+      headers: { 'Accept': 'application/json' }
+    }).then(function (response) {
+      return response.json().catch(function () { return null; }).then(function (data) {
+        if (!response.ok || !data || data.ok === false || !data.event) {
+          var msg = data && (data.message || data.error) ? String(data.message || data.error) : ('HTTP ' + response.status);
+          throw new Error(msg);
+        }
+        var eventRow = data.event || {};
+        var dateISO = String((eventRow._date || eventRow.start_date || '')).slice(0, 10);
+        if (!dateISO) throw new Error('event date missing');
+        try {
+          if (Data && typeof Data.readStore === 'function' && typeof Data.writeStore === 'function') {
+            var current = Data.readStore() || {};
+            var next = Object.assign({}, current);
+            var bucket = Array.isArray(next[dateISO]) ? next[dateISO].slice() : [];
+            var replaced = false;
+            for (var bi = 0; bi < bucket.length; bi++) {
+              if (bucket[bi] && String(bucket[bi].id || '') === String(eventRow.id || '')) {
+                bucket[bi] = eventRow;
+                replaced = true;
+                break;
+              }
+            }
+            if (!replaced) bucket.push(eventRow);
+            next[dateISO] = bucket;
+            Data.writeStore(next);
+          }
+        } catch (_) { }
+        return { event: eventRow, dateISO: dateISO };
+      });
+    });
+  }
+
+  function __searchOpenEventContext(item, opts) {
+    item = item || {};
+    opts = (opts && typeof opts === 'object') ? opts : {};
+    var eventId = String(item.event_id || item.id || '').trim();
+    if (!eventId) return;
+    __searchEnsureEventInStore(eventId)
+      .then(function (ctx) {
+        var ui = (window.CalendarApp && window.CalendarApp.ui) || {};
+        if (ui && typeof ui.openInfo === 'function') {
+          ui.openInfo(ctx.dateISO, eventId, opts);
+        }
+      })
+      .catch(function (error) {
+        try { alert('Не вдалося відкрити подію: ' + (error && error.message ? error.message : 'помилка')); } catch (_) { }
+      });
+  }
+
+  function __renderSearchEventSection(container, query, matches) {
+    var sec = document.createElement('div');
+    sec.className = 'planning-section';
+
+    var h = document.createElement('div');
+    h.className = 'planning-section__title';
+
+    var title = document.createElement('span');
+    title.textContent = 'Результати пошуку: "' + (query || '') + '"';
+
+    var meta = document.createElement('span');
+    meta.className = 'planning-section__date';
+    meta.textContent = 'знайдено: ' + (matches.length || 0);
+
+    h.appendChild(title);
+    h.appendChild(meta);
+    sec.appendChild(h);
+
+    if (!matches.length) {
+      var empty = document.createElement('div');
+      empty.className = 'planning-empty';
+      empty.textContent = 'Події не знайдено';
+      sec.appendChild(empty);
+      container.appendChild(sec);
+      return;
+    }
+
+    var ul = document.createElement('ul');
+    ul.className = 'planning-today__list';
+
+    for (var i = 0; i < matches.length; i++) {
+      var m = matches[i];
+      var dateISO = m.dateISO;
+      var ev = m.ev;
+      if (!ev) continue;
+
+      var li = document.createElement('li');
+      li.className = 'planning-today__item';
+      if (ev.urgent) li.classList.add('urgent');
+      if (ev.done) li.classList.add('done');
+      try {
+        var s = (ev.start_date || dateISO || '').slice(0, 10);
+        var e = (ev.end_date || '').slice(0, 10);
+        if (e && s && e !== s) li.classList.add('ev--multi');
+      } catch (_) { }
+
+      var time = document.createElement('div');
+      time.className = 'planning-today__time';
+      var tm = (ev.time && String(ev.time).trim()) ? String(ev.time).trim() : '00:00';
+      time.textContent = __isoToShortDM(dateISO) + "\n" + tm;
+
+      var details = document.createElement('div');
+      details.className = 'planning-today__details';
+
+      var head = document.createElement('div');
+      head.className = 'planning-today__head';
+
+      var tRaw = ev.type || 'evt';
+      var chip = document.createElement('span');
+      chip.className = 'chip ' + (tRaw === 'mi' ? 'mi' : tRaw === 'nas' ? 'nas' : tRaw === 'evt' ? 'evt' : 'other');
+      chip.textContent = (Ev.labelForType ? Ev.labelForType(tRaw) : tRaw);
+
+      var p = document.createElement('span');
+      p.className = 'planning-today__title';
+      p.textContent = ev.title || '(без назви)';
+
+      head.appendChild(chip);
+      head.appendChild(p);
+
+      var owner = document.createElement('span');
+      owner.className = 'planning-today__owner';
+      owner.textContent = __ownerText(ev);
+
+      details.appendChild(head);
+      if (__ownerText(ev)) details.appendChild(owner);
+
+      li.appendChild(time);
+      li.appendChild(details);
+
+      (function (dISO, id) {
+        li.addEventListener('click', function (e) {
+          var ui = (window.CalendarApp && window.CalendarApp.ui) || {};
+          try {
+            if (e && e.shiftKey && ui.openModalEdit) ui.openModalEdit(dISO, id);
+            else if (ui.openInfo) ui.openInfo(dISO, id);
+          } catch (_) { }
+        });
+      })(dateISO, ev.id);
+
+      ul.appendChild(li);
+    }
+
+    sec.appendChild(ul);
+    container.appendChild(sec);
+  }
+
+  function __renderSearchCommentsSection(container, comments) {
+    comments = Array.isArray(comments) ? comments : [];
+    if (!comments.length) return;
+
+    var sec = document.createElement('div');
+    sec.className = 'planning-section';
+    sec.innerHTML = '<div class="planning-section__title"><span>Коментарі</span><span class="planning-section__date">знайдено: ' + comments.length + '</span></div>';
+    var list = document.createElement('div');
+    list.className = 'calendar-search-comments';
+
+    comments.forEach(function (item) {
+      var row = document.createElement('article');
+      row.className = 'calendar-search-comment';
+      row.innerHTML = ''
+        + '<div class="calendar-search-comment__head">'
+        +   '<div class="calendar-search-comment__title">' + __searchEsc(String(item.event_title || '(без назви події)')) + '</div>'
+        +   '<div class="calendar-search-comment__type">' + __searchEsc(__searchTypeLabel(item.event_type)) + '</div>'
+        + '</div>'
+        + '<div class="calendar-search-comment__meta">' + __searchEsc(__searchFormatDateTime(item.event_date, item.event_time)) + ' · Автор: ' + __searchEsc((((item.author || {}).display) || ((item.author || {}).name) || ((item.author || {}).login) || '—')) + '</div>'
+        + '<div class="calendar-search-comment__text">' + __searchEsc(__searchSnippet(item.message_text, 220)) + '</div>';
+      var actions = document.createElement('div');
+      actions.className = 'calendar-search-comment__actions';
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'info-thread-icon-action info-thread-icon-action--edit';
+      btn.title = 'До коментаря';
+      btn.setAttribute('aria-label', 'До коментаря');
+      btn.innerHTML = __searchActionSvg('comment');
+      btn.addEventListener('click', function () {
+        __searchOpenEventContext(item, { focusMessageId: item.id });
+      });
+      actions.appendChild(btn);
+      row.appendChild(actions);
+      list.appendChild(row);
+    });
+
+    sec.appendChild(list);
+    container.appendChild(sec);
+  }
+
+  function __renderSearchFilesSection(container, files) {
+    files = Array.isArray(files) ? files : [];
+    if (!files.length) return;
+
+    var sec = document.createElement('div');
+    sec.className = 'planning-section';
+    sec.innerHTML = '<div class="planning-section__title"><span>Файли</span><span class="planning-section__date">знайдено: ' + files.length + '</span></div>';
+    var list = document.createElement('div');
+    list.className = 'calendar-search-files info-thread-files';
+
+    files.forEach(function (item) {
+      var fileType = String(item.mime_type || 'application/octet-stream');
+      var fileName = String(item.original_name || 'file');
+      var row = document.createElement('div');
+      row.className = 'info-files-item calendar-search-file';
+      row.innerHTML = ''
+        + '<div class="info-files-item__icon" aria-hidden="true">' + __searchFileIcon(item) + '</div>'
+        + '<div class="info-files-item__body">'
+        +   '<div class="info-files-item__top">'
+        +     '<div class="calendar-search-file__title-group">'
+        +       '<div class="info-files-item__name">' + __searchEsc(fileName) + '</div>'
+        +       '<div class="info-files-item__size">' + __searchEsc(__searchFormatBytes(item.file_size || 0)) + '</div>'
+        +     '</div>'
+        +     '<div class="info-files-item__actions"></div>'
+        +   '</div>'
+        +   '<div class="info-files-item__meta">' + __searchEsc(fileType) + ' · ' + __searchEsc(__searchFormatDateTime(item.event_date, item.event_time)) + ' · ' + __searchEsc(String(item.event_title || '(без назви події)')) + (item.message_preview ? (' · ' + __searchEsc(__searchSnippet(item.message_preview, 70))) : '') + '</div>'
+        + '</div>';
+      var actions = row.querySelector('.info-files-item__actions');
+
+      var previewBtn = document.createElement('button');
+      previewBtn.type = 'button';
+      previewBtn.className = 'info-thread-icon-action info-thread-icon-action--preview';
+      previewBtn.title = 'Переглянути файл';
+      previewBtn.setAttribute('aria-label', 'Переглянути файл');
+      previewBtn.innerHTML = __searchActionSvg('preview');
+      previewBtn.addEventListener('click', function () {
+        __searchOpenEventContext(item, { previewDocId: item.id });
+      });
+      actions.appendChild(previewBtn);
+
+      var downloadLink = document.createElement('a');
+      downloadLink.className = 'info-thread-icon-action info-thread-icon-action--download';
+      downloadLink.href = String(item.download_url || ('/api/documents/download?id=' + (item.id || '')));
+      downloadLink.target = '_blank';
+      downloadLink.rel = 'noopener';
+      downloadLink.title = 'Завантажити файл';
+      downloadLink.setAttribute('aria-label', 'Завантажити файл');
+      downloadLink.innerHTML = __searchActionSvg('download');
+      actions.appendChild(downloadLink);
+
+      if ((parseInt(item.message_id || 0, 10) || 0) > 0) {
+        var commentBtn = document.createElement('button');
+        commentBtn.type = 'button';
+        commentBtn.className = 'info-thread-icon-action info-thread-icon-action--edit';
+        commentBtn.title = 'До коментаря';
+        commentBtn.setAttribute('aria-label', 'До коментаря');
+        commentBtn.innerHTML = __searchActionSvg('comment');
+        commentBtn.addEventListener('click', function () {
+          __searchOpenEventContext(item, { focusMessageId: item.message_id });
+        });
+        actions.appendChild(commentBtn);
+      }
+
+      list.appendChild(row);
+    });
+
+    sec.appendChild(list);
+    container.appendChild(sec);
+  }
+
   function __enterFullSearch(query) {
     if (!calendarSearchResults) return;
     var q = String(query || '').trim();
@@ -669,20 +757,30 @@
 
     __fullSearchActive = true;
     __fullSearchLastQuery = q;
-    __fullSearchRequestId++;
-    var requestId = __fullSearchRequestId;
 
     __setCalendarContentHidden(true);
     calendarSearchResults.hidden = false;
-    calendarSearchResults.innerHTML = '';
+    calendarSearchResults.innerHTML = '<div class="planning-section"><div class="planning-section__title"><span>Результати пошуку: &quot;' + __searchEsc(q) + '&quot;</span></div><div class="planning-empty">Завантаження…</div></div>';
 
+    var token = q;
     var matches = __collectFullSearchMatches(q);
-    if (!matches.length) {
-      __renderSearchEmpty(calendarSearchResults, q);
-    } else {
-      __renderSearchResults(calendarSearchResults, q, matches);
-    }
-    __loadExtendedSearchResults(q, requestId);
+    __searchFetchExtended(q)
+      .then(function (data) {
+        if (!__fullSearchActive || __fullSearchLastQuery !== token) return;
+        calendarSearchResults.innerHTML = '';
+        __renderSearchEventSection(calendarSearchResults, q, matches);
+        __renderSearchCommentsSection(calendarSearchResults, (data && data.comments) ? data.comments : []);
+        __renderSearchFilesSection(calendarSearchResults, (data && data.files) ? data.files : []);
+      })
+      .catch(function (error) {
+        if (!__fullSearchActive || __fullSearchLastQuery !== token) return;
+        calendarSearchResults.innerHTML = '';
+        __renderSearchEventSection(calendarSearchResults, q, matches);
+        var err = document.createElement('div');
+        err.className = 'planning-empty';
+        err.textContent = 'Не вдалося завантажити коментарі/файли: ' + (error && error.message ? error.message : 'помилка');
+        calendarSearchResults.appendChild(err);
+      });
 
     try { calendarSearchResults.scrollIntoView({ block: 'start', behavior: 'smooth' }); } catch (_) { }
   }
@@ -702,20 +800,7 @@
     if (!calendarSearchResults || calendarSearchResults.hidden) return;
     var q = String(__fullSearchLastQuery || '').trim();
     if (!q) return;
-
-    var prevTop = 0;
-    try { prevTop = calendarSearchResults.scrollTop || 0; } catch (_) { prevTop = 0; }
-
-    __fullSearchRequestId++;
-    var requestId = __fullSearchRequestId;
-
-    calendarSearchResults.innerHTML = '';
-    var matches = __collectFullSearchMatches(q);
-    if (!matches.length) __renderSearchEmpty(calendarSearchResults, q);
-    else __renderSearchResults(calendarSearchResults, q, matches);
-    __loadExtendedSearchResults(q, requestId);
-
-    try { calendarSearchResults.scrollTop = prevTop; } catch (_) { }
+    __enterFullSearch(q);
   }
 
   // Re-render full-search results after edits/updates (edit modal fires "calendar:changed")
