@@ -194,7 +194,55 @@
             apply(v);
         });
     });
+})()
+
+
+// Cabinet Settings: Max file size for uploads in comments (ui-max-file-mb) — ADD ONLY
+(function () {
+    var KEY = 'ui-max-file-mb';
+    var input = document.getElementById('uiMaxFileMb');
+    if (!input) return;
+
+    function read() {
+        try {
+            var v = parseInt(localStorage.getItem(KEY) || '', 10);
+            if (!isFinite(v) || v <= 0) return 100;
+            return v;
+        } catch (e) {
+            return 100;
+        }
+    }
+
+    function clamp(v) {
+        var n = parseInt(v, 10);
+        if (!isFinite(n) || n <= 0) n = 100;
+        if (n < 1) n = 1;
+        if (n > 1024) n = 1024;
+        return n;
+    }
+
+    function write(v) {
+        try { localStorage.setItem(KEY, String(v)); } catch (e) { /* no-op */ }
+    }
+
+    function apply(v) {
+        var val = clamp(v);
+        input.value = String(val);
+        write(val);
+    }
+
+    // init
+    apply(read());
+
+    input.addEventListener('change', function () {
+        apply(input.value);
+    });
+
+    input.addEventListener('blur', function () {
+        apply(input.value);
+    });
 })();
+;
 
 // P15.7: cabinet toast payload (password change success)
 (function () {

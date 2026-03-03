@@ -196,6 +196,18 @@ $__toastErr = \App\Core\Session::flash('toast_error');
             <div class="hint">Застосовується до всього інтерфейсу. Налаштування зберігається в браузері.</div>
           </div>
         </div>
+
+        <div class="cab-card">
+          <div class="cab-card__title">Максимальний розмір файла</div>
+          <div class="cab-card__body">
+            <div class="field">
+              <label for="uiMaxFileMb">Максимум (MB)</label>
+              <input id="uiMaxFileMb" class="input" type="number" min="1" max="1024" step="1" value="100" />
+            </div>
+            <div class="hint">Застосовується до завантаження файлів у коментарях. Налаштування зберігається в браузері (Local Storage). За замовчуванням: 100 MB.</div>
+          </div>
+        </div>
+
       </div>
     </section>
 

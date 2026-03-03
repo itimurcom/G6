@@ -207,9 +207,14 @@ final class EventMessageMysqlRepository implements EventMessageRepositoryInterfa
 
         $limit = max(1, min(200, $limit));
         $offset = max(0, $offset);
-        $params = [
-            'q' => '%' . $query . '%',
-        ];
+        $params = [];
+        $tokens = $this->tokenizeSearchQuery($query);
+        $searchSql = $this->buildLikeOrSqlMulti(
+            ['m.message_text', 'e.title', 'u.name', 'u.login'],
+            $tokens,
+            'mq',
+            $params
+        );
 
         $typeSql = '';
         $eventType = trim((string)($eventType ?? ''));
@@ -243,7 +248,7 @@ final class EventMessageMysqlRepository implements EventMessageRepositoryInterfa
                 INNER JOIN events e ON e.id COLLATE utf8mb4_unicode_ci = m.event_id
                 LEFT JOIN users u ON u.id = m.user_id
                 WHERE m.deleted_at IS NULL
-                  AND m.message_text LIKE :q{$typeSql}
+                  AND {$searchSql}{$typeSql}
                 ORDER BY e.start_date DESC, COALESCE(e.time, '') DESC, m.created_at DESC, m.id DESC
                 LIMIT {$limit} OFFSET {$offset}";
 
@@ -260,6 +265,72 @@ final class EventMessageMysqlRepository implements EventMessageRepositoryInterfa
             $out[] = $mapped;
         }
         return $out;
+    }
+
+    /** @param array<string> $columns @param array<string> $tokens @param array<string,mixed> $params */
+    private function buildLikeOrSqlMulti(array $columns, array $tokens, string $paramPrefix, array &$params): string
+    {
+        $parts = [];
+        foreach ($tokens as $tokenIndex => $token) {
+            foreach ($columns as $columnIndex => $column) {
+                $paramName = $paramPrefix . '_' . $tokenIndex . '_' . $columnIndex;
+                $parts[] = $column . ' LIKE :' . $paramName;
+                $params[$paramName] = '%' . $token . '%';
+            }
+        }
+
+        if ($parts === []) {
+            $paramName = $paramPrefix . '_fallback';
+            $params[$paramName] = '%%';
+            return 'm.message_text LIKE :' . $paramName;
+        }
+
+        return '(' . implode(' OR ', $parts) . ')';
+    }
+
+    /** @return array<int,string> */
+    private function tokenizeSearchQuery(string $query): array
+    {
+        $query = trim($query);
+        if ($query === '') {
+            return [];
+        }
+
+        $parts = preg_split('/[\s\p{Zs}]+/u', $query) ?: [];
+        $tokens = [];
+        $seen = [];
+
+        foreach ($parts as $part) {
+            $part = trim((string)$part);
+            if ($part === '') {
+                continue;
+            }
+
+            $length = function_exists('mb_strlen')
+                ? (int)mb_strlen($part, 'UTF-8')
+                : strlen($part);
+
+            if ($length < 2 && !preg_match('/^\d+$/', $part)) {
+                continue;
+            }
+
+            $key = function_exists('mb_strtolower')
+                ? (string)mb_strtolower($part, 'UTF-8')
+                : strtolower($part);
+
+            if (isset($seen[$key])) {
+                continue;
+            }
+
+            $seen[$key] = true;
+            $tokens[] = $part;
+        }
+
+        if ($tokens === []) {
+            $tokens[] = $query;
+        }
+
+        return $tokens;
     }
 
     private function normalizeMessageText(string $messageText): string

@@ -254,9 +254,14 @@ final class DocumentMysqlRepository
 
         $limit = max(1, min(200, $limit));
         $offset = max(0, $offset);
-        $params = [
-            'q' => '%' . $query . '%',
-        ];
+        $params = [];
+        $tokens = $this->tokenizeSearchQuery($query);
+        $searchSql = $this->buildLikeOrSqlMulti(
+            ['d.original_name', 'e.title', 'm.message_text', 'u.name', 'u.login', 'd.mime_type'],
+            $tokens,
+            'dq',
+            $params
+        );
 
         $typeSql = '';
         $eventType = trim((string)($eventType ?? ''));
@@ -278,12 +283,78 @@ final class DocumentMysqlRepository
                 LEFT JOIN event_messages m ON m.id = d.message_id
                 WHERE d.deleted_at IS NULL
                   AND (d.message_id IS NULL OR m.deleted_at IS NULL)
-                  AND d.original_name LIKE :q{$typeSql}
+                  AND {$searchSql}{$typeSql}
                 ORDER BY d.created_at DESC, d.id DESC
                 LIMIT {$limit} OFFSET {$offset}";
         $st = $this->db->prepare($sql);
         $st->execute($params);
         return array_map([$this, 'mapRow'], $st->fetchAll(PDO::FETCH_ASSOC) ?: []);
+    }
+
+    /** @param array<string> $columns @param array<string> $tokens @param array<string,mixed> $params */
+    private function buildLikeOrSqlMulti(array $columns, array $tokens, string $paramPrefix, array &$params): string
+    {
+        $parts = [];
+        foreach ($tokens as $tokenIndex => $token) {
+            foreach ($columns as $columnIndex => $column) {
+                $paramName = $paramPrefix . '_' . $tokenIndex . '_' . $columnIndex;
+                $parts[] = $column . ' LIKE :' . $paramName;
+                $params[$paramName] = '%' . $token . '%';
+            }
+        }
+
+        if ($parts === []) {
+            $paramName = $paramPrefix . '_fallback';
+            $params[$paramName] = '%%';
+            return 'd.original_name LIKE :' . $paramName;
+        }
+
+        return '(' . implode(' OR ', $parts) . ')';
+    }
+
+    /** @return array<int,string> */
+    private function tokenizeSearchQuery(string $query): array
+    {
+        $query = trim($query);
+        if ($query === '') {
+            return [];
+        }
+
+        $parts = preg_split('/[\s\p{Zs}]+/u', $query) ?: [];
+        $tokens = [];
+        $seen = [];
+
+        foreach ($parts as $part) {
+            $part = trim((string)$part);
+            if ($part === '') {
+                continue;
+            }
+
+            $length = function_exists('mb_strlen')
+                ? (int)mb_strlen($part, 'UTF-8')
+                : strlen($part);
+
+            if ($length < 2 && !preg_match('/^\d+$/', $part)) {
+                continue;
+            }
+
+            $key = function_exists('mb_strtolower')
+                ? (string)mb_strtolower($part, 'UTF-8')
+                : strtolower($part);
+
+            if (isset($seen[$key])) {
+                continue;
+            }
+
+            $seen[$key] = true;
+            $tokens[] = $part;
+        }
+
+        if ($tokens === []) {
+            $tokens[] = $query;
+        }
+
+        return $tokens;
     }
 
     public function listForCabinet(int $viewerUserId, bool $isAdmin, int $limit = 200, int $offset = 0): array

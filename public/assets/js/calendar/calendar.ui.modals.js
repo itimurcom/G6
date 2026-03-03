@@ -597,6 +597,63 @@
     return [String(file.name || ''), String(file.size || 0), String(file.lastModified || 0), String(file.type || '')].join('::');
   }
 
+  function __threadHasDraggedFiles(dt) {
+    try {
+      if (!dt) return false;
+      if (dt.files && dt.files.length) return true;
+      if (dt.types && dt.types.indexOf && dt.types.indexOf('Files') !== -1) return true;
+    } catch (_) { }
+    return false;
+  }
+
+  function __threadSetDragOver(target, on) {
+    if (!target || !target.classList) return;
+    target.classList.toggle('is-dragover', !!on);
+    if (!on) target.__dragCounter = 0;
+  }
+
+  function __threadGetMaxFileSizeMb() {
+    // Stored in Cabinet Settings (Local Storage): ui-max-file-mb
+    var def = 100;
+    var v = def;
+    try {
+      v = parseInt(localStorage.getItem('ui-max-file-mb') || '', 10);
+    } catch (_) { v = def; }
+    if (!isFinite(v) || v <= 0) v = def;
+    if (v < 1) v = 1;
+    if (v > 1024) v = 1024;
+    return v;
+  }
+
+  function __threadGetMaxFileSizeBytes() {
+    return __threadGetMaxFileSizeMb() * 1024 * 1024;
+  }
+
+  function __threadFilterFilesBySize(files) {
+    files = Array.isArray(files) ? files : [];
+    var maxBytes = __threadGetMaxFileSizeBytes();
+    var ok = [];
+    var bad = [];
+    for (var i = 0; i < files.length; i++) {
+      var f = files[i];
+      if (!f) continue;
+      var size = parseInt(f.size || 0, 10) || 0;
+      if (size > maxBytes) bad.push(f);
+      else ok.push(f);
+    }
+    return { ok: ok, bad: bad, maxBytes: maxBytes };
+  }
+
+  function __threadDescribeRejectedFiles(rejected, maxBytes) {
+    rejected = Array.isArray(rejected) ? rejected : [];
+    if (!rejected.length) return '';
+    var limit = 5;
+    var names = rejected.slice(0, limit).map(function (f) { return String((f && f.name) ? f.name : 'file'); });
+    var more = rejected.length > limit ? (' + ще ' + String(rejected.length - limit)) : '';
+    return 'Файл(и) завеликий(і). Максимум: ' + __threadGetMaxFileSizeMb() + ' MB. Не додано: ' + names.join(', ') + more;
+  }
+
+
   function __threadMergeFiles(existing, added) {
     var current = Array.isArray(existing) ? existing.slice() : [];
     var incoming = Array.isArray(added) ? added : [];
@@ -620,7 +677,16 @@
   function __threadSetPendingFiles(files, append) {
     var state = __threadGetState();
     if (!state) return;
-    state.pendingFiles = append ? __threadMergeFiles(state.pendingFiles || [], files) : (Array.isArray(files) ? files : []);
+
+    var filtered = __threadFilterFilesBySize(Array.isArray(files) ? files : []);
+    if (filtered.bad.length) {
+      __threadSetStatus(__threadDescribeRejectedFiles(filtered.bad, filtered.maxBytes), 'error');
+    } else {
+      // Keep status as-is (do not overwrite success/info messages).
+    }
+
+    var nextFiles = filtered.ok;
+    state.pendingFiles = append ? __threadMergeFiles(state.pendingFiles || [], nextFiles) : nextFiles;
     __threadRenderComposerFiles();
   }
 
@@ -664,6 +730,12 @@
 
   function __threadUploadFiles(eventId, messageId, files) {
     files = Array.isArray(files) ? files : [];
+    var filtered = __threadFilterFilesBySize(files);
+    files = filtered.ok;
+    if (filtered.bad.length) {
+      // Stop upload if any files are too large (prevents partial uploads by mistake).
+      return Promise.reject(new Error(__threadDescribeRejectedFiles(filtered.bad, filtered.maxBytes)));
+    }
     if (!files.length) return Promise.resolve({ ok: true, documents: [] });
 
     var chunkSize = 10;
@@ -1741,6 +1813,69 @@
       });
     }
 
+    // Drag & Drop files into composer textarea (works like "Add files")
+    (function () {
+      var composer = document.getElementById('infoThreadComposer');
+      var textarea = document.getElementById('infoThreadInput');
+      if (!composer || !textarea) return;
+
+      var dragCounter = 0;
+
+      function hasFiles(dt) {
+        try {
+          if (!dt) return false;
+          if (dt.files && dt.files.length) return true;
+          if (dt.types && dt.types.indexOf && dt.types.indexOf('Files') !== -1) return true;
+        } catch (_) { }
+        return false;
+      }
+
+      function setOver(on) {
+        composer.classList.toggle('is-dragover', !!on);
+      }
+
+      function onDragEnter(ev) {
+        if (!hasFiles(ev.dataTransfer)) return;
+        dragCounter++;
+        setOver(true);
+      }
+
+      function onDragLeave(ev) {
+        if (!hasFiles(ev.dataTransfer)) return;
+        dragCounter = Math.max(0, dragCounter - 1);
+        if (!dragCounter) setOver(false);
+      }
+
+      function onDragOver(ev) {
+        if (!hasFiles(ev.dataTransfer)) return;
+        ev.preventDefault();
+        try { ev.dataTransfer.dropEffect = 'copy'; } catch (_) { }
+        setOver(true);
+      }
+
+      function onDrop(ev) {
+        if (!hasFiles(ev.dataTransfer)) return;
+        ev.preventDefault();
+        dragCounter = 0;
+        setOver(false);
+
+        __threadSetComposerVisible(true);
+        var dropped = __threadFilesToArray(ev.dataTransfer.files);
+        __threadSetPendingFiles(dropped, true);
+      }
+
+      // Use composer container so drop works even when cursor is on actions area
+      composer.addEventListener('dragenter', onDragEnter);
+      composer.addEventListener('dragleave', onDragLeave);
+      composer.addEventListener('dragover', onDragOver);
+      composer.addEventListener('drop', onDrop);
+
+      // Prevent browser from opening file if dropped on textarea directly
+      textarea.addEventListener('dragover', onDragOver);
+      textarea.addEventListener('drop', onDrop);
+    })();
+
+
     var filesList = document.getElementById('infoThreadFilesList');
     if (filesList) {
       filesList.addEventListener('click', function (ev) {
@@ -1833,7 +1968,12 @@
         if (!st) return;
         var id = parseInt(inputEl.getAttribute('data-id') || '0', 10) || 0;
         if (id > 0 && st.editingId === id) {
-          st.editingFiles = __threadMergeFiles(st.editingFiles || [], __threadFilesToArray(inputEl.files));
+          var picked = __threadFilesToArray(inputEl.files);
+          var filtered = __threadFilterFilesBySize(picked);
+          if (filtered.bad.length) {
+            __threadSetStatus(__threadDescribeRejectedFiles(filtered.bad, filtered.maxBytes), 'error');
+          }
+          st.editingFiles = __threadMergeFiles(st.editingFiles || [], filtered.ok);
           try { inputEl.value = ''; } catch (_) { }
           __threadRender();
         }
@@ -1847,6 +1987,54 @@
           var id = parseInt(inputEl.getAttribute('data-id') || '0', 10) || 0;
           if (id > 0) __threadSaveEdit(id);
         }
+      });
+
+      list.addEventListener('dragenter', function (ev) {
+        if (!__threadHasDraggedFiles(ev.dataTransfer)) return;
+        var editor = ev.target.closest('.info-thread-editor');
+        if (!editor) return;
+        ev.preventDefault();
+        editor.__dragCounter = (editor.__dragCounter || 0) + 1;
+        __threadSetDragOver(editor, true);
+      });
+
+      list.addEventListener('dragleave', function (ev) {
+        if (!__threadHasDraggedFiles(ev.dataTransfer)) return;
+        var editor = ev.target.closest('.info-thread-editor');
+        if (!editor) return;
+        editor.__dragCounter = Math.max(0, (editor.__dragCounter || 0) - 1);
+        if (!editor.__dragCounter) {
+          __threadSetDragOver(editor, false);
+        }
+      });
+
+      list.addEventListener('dragover', function (ev) {
+        if (!__threadHasDraggedFiles(ev.dataTransfer)) return;
+        var editor = ev.target.closest('.info-thread-editor');
+        if (!editor) return;
+        ev.preventDefault();
+        try { ev.dataTransfer.dropEffect = 'copy'; } catch (_) { }
+        __threadSetDragOver(editor, true);
+      });
+
+      list.addEventListener('drop', function (ev) {
+        if (!__threadHasDraggedFiles(ev.dataTransfer)) return;
+        var editor = ev.target.closest('.info-thread-editor');
+        if (!editor) return;
+        ev.preventDefault();
+        __threadSetDragOver(editor, false);
+        var st = __threadGetState();
+        if (!st) return;
+        var inputEl = editor.querySelector('[data-thread-role="edit-input"]');
+        var id = parseInt(inputEl ? (inputEl.getAttribute('data-id') || '0') : '0', 10) || 0;
+        if (!(id > 0) || st.editingId !== id) return;
+        var dropped = __threadFilesToArray(ev.dataTransfer.files);
+        var filtered = __threadFilterFilesBySize(dropped);
+        if (filtered.bad.length) {
+          __threadSetStatus(__threadDescribeRejectedFiles(filtered.bad, filtered.maxBytes), 'error');
+        }
+        st.editingFiles = __threadMergeFiles(st.editingFiles || [], filtered.ok);
+        __threadRender();
       });
     }
 

@@ -1342,6 +1342,11 @@ body.light .ev--multi,
   margin-top: 8px;
 }
 
+.calendar-search-comments {
+  list-style: none;
+  padding: 0;
+}
+
 .calendar-search-comment {
   display: grid;
   gap: 8px;
@@ -1389,6 +1394,39 @@ body.light .ev--multi,
   gap: 8px;
   flex-wrap: wrap;
   align-items: center;
+}
+
+
+.calendar-search-comment-item {
+  cursor: pointer;
+}
+
+.calendar-search-comment-item:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 24px rgba(15, 23, 42, .12);
+}
+
+.calendar-search-comment-item:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--accent) 58%, transparent);
+  outline-offset: 2px;
+}
+
+.calendar-search-comment-item__time {
+  font-weight: 800;
+}
+
+.calendar-search-comment-item__details {
+  gap: 6px;
+}
+
+.calendar-search-comment-item__meta {
+  opacity: .82;
+}
+
+.calendar-search-comment-item__text {
+  white-space: pre-wrap;
+  word-break: break-word;
+  line-height: 1.45;
 }
 
 .calendar-search-file {

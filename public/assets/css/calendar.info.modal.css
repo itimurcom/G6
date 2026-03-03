@@ -739,6 +739,27 @@ body.light #infoContent .info-seen-head,
   margin-bottom: 12px;
 }
 
+
+.info-thread-composer.is-dragover {
+  border-color: color-mix(in srgb, var(--accent) 60%, var(--info-border-soft));
+  background: color-mix(in srgb, var(--accent) 6%, var(--info-surface-1) 94%);
+}
+
+.info-thread-composer.is-dragover .info-thread-textarea {
+  outline: 2px dashed color-mix(in srgb, var(--accent) 70%, transparent);
+  outline-offset: 4px;
+}
+
+.info-thread-editor.is-dragover {
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--accent) 5%, transparent);
+}
+
+.info-thread-editor.is-dragover .info-thread-editor__textarea {
+  outline: 2px dashed color-mix(in srgb, var(--accent) 70%, transparent);
+  outline-offset: 4px;
+}
+
 .info-thread-composer[hidden] {
   display: none !important;
 }

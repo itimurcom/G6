@@ -429,6 +429,25 @@
     return __isoToShortDM(d) + (t ? (' ' + t) : '');
   }
 
+  function __searchFormatMessageDateTime(dateTime) {
+    var raw = String(dateTime || '').trim();
+    if (!raw) return '—';
+    var normalized = raw.replace(' ', 'T');
+    var dt = new Date(normalized);
+    if (isFinite(dt.getTime())) {
+      var dd = String(dt.getDate()).padStart(2, '0');
+      var mm = String(dt.getMonth() + 1).padStart(2, '0');
+      var hh = String(dt.getHours()).padStart(2, '0');
+      var mi = String(dt.getMinutes()).padStart(2, '0');
+      return dd + '.' + mm + ' ' + hh + ':' + mi;
+    }
+    var m = raw.match(/(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})/);
+    if (m) {
+      return m[3] + '.' + m[2] + ' ' + m[4] + ':' + m[5];
+    }
+    return raw;
+  }
+
   function __searchSnippet(text, limit) {
     var raw = String(text || '').replace(/\s+/g, ' ').trim();
     var max = Math.max(40, parseInt(limit || 0, 10) || 140);
@@ -647,32 +666,37 @@
     var sec = document.createElement('div');
     sec.className = 'planning-section';
     sec.innerHTML = '<div class="planning-section__title"><span>Коментарі</span><span class="planning-section__date">знайдено: ' + comments.length + '</span></div>';
-    var list = document.createElement('div');
-    list.className = 'calendar-search-comments';
+    var list = document.createElement('ul');
+    list.className = 'planning-today__list calendar-search-comments';
 
     comments.forEach(function (item) {
-      var row = document.createElement('article');
-      row.className = 'calendar-search-comment';
+      var row = document.createElement('li');
+      var authorName = (((item.author || {}).display) || ((item.author || {}).name) || ((item.author || {}).login) || '—');
+      var createdLabel = __searchFormatMessageDateTime(item.created_at);
+      row.className = 'planning-today__item calendar-search-comment-item';
+      row.setAttribute('role', 'button');
+      row.setAttribute('tabindex', '0');
+      row.setAttribute('aria-label', 'Відкрити коментар у події ' + String(item.event_title || '(без назви події)'));
       row.innerHTML = ''
-        + '<div class="calendar-search-comment__head">'
-        +   '<div class="calendar-search-comment__title">' + __searchEsc(String(item.event_title || '(без назви події)')) + '</div>'
-        +   '<div class="calendar-search-comment__type">' + __searchEsc(__searchTypeLabel(item.event_type)) + '</div>'
-        + '</div>'
-        + '<div class="calendar-search-comment__meta">' + __searchEsc(__searchFormatDateTime(item.event_date, item.event_time)) + ' · Автор: ' + __searchEsc((((item.author || {}).display) || ((item.author || {}).name) || ((item.author || {}).login) || '—')) + '</div>'
-        + '<div class="calendar-search-comment__text">' + __searchEsc(__searchSnippet(item.message_text, 220)) + '</div>';
-      var actions = document.createElement('div');
-      actions.className = 'calendar-search-comment__actions';
-      var btn = document.createElement('button');
-      btn.type = 'button';
-      btn.className = 'info-thread-icon-action info-thread-icon-action--edit';
-      btn.title = 'До коментаря';
-      btn.setAttribute('aria-label', 'До коментаря');
-      btn.innerHTML = __searchActionSvg('comment');
-      btn.addEventListener('click', function () {
+        + '<div class="planning-today__time calendar-search-comment-item__time">' + __searchEsc(createdLabel) + '</div>'
+        + '<div class="planning-today__details calendar-search-comment-item__details">'
+        +   '<div class="planning-today__head">'
+        +     '<span class="chip ' + __searchEsc((item.event_type === 'mi' ? 'mi' : item.event_type === 'nas' ? 'nas' : item.event_type === 'evt' ? 'evt' : 'other')) + '">' + __searchEsc(__searchTypeLabel(item.event_type)) + '</span>'
+        +     '<span class="planning-today__title" title="' + __searchEsc(String(item.event_title || '(без назви події)')) + '">До події: ' + __searchEsc(String(item.event_title || '(без назви події)')) + '</span>'
+        +   '</div>'
+        +   '<div class="planning-today__owner calendar-search-comment-item__meta">Коментар створено: ' + __searchEsc(createdLabel) + ' · Автор: ' + __searchEsc(authorName) + '</div>'
+        +   '<div class="calendar-search-comment-item__text">' + __searchEsc(__searchSnippet(item.message_text, 220)) + '</div>'
+        + '</div>';
+      function openComment() {
         __searchOpenEventContext(item, { focusMessageId: item.id });
+      }
+      row.addEventListener('click', openComment);
+      row.addEventListener('keydown', function (ev) {
+        if (ev.key === 'Enter' || ev.key === ' ') {
+          ev.preventDefault();
+          openComment();
+        }
       });
-      actions.appendChild(btn);
-      row.appendChild(actions);
       list.appendChild(row);
     });
 
