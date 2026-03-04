@@ -1926,6 +1926,17 @@
 
   function openTodayPopupWindow() {
     try {
+      // Auto-hide Today panel in main Calendar when opening popup (reuse existing toggle logic)
+      try {
+        if (!__TODAY_ONLY) {
+          var layout = document.getElementById('calendarLayout') || document.querySelector('.layout');
+          var toggle = document.getElementById('todayPanelToggle');
+          if (layout && toggle) {
+            var collapsedNow = layout.classList.contains('today-panel-hidden') || layout.classList.contains('today-panel-collapsed');
+            if (!collapsedNow) toggle.click();
+          }
+        }
+      } catch (_) { }
       var url = '/today/';
 
       // Dimensions: ~35% of screen width, up to 560px; height up to 900px
