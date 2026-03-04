@@ -345,6 +345,11 @@ select,
   padding-right: 38px;
 }
 
+
+.event-activity-badges {
+  margin-left: -12px;
+}
+
 .event.has-user-badge.has-assignee-badge .event-title,
 .event.has-user-badge.has-assignee-badge .event-owner {
   padding-right: 72px;
@@ -352,11 +357,13 @@ select,
 
 .event.has-user-badge .event-activity-badges,
 .event.has-assignee-badge .event-activity-badges {
-  padding-right: 38px;
+  /* padding-right: 38px; */
+
 }
 
 .event.has-user-badge.has-assignee-badge .event-activity-badges {
-  padding-right: 72px;
+  /* padding-right: 72px; */
+  margin-left: -12px;
 }
 
 /* Extra vertical space so badges never sit on top of text in narrow chips */
@@ -369,7 +376,7 @@ select,
 .event-user-badge,
 .event-assignee-badge {
   position: absolute;
-  bottom: 4px;
+  bottom: 8px;
   width: 28px;
   height: 28px;
   display: grid;
@@ -427,7 +434,7 @@ select,
 .event.has-user-badge.has-activity-badges,
 .event.has-assignee-badge.has-activity-badges,
 .event.has-user-badge.has-assignee-badge.has-activity-badges {
-  padding-bottom: 22px;
+  /* padding-bottom: 22px; */
   min-height: 0;
 }
 
@@ -930,7 +937,8 @@ select,
   position: fixed;
   left: 16px;
   bottom: 16px;
-  display: none; /* TEMP: hide export/import buttons */
+  display: none;
+  /* TEMP: hide export/import buttons */
   gap: 10px;
   z-index: 10000;
 }
@@ -1306,8 +1314,11 @@ body.light .ev--multi,
 #sidebarOverlay:not(.sidebar-overlay--open) {
   display: none;
 }
+
 /* TEMP: quick filters are hidden (work on them will continue later) */
-#quickFilters { display: none !important; }
+#quickFilters {
+  display: none !important;
+}
 
 
 /* === Calendar full-search results (Enter in search field) === */
@@ -1608,10 +1619,12 @@ body.light .ev--multi,
 }
 
 @media (max-width: 720px) {
+
   .calendar-search-comment,
   .calendar-search-file {
     padding: 14px;
   }
+
   .calendar-search-file__title-group {
     flex-wrap: wrap;
     gap: 6px 10px;
@@ -1619,7 +1632,9 @@ body.light .ev--multi,
 }
 
 /* TEMP: приховано кнопку чату (btnChat) */
-#btnChat{display:none !important;}
+#btnChat {
+  display: none !important;
+}
 
 
 /* Info modal: width + grid layout + seen-by block */
@@ -1688,7 +1703,7 @@ body.light .ev--multi,
   isolation: isolate;
 }
 
-#infoContent .info-badge--overdue.ev--overdue-flash > * {
+#infoContent .info-badge--overdue.ev--overdue-flash>* {
   position: relative;
   z-index: 2;
 }
