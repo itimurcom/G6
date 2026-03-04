@@ -1093,6 +1093,15 @@
       });
   }
 
+  function __threadBumpEventActivityCounts(eventId, deltaComments, deltaFiles) {
+    try {
+      var ui = (global.CalendarApp && global.CalendarApp.ui) || {};
+      if (ui && typeof ui.bumpEventActivityCounts === 'function') {
+        ui.bumpEventActivityCounts(eventId, deltaComments, deltaFiles);
+      }
+    } catch (_) { }
+  }
+
   function __threadPrefetchCount(eventId) {
     var state = __threadGetState();
     if (!state) return;
@@ -1164,6 +1173,7 @@
                 return it;
               });
               __filesAppendDocuments(state.eventId, docs);
+              __threadBumpEventActivityCounts(state.eventId, 1, docs.length);
               finalize('Коментар додано.', 'success');
             })
             .catch(function (error) {
@@ -1176,12 +1186,15 @@
                   return it;
                 });
                 __filesAppendDocuments(state.eventId, uploadedDocs);
+                __threadBumpEventActivityCounts(state.eventId, 1, uploadedDocs.length);
                 finalize('Коментар створено, частину файлів завантажено, але далі сталася помилка: ' + error.message, 'error');
                 return;
               }
+              __threadBumpEventActivityCounts(state.eventId, 1, 0);
               finalize('Коментар створено, але файли не завантажились: ' + error.message, 'error');
             });
         } else {
+          __threadBumpEventActivityCounts(state.eventId, 1, 0);
           finalize('Коментар додано.', 'success');
         }
       })
@@ -1256,6 +1269,7 @@
       });
       if (uploadedDocs.length) {
         __filesAppendDocuments(state.eventId, uploadedDocs);
+        __threadBumpEventActivityCounts(state.eventId, 0, uploadedDocs.length);
       }
       state.editingId = 0;
       state.editingText = '';
@@ -1343,6 +1357,7 @@
         }
         __threadRender();
         __filesRemoveDocuments(state.eventId, removedDocIds);
+        __threadBumpEventActivityCounts(state.eventId, -1, -removedDocIds.length);
         __threadSetStatus('Коментар видалено.', 'success');
         setTimeout(function () { __threadSetStatus('', ''); }, 1800);
       })
@@ -1379,6 +1394,7 @@
         });
         __threadRender();
         __filesRemoveDocument(state.eventId, docId);
+        __threadBumpEventActivityCounts(state.eventId, 0, -1);
         __threadSetStatus('Файл видалено.', 'success');
         setTimeout(function () { __threadSetStatus('', ''); }, 1800);
       })

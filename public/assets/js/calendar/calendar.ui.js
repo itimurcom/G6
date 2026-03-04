@@ -464,6 +464,81 @@
     return (Math.round((num / 1024 / 1024 / 1024) * 10) / 10) + ' GB';
   }
 
+  function __eventActivityCount(value) {
+    var n = parseInt(value, 10) || 0;
+    return n > 0 ? n : 0;
+  }
+
+  function __eventCommentsCount(ev) {
+    return __eventActivityCount(ev && (ev.comments_count != null ? ev.comments_count : ev.messages_count));
+  }
+
+  function __eventFilesCount(ev) {
+    return __eventActivityCount(ev && (ev.files_count != null ? ev.files_count : ev.documents_count));
+  }
+
+  function __eventActivityBadgeSvg(kind) {
+    if (kind === 'comments') {
+      return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 18.5V7.8A2.8 2.8 0 0 1 7.8 5h8.4A2.8 2.8 0 0 1 19 7.8v5.4A2.8 2.8 0 0 1 16.2 16H10l-5 2.5Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+    }
+    return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8.5 12.5 14 7a3 3 0 1 1 4.2 4.2l-7.7 7.7a5 5 0 1 1-7.1-7.1L11 4.2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  }
+
+  function __appendEventActivityBadges(node, ev, variant) {
+    if (!node || !ev) return;
+    var commentsCount = __eventCommentsCount(ev);
+    var filesCount = __eventFilesCount(ev);
+    if (!commentsCount && !filesCount) return;
+
+    node.classList.add('has-activity-badges');
+
+    var wrap = document.createElement('div');
+    wrap.className = 'event-activity-badges' + (variant === 'timeline' ? ' event-activity-badges--timeline' : '');
+
+    function appendBadge(kind, count) {
+      if (!count) return;
+      var badge = document.createElement('span');
+      badge.className = 'event-activity-badge event-activity-badge--' + kind;
+      badge.innerHTML = '<span class="event-activity-badge__icon">' + __eventActivityBadgeSvg(kind) + '</span><span class="event-activity-badge__count">' + count + '</span>';
+      wrap.appendChild(badge);
+    }
+
+    appendBadge('comments', commentsCount);
+    appendBadge('files', filesCount);
+    if (wrap.childNodes.length) node.appendChild(wrap);
+  }
+
+  function __updateEventActivityCountsInCache(eventId, deltaComments, deltaFiles) {
+    eventId = String(eventId || '').trim();
+    if (!eventId || !Data || typeof Data._getCache !== 'function' || typeof Data._setCache !== 'function') return false;
+    var cache = Data._getCache() || {};
+    var changed = false;
+    var next = {};
+
+    Object.keys(cache).forEach(function (dateISO) {
+      var arr = Array.isArray(cache[dateISO]) ? cache[dateISO] : [];
+      var out = arr.slice();
+      for (var i = 0; i < out.length; i++) {
+        var ev = out[i];
+        if (!ev || String(ev.id || '') !== eventId) continue;
+        var clone = Object.assign({}, ev);
+        clone.comments_count = Math.max(0, __eventCommentsCount(clone) + (parseInt(deltaComments, 10) || 0));
+        clone.files_count = Math.max(0, __eventFilesCount(clone) + (parseInt(deltaFiles, 10) || 0));
+        out[i] = clone;
+        changed = true;
+      }
+      next[dateISO] = out;
+    });
+
+    if (!changed) return false;
+    try { Data._setCache(next); } catch (_) { return false; }
+    try {
+      if (typeof withStableScroll === 'function') withStableScroll(renderAllFn);
+      else renderAllFn();
+    } catch (_) { }
+    return true;
+  }
+
 
   function __searchFileIcon(item) {
     item = item || {};
@@ -1621,6 +1696,7 @@
       if (ev._seg && ev._seg !== 'single') { item.classList.add('ev--multi'); }
       if (ev._seg) { item.className += ' ev--' + ev._seg; }      // item.appendChild(del);
       if (!__isMultiSeg) { item.appendChild(owner); }
+      __appendEventActivityBadges(item, ev, 'calendar');
       item.setAttribute('title', ev.title || '');
       list.appendChild(item);
     }
@@ -1810,6 +1886,7 @@
             var dot = document.createElement('span'); dot.className = 'dot ' + (ev.type || 'evt'); row.appendChild(dot);
             var label = (ev.time || '') + ' — ' + ev.title + (__ownerText(ev) ? (' • ' + __ownerText(ev)) : '');
             row.appendChild(document.createTextNode(label));
+            __appendEventActivityBadges(row, ev, 'timeline');
             row.addEventListener('click', function () {
               // В Today-панелі відкриваємо Info
               var did = this.dataset.id; var sday = this.dataset.start || this.dataset.date || dateISO; openInfo(sday, did);
@@ -1938,6 +2015,7 @@
   global.CalendarApp.ui = global.CalendarApp.ui || {};
   // global.CalendarApp.ui.init = init;
   global.CalendarApp.ui.renderAllFn = renderAllFn;
+  global.CalendarApp.ui.bumpEventActivityCounts = __updateEventActivityCountsInCache;
   global.CalendarApp.ui.getCurrentMonthContext = function () { return { year: state.year, month: state.month + 1, monthIndex: state.month }; };
   CalendarApp.ui.isEventOverdueStrict = isEventOverdueStrict;
   window.CalendarApp.ui.isEventClosed = isEventClosed;

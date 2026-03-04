@@ -7,6 +7,7 @@ use App\Models\DocumentMysqlRepository;
 use App\Models\EventMessageMysqlRepository;
 use App\Models\EventMysqlRepository; // <--- ЗМІНЕНО: Використовуємо MySQL репозиторій
 use App\Models\LoggingEventRepository;
+use App\Core\Database;
 
 final class ApiEventsController
 {
@@ -60,7 +61,7 @@ final class ApiEventsController
         $date = (string)($_GET['date'] ?? '');
         if ($date === '') { $this->json(['ok'=>false,'error'=>'date required'], 400); return; }
         try {
-            $rows = $this->repo->listByDate($date);
+            $rows = $this->decorateEventListWithActivityCounts($this->repo->listByDate($date));
             $this->json(['ok'=>true,'date'=>$date,'events'=>$rows]);
         } catch (\Throwable $e) {
             $this->json(['ok'=>false,'error'=>'internal','message'=>$e->getMessage()], 500);
@@ -73,7 +74,7 @@ final class ApiEventsController
         $end   = (string)($_GET['end'] ?? '');
         if ($start === '' || $end === '') { $this->json(['ok'=>false,'error'=>'start/end required'], 400); return; }
         try {
-            $map = $this->repo->listByRange($start, $end);
+            $map = $this->decorateEventMapWithActivityCounts($this->repo->listByRange($start, $end));
             $this->json(['ok'=>true,'data'=>$map,'start'=>$start,'end'=>$end]);
         } catch (\Throwable $e) {
             $this->json(['ok'=>false,'error'=>'internal','message'=>$e->getMessage()], 500);
@@ -87,6 +88,7 @@ final class ApiEventsController
         try {
             $row = $this->repo->getById($id);
             if (!$row) { $this->json(['ok'=>false,'error'=>'not_found'], 404); return; }
+            $row = $this->decorateEventRowWithActivityCounts($row, $this->fetchEventActivityCounts([$id]));
             $this->json(['ok'=>true,'event'=>$row]);
         } catch (\Throwable $e) {
             $this->json(['ok'=>false,'error'=>'internal','message'=>$e->getMessage()], 500);
@@ -270,6 +272,108 @@ final class ApiEventsController
         } catch (\Throwable $e) {
             $this->json(['ok'=>false,'error'=>'internal','message'=>$e->getMessage()], 500);
         }
+    }
+
+
+    /** @param array<int|string> $eventIds @return array<string,array{comments_count:int,files_count:int}> */
+    private function fetchEventActivityCounts(array $eventIds): array
+    {
+        $ids = [];
+        foreach ($eventIds as $eventId) {
+            $eventId = trim((string)$eventId);
+            if ($eventId === '') continue;
+            $ids[$eventId] = true;
+        }
+        $ids = array_keys($ids);
+        if ($ids === []) {
+            return [];
+        }
+
+        $pdo = Database::connect();
+        $placeholders = implode(', ', array_fill(0, count($ids), '?'));
+        $counts = [];
+        foreach ($ids as $id) {
+            $counts[$id] = ['comments_count' => 0, 'files_count' => 0];
+        }
+
+        $sqlComments = "SELECT m.event_id, COUNT(*) AS c
+                        FROM event_messages m
+                        WHERE m.deleted_at IS NULL
+                          AND m.event_id IN ({$placeholders})
+                        GROUP BY m.event_id";
+        $stComments = $pdo->prepare($sqlComments);
+        $stComments->execute($ids);
+        foreach (($stComments->fetchAll(\PDO::FETCH_ASSOC) ?: []) as $row) {
+            $eventId = trim((string)($row['event_id'] ?? ''));
+            if ($eventId === '' || !isset($counts[$eventId])) continue;
+            $counts[$eventId]['comments_count'] = (int)($row['c'] ?? 0);
+        }
+
+        $sqlFiles = "SELECT d.event_id, COUNT(*) AS c
+                     FROM documents d
+                     LEFT JOIN event_messages m ON m.id = d.message_id
+                     WHERE d.deleted_at IS NULL
+                       AND (d.message_id IS NULL OR m.deleted_at IS NULL)
+                       AND d.event_id IN ({$placeholders})
+                     GROUP BY d.event_id";
+        $stFiles = $pdo->prepare($sqlFiles);
+        $stFiles->execute($ids);
+        foreach (($stFiles->fetchAll(\PDO::FETCH_ASSOC) ?: []) as $row) {
+            $eventId = trim((string)($row['event_id'] ?? ''));
+            if ($eventId === '' || !isset($counts[$eventId])) continue;
+            $counts[$eventId]['files_count'] = (int)($row['c'] ?? 0);
+        }
+
+        return $counts;
+    }
+
+    /** @param array<string,mixed> $row @param array<string,array{comments_count:int,files_count:int}> $counts */
+    private function decorateEventRowWithActivityCounts(array $row, array $counts): array
+    {
+        $eventId = trim((string)($row['id'] ?? ''));
+        $meta = ($eventId !== '' && isset($counts[$eventId]))
+            ? $counts[$eventId]
+            : ['comments_count' => 0, 'files_count' => 0];
+        $row['comments_count'] = (int)($meta['comments_count'] ?? 0);
+        $row['files_count'] = (int)($meta['files_count'] ?? 0);
+        return $row;
+    }
+
+    /** @param array<int,array<string,mixed>> $rows @return array<int,array<string,mixed>> */
+    private function decorateEventListWithActivityCounts(array $rows): array
+    {
+        $ids = [];
+        foreach ($rows as $row) {
+            $eventId = trim((string)($row['id'] ?? ''));
+            if ($eventId !== '') $ids[] = $eventId;
+        }
+        $counts = $this->fetchEventActivityCounts($ids);
+        foreach ($rows as $i => $row) {
+            $rows[$i] = $this->decorateEventRowWithActivityCounts($row, $counts);
+        }
+        return $rows;
+    }
+
+    /** @param array<string,array<int,array<string,mixed>>> $map @return array<string,array<int,array<string,mixed>>> */
+    private function decorateEventMapWithActivityCounts(array $map): array
+    {
+        $ids = [];
+        foreach ($map as $rows) {
+            if (!is_array($rows)) continue;
+            foreach ($rows as $row) {
+                $eventId = trim((string)($row['id'] ?? ''));
+                if ($eventId !== '') $ids[] = $eventId;
+            }
+        }
+        $counts = $this->fetchEventActivityCounts($ids);
+        foreach ($map as $date => $rows) {
+            if (!is_array($rows)) continue;
+            foreach ($rows as $i => $row) {
+                $rows[$i] = $this->decorateEventRowWithActivityCounts((array)$row, $counts);
+            }
+            $map[$date] = $rows;
+        }
+        return $map;
     }
 
     public function search(): void

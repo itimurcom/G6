@@ -404,6 +404,84 @@ select,
   box-shadow: 0 4px 10px rgba(0, 0, 0, .12), inset 0 0 0 1px rgba(0, 0, 0, .10);
 }
 
+.event.has-activity-badges {
+  padding-bottom: 28px;
+}
+
+.event.has-user-badge.has-activity-badges,
+.event.has-assignee-badge.has-activity-badges,
+.event.has-user-badge.has-assignee-badge.has-activity-badges {
+  padding-bottom: 30px;
+}
+
+.event-activity-badges {
+  position: absolute;
+  left: 8px;
+  bottom: 5px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.event-activity-badges--timeline {
+  left: 6px;
+  bottom: 4px;
+}
+
+.event-activity-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 18px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in oklab, var(--border) 84%, var(--fg) 16%);
+  background: color-mix(in oklab, var(--bg) 78%, var(--event-bg) 22%);
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1;
+  box-shadow: inset 0 0 0 1px color-mix(in oklab, white 4%, transparent);
+}
+
+.event-activity-badge__icon {
+  width: 12px;
+  height: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--fg);
+  opacity: .9;
+}
+
+.event-activity-badge__icon svg {
+  width: 12px;
+  height: 12px;
+  display: block;
+}
+
+.event-activity-badge__count {
+  display: inline-block;
+  min-width: 1ch;
+}
+
+.item.has-activity-badges {
+  display: inline-block;
+  padding-bottom: 22px;
+}
+
+.item.has-activity-badges.urgent {
+  padding-bottom: 24px;
+}
+
+:root[data-theme="light"] .event-activity-badge {
+  background: color-mix(in oklab, white 90%, var(--event-bg) 10%);
+  color: color-mix(in oklab, var(--muted) 84%, var(--fg) 16%);
+  border-color: color-mix(in oklab, var(--border) 74%, var(--fg) 26%);
+}
+
 .event-btn {
   border: 0;
   background: transparent;
