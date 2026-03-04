@@ -629,6 +629,45 @@ body.light #infoContent .info-seen-head,
   gap: 6px;
 }
 
+.info-thread-head {
+  width: 100%;
+  justify-content: space-between;
+}
+
+.info-thread-head__title {
+  min-width: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.info-thread-head__caret {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted);
+  font-size: 22px;
+  line-height: 1;
+  transition: transform .16s ease;
+}
+
+.info-thread-wrap[open] > summary.info-thread-head .info-thread-head__caret {
+  transform: rotate(90deg);
+}
+
+.info-thread-head__add {
+  flex: 0 0 auto;
+  margin-left: auto;
+}
+
+.info-thread-head__add-glyph {
+  display: inline-block;
+  font-size: 24px;
+  line-height: 1;
+  font-weight: 300;
+  transform: translateY(-1px);
+}
+
 .info-history-wrap>summary.info-history-head,
 .info-thread-wrap>summary.info-thread-head,
 .info-files-wrap>summary.info-files-head {
@@ -636,6 +675,10 @@ body.light #infoContent .info-seen-head,
   align-items: center;
   justify-content: flex-start;
   gap: 8px;
+}
+
+.info-thread-wrap>summary.info-thread-head {
+  justify-content: space-between;
 }
 
 .info-history-wrap>summary.info-history-head::before,
@@ -646,7 +689,6 @@ body.light #infoContent .info-seen-head,
 }
 
 .info-history-wrap>summary.info-history-head::after,
-.info-thread-wrap>summary.info-thread-head::after,
 .info-files-wrap>summary.info-files-head::after {
   content: '▸';
   display: inline-flex;
@@ -660,9 +702,13 @@ body.light #infoContent .info-seen-head,
 }
 
 .info-history-wrap[open]>summary.info-history-head::after,
-.info-thread-wrap[open]>summary.info-thread-head::after,
 .info-files-wrap[open]>summary.info-files-head::after {
   transform: rotate(90deg);
+}
+
+.info-thread-wrap>summary.info-thread-head::after {
+  content: none;
+  display: none;
 }
 
 .info-history-raw>summary::before,
@@ -834,6 +880,18 @@ body.light #infoContent .info-seen-head,
   gap: 8px;
   flex-wrap: wrap;
   align-items: center;
+}
+
+.info-thread-composer__actions {
+  flex-direction: column;
+  flex-wrap: nowrap;
+  align-items: stretch;
+  justify-content: flex-start;
+  align-self: start;
+}
+
+.info-thread-composer__actions .info-thread-icon-action {
+  margin: 0;
 }
 
 .info-thread-message__actions {
@@ -1177,6 +1235,13 @@ body.light #infoContent .info-seen-head,
   --thread-action-border: var(--info-btn-red-border);
 }
 
+.info-thread-composer__actions #infoThreadComposerCancel.info-thread-icon-action {
+  --thread-action-fg: var(--info-btn-neutral-fg);
+  --thread-action-bg: var(--info-btn-neutral-bg);
+  --thread-action-border: var(--info-btn-neutral-border);
+  opacity: 1;
+}
+
 .info-thread-attachment__actions .info-thread-icon-action,
 .info-files-item__actions .info-thread-icon-action,
 .info-thread-message__actions .info-thread-icon-action,
@@ -1354,6 +1419,12 @@ body.light #infoContent .info-seen-head,
     width: 100%;
     margin-left: 0;
     justify-content: flex-start;
+  }
+
+  .info-thread-composer__actions {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
   }
 
   .info-thread-attachment {

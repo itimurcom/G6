@@ -876,20 +876,27 @@
     el.classList.toggle('is-success', type === 'success');
   }
 
+  function __threadSyncHeadControls() {
+    var state = __threadGetState();
+    var wrap = document.getElementById('infoThreadWrap');
+    var toggleBtn = document.getElementById('infoThreadComposerToggle');
+    if (!toggleBtn) return;
+    var showToggle = !!(wrap && wrap.open && state && !state.composerOpen);
+    toggleBtn.hidden = !showToggle;
+  }
+
   function __threadSetComposerVisible(openIt) {
     var state = __threadGetState();
     if (!state) return;
     state.composerOpen = !!openIt;
     var box = document.getElementById('infoThreadComposer');
-    var toggleBtn = document.getElementById('infoThreadComposerToggle');
     if (box) box.hidden = !state.composerOpen;
-    if (toggleBtn) toggleBtn.hidden = state.composerOpen;
+    __threadSyncHeadControls();
     if (state.composerOpen) {
       var input = document.getElementById('infoThreadInput');
       if (input) {
         setTimeout(function () { try { input.focus(); } catch (_) { } }, 0);
-        __threadRenderComposerFiles();
-    }
+      }
       __threadRenderComposerFiles();
     }
   }
@@ -1700,12 +1707,12 @@
     var me = __threadCurrentUser();
     return ''
       + '<details class="info-thread-wrap" id="infoThreadWrap">'
-      +   '<summary class="info-thread-head"><strong>Коментарі <span id="infoThreadCount" class="info-thread-count"></span></strong></summary>'
+      +   '<summary class="info-thread-head">'
+      +     '<span class="info-thread-head__title"><strong>Коментарі <span id="infoThreadCount" class="info-thread-count"></span></strong><span class="info-thread-head__caret" aria-hidden="true">▸</span></span>'
+      +     '<button type="button" id="infoThreadComposerToggle" class="info-thread-icon-action info-thread-icon-action--compose info-thread-head__add" title="Додати коментар" aria-label="Додати коментар" hidden><span class="info-thread-head__add-glyph" aria-hidden="true">+</span></button>'
+      +   '</summary>'
       +   '<div class="info-thread-body">'
       +     '<div id="infoThreadStatus" class="info-thread-status" hidden></div>'
-      +     '<div class="info-thread-toolbar">'
-      +       '<button type="button" id="infoThreadComposerToggle" class="info-thread-icon-action info-thread-icon-action--compose" title="Написати коментар" aria-label="Написати коментар">' + __threadActionSvg('compose') + '</button>'
-      +     '</div>'
       +     '<div id="infoThreadComposer" class="info-thread-composer" hidden>'
       +       '<div id="infoThreadComposerAvatar" class="info-thread-composer__avatar' + ((me.hasAvatar && me.avatarUrl) ? ' has-image' : '') + '">' + __threadAvatarHtml({ avatar_url: me.avatarUrl, display: me.display }, me.display) + '</div>'
       +       '<div class="info-thread-composer__main">'
@@ -1764,14 +1771,25 @@
       if (wrap.open && !st.loaded && !st.loading) {
         __threadLoad(eventId);
       }
+      if (!wrap.open && st.composerOpen) {
+        __threadSetComposerVisible(false);
+      } else {
+        __threadSyncHeadControls();
+      }
     });
 
     var composerToggle = document.getElementById('infoThreadComposerToggle');
     if (composerToggle) {
-      composerToggle.addEventListener('click', function () {
+      composerToggle.addEventListener('click', function (ev) {
+        if (ev) {
+          ev.preventDefault();
+          ev.stopPropagation();
+        }
+        if (!wrap.open) wrap.open = true;
         __threadSetComposerVisible(true);
       });
     }
+    __threadSyncHeadControls();
 
     var composerCancel = document.getElementById('infoThreadComposerCancel');
     if (composerCancel) {
