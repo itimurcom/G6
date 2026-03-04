@@ -123,7 +123,7 @@
   var Data = (global.CalendarApp && global.CalendarApp.data) || {};
   var MOUNT_ID = "planning-today";
   var TOOLBAR_ID = "planning-toolbar";
-  var STATE = { scope: (localStorage.getItem("planning.scope") || "all"), userId: 0, userLogin: '' };
+  var STATE = { scope: (localStorage.getItem("planning.scope") || "exec"), userId: 0, userLogin: '', isAdmin: false };
 
   function ownerDisplay(ev) {
     try {
@@ -150,18 +150,48 @@
       return String(s || '').trim();
     } catch (_) { return ''; }
   }
+  function readCurrentUserIsAdmin() {
+    try {
+      var m = document.getElementById(MOUNT_ID);
+      var v = m && m.dataset ? String(m.dataset.userIsAdmin || '0') : '0';
+      return v === '1';
+    } catch (_) { return false; }
+  }
+  function normalizeScope(scope) {
+    var v = String(scope || '').toLowerCase();
+    if (v !== 'all' && v !== 'my' && v !== 'exec') v = 'exec';
+    if (!STATE.isAdmin && v === 'all') v = 'exec';
+    return v;
+  }
   function ensureToolbar() {
     var t = document.getElementById(TOOLBAR_ID);
     if (!t) return;
+    STATE.isAdmin = readCurrentUserIsAdmin();
+    STATE.scope = normalizeScope(STATE.scope);
+    localStorage.setItem("planning.scope", STATE.scope);
     var inputs = t.querySelectorAll("input[name=planning-scope]");
+    var hasChecked = false;
     for (var i = 0; i < inputs.length; i++) {
-      inputs[i].checked = (inputs[i].value === STATE.scope);
-      inputs[i].addEventListener("change", function (ev) {
-        var v = String(ev.target.value || '').toLowerCase();
-        STATE.scope = (v === 'my' || v === 'exec') ? v : 'all';
+      var input = inputs[i];
+      if (!STATE.isAdmin && String(input.value || '').toLowerCase() === 'all') {
+        var label = input.closest ? input.closest('label') : input.parentNode;
+        if (label && label.parentNode) label.parentNode.removeChild(label);
+        continue;
+      }
+      input.checked = (input.value === STATE.scope);
+      if (input.checked) hasChecked = true;
+      input.addEventListener("change", function (ev) {
+        STATE.scope = normalizeScope(ev.target.value || 'exec');
         localStorage.setItem("planning.scope", STATE.scope);
         ensureStore(render);
       });
+    }
+    if (!hasChecked) {
+      var fallback = t.querySelector('input[name=planning-scope][value="' + STATE.scope + '"]')
+        || t.querySelector('input[name=planning-scope][value="exec"]')
+        || t.querySelector('input[name=planning-scope][value="my"]')
+        || t.querySelector('input[name=planning-scope]');
+      if (fallback) fallback.checked = true;
     }
   }
   function applyScope(list) {
@@ -451,6 +481,53 @@
     return newId;
   }
 
+
+  function collectUpcoming(store, startExclusiveDayKey) {
+    var out = [];
+    var seen = Object.create(null);
+    var keys = Object.keys(store || {}).sort();
+    for (var i = 0; i < keys.length; i++) {
+      var dk = String(keys[i]).slice(0, 10);
+      if (!dk) continue;
+      if (startExclusiveDayKey && dk <= String(startExclusiveDayKey).slice(0, 10)) continue;
+
+      var list = (Data.getEventsFor ? (Data.getEventsFor(dk) || []) : (store[dk] || []));
+      for (var j = 0; j < list.length; j++) {
+        var ev = list[j] || {};
+        if (!ev) continue;
+
+        var startDay = String((ev.start_date || ev.date || ev._date || dk) || '').slice(0, 10) || dk;
+        if (!startDay) continue;
+        if (startExclusiveDayKey && startDay <= String(startExclusiveDayKey).slice(0, 10)) continue;
+
+        var eid = (ev.id && String(ev.id).trim()) ? String(ev.id) : ensureEventId(startDay, ev);
+        if (!eid || seen[eid]) continue;
+        seen[eid] = 1;
+
+        var t = ev.time || ev.start || '00:00';
+        var dt = toDate(startDay, t);
+
+        out.push({
+          start: dt,
+          display: dt,
+          ev: ev,
+          dk: startDay,
+          startDay: startDay,
+          endDay: (ev.end_date || ev.end || startDay),
+          dateLabel: __uaDayShortFromKey(startDay),
+          dateTitle: __uaDayFullFromKey(startDay),
+          id: eid
+        });
+      }
+    }
+
+    out.sort(function (a, b) {
+      return (a.start - b.start) || (String(a.id).localeCompare(String(b.id)));
+    });
+
+    return out;
+  }
+
   // ---------- section builder ----------
   function section(label, dateValue, items) {
     var wrap = document.createElement("div");
@@ -693,11 +770,84 @@
   }
 
 
+  function sectionUpcomingGrouped(label, startExclusiveDateValue, items) {
+    var wrap = document.createElement("div");
+    wrap.className = "planning-section";
+
+    var h = document.createElement("div");
+    h.className = "planning-section__title";
+
+    var labelEl = document.createElement("span");
+    labelEl.textContent = label + " ";
+
+    var dateEl = document.createElement("span");
+    dateEl.className = "planning-section__date";
+    dateEl.textContent = "після " + toUADisplayDate(startExclusiveDateValue);
+
+    h.appendChild(labelEl);
+    h.appendChild(dateEl);
+    wrap.appendChild(h);
+
+    if (!items || !items.length) {
+      var empty = document.createElement("div");
+      empty.className = "planning-empty";
+      empty.textContent = "Список пуст";
+      wrap.appendChild(empty);
+      return wrap;
+    }
+
+    var buckets = Object.create(null);
+    for (var i = 0; i < items.length; i++) {
+      var it = items[i] || {};
+      var dk = String((it.startDay || it.dk || (it.ev && (it.ev.start_date || it.ev.date || it.ev._date)) || "")).slice(0, 10);
+      if (!dk) continue;
+      if (!buckets[dk]) buckets[dk] = [];
+      buckets[dk].push(it);
+    }
+
+    var days = Object.keys(buckets).sort();
+    for (var di = 0; di < days.length; di++) {
+      var dayKey = days[di];
+      var list = buckets[dayKey] || [];
+      list.sort(function (a, b) { return (a.start || 0) - (b.start || 0); });
+
+      var tmp = section("Післязавтра", parseDayKey(dayKey), list);
+      var th = tmp.querySelector(".planning-section__title");
+      if (th) th.classList.add("planning-overdue__dayTitle");
+      try {
+        var __labelSpan = th ? th.querySelector("span") : null;
+        if (__labelSpan) {
+          __labelSpan.textContent = "Післязавтра ";
+          __labelSpan.style.visibility = "hidden";
+          __labelSpan.style.userSelect = "none";
+        }
+      } catch (e) { }
+      var ul = tmp.querySelector(".planning-today__list");
+      try {
+        if (ul) {
+          var __times = ul.querySelectorAll(".planning-today__time");
+          for (var __ti = 0; __ti < __times.length; __ti++) {
+            var __txt = String(__times[__ti].textContent || "").trim();
+            __times[__ti].textContent = __txt.replace(/^\d{1,2}\.\d{1,2}\s+/, "");
+          }
+        }
+      } catch (e) { }
+
+      if (th) wrap.appendChild(th);
+      if (ul) wrap.appendChild(ul);
+    }
+
+    return wrap;
+  }
+
+
 
   // ---------- page render ----------
   function render(store) {
     STATE.userId = readCurrentUserId();
     STATE.userLogin = readCurrentUserLogin();
+    STATE.isAdmin = readCurrentUserIsAdmin();
+    STATE.scope = normalizeScope(STATE.scope);
     ensureToolbar();
     var mount = document.getElementById(MOUNT_ID);
     if (!mount) return;
@@ -729,11 +879,13 @@
     var frag = document.createDocumentFragment();
 
     var sOver = applyScope(collectOverdue(store, dkY)); // keys strictly before "Вчора"
+    var sNext = applyScope(collectUpcoming(store, dkPz)); // keys strictly after "Післязавтра"
     frag.appendChild(sectionOverdueGrouped("Прострочені до", dY, sOver));
     frag.appendChild(section("Вчора", dY, sY));
     frag.appendChild(section("Сьогодні", dT, sT));
     frag.appendChild(section("Завтра", dZ, sZ));
     frag.appendChild(section("Післязавтра", dPz, sPz));
+    frag.appendChild(sectionUpcomingGrouped("Наступні", dPz, sNext));
 
     mount.innerHTML = "";
     mount.appendChild(frag);

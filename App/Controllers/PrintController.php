@@ -87,9 +87,12 @@ final class PrintController
 
     public function planning(Request $request): string
     {
-        $scope = strtolower(trim((string)($request->input('scope') ?? 'all')));
+        $scope = strtolower(trim((string)($request->input('scope') ?? 'exec')));
         if (!in_array($scope, ['all', 'my', 'exec'], true)) {
-            $scope = 'all';
+            $scope = 'exec';
+        }
+        if ($scope === 'all' && !$this->isPlanningAdmin()) {
+            $scope = 'exec';
         }
 
         $today = new \DateTimeImmutable('today');
@@ -411,6 +414,15 @@ final class PrintController
             'exec' => 'На виконанні',
             default => 'Всі задачі',
         };
+    }
+
+    private function isPlanningAdmin(): bool
+    {
+        $me = Auth::user() ?? [];
+        $role = mb_strtolower((string)($me['role'] ?? ''), 'UTF-8');
+        return (($me['is_admin'] ?? false) === true)
+            || ((int)($me['is_admin'] ?? 0) === 1)
+            || in_array($role, ['admin', 'superadmin', 'root'], true);
     }
 
     private function loadEventAudit(string $eventId): array
