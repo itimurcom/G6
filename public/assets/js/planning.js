@@ -163,6 +163,20 @@
     if (!STATE.isAdmin && v === 'all') v = 'exec';
     return v;
   }
+  function updateToolbarCounters(counts) {
+    var t = document.getElementById(TOOLBAR_ID);
+    if (!t) return;
+    counts = counts || {};
+    var nodes = t.querySelectorAll('[data-scope-count]');
+    for (var i = 0; i < nodes.length; i++) {
+      var node = nodes[i];
+      var scope = String(node.getAttribute('data-scope-count') || '').toLowerCase();
+      var value = Math.max(0, parseInt(counts[scope], 10) || 0);
+      node.textContent = String(value);
+      node.setAttribute('aria-label', 'Кількість: ' + value);
+      node.title = 'Кількість: ' + value;
+    }
+  }
   function ensureToolbar() {
     var t = document.getElementById(TOOLBAR_ID);
     if (!t) return;
@@ -842,6 +856,36 @@
 
 
 
+  function __withScope(scope, list) {
+    var prev = STATE.scope;
+    try {
+      STATE.scope = normalizeScope(scope);
+      return applyScope(Array.isArray(list) ? list.slice() : []);
+    } finally {
+      STATE.scope = prev;
+    }
+  }
+
+  function collectScopeCounters(store, dkY, dkT, dkZ, dkPz) {
+    var allItems = [];
+    function pushAll(arr) {
+      if (!Array.isArray(arr) || !arr.length) return;
+      for (var i = 0; i < arr.length; i++) allItems.push(arr[i]);
+    }
+    pushAll(collectOverdue(store, dkY));
+    pushAll(collectForDay(store, dkY));
+    pushAll(collectForDay(store, dkT));
+    pushAll(collectForDay(store, dkZ));
+    pushAll(collectForDay(store, dkPz));
+    pushAll(collectUpcoming(store, dkPz));
+
+    return {
+      exec: __withScope('exec', allItems).length,
+      my: __withScope('my', allItems).length,
+      all: STATE.isAdmin ? __withScope('all', allItems).length : 0
+    };
+  }
+
   // ---------- page render ----------
   function render(store) {
     STATE.userId = readCurrentUserId();
@@ -875,6 +919,8 @@
     var dT = parseDayKey(dkT);
     var dZ = parseDayKey(dkZ);
     var dPz = parseDayKey(dkPz);
+
+    updateToolbarCounters(collectScopeCounters(store, dkY, dkT, dkZ, dkPz));
 
     var frag = document.createDocumentFragment();
 
