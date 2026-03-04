@@ -345,25 +345,9 @@ select,
   padding-right: 38px;
 }
 
-
-.event-activity-badges {
-  margin-left: -12px;
-}
-
 .event.has-user-badge.has-assignee-badge .event-title,
 .event.has-user-badge.has-assignee-badge .event-owner {
   padding-right: 72px;
-}
-
-.event.has-user-badge .event-activity-badges,
-.event.has-assignee-badge .event-activity-badges {
-  /* padding-right: 38px; */
-
-}
-
-.event.has-user-badge.has-assignee-badge .event-activity-badges {
-  /* padding-right: 72px; */
-  margin-left: -12px;
 }
 
 /* Extra vertical space so badges never sit on top of text in narrow chips */
@@ -431,13 +415,6 @@ select,
   align-items: start;
 }
 
-.event.has-user-badge.has-activity-badges,
-.event.has-assignee-badge.has-activity-badges,
-.event.has-user-badge.has-assignee-badge.has-activity-badges {
-  /* padding-bottom: 22px; */
-  min-height: 0;
-}
-
 .event-activity-badges {
   position: static;
   grid-column: 2 / -2;
@@ -448,6 +425,7 @@ select,
   flex-wrap: wrap;
   gap: 6px;
   margin-top: 4px;
+  margin-left: -12px;
   max-width: 100%;
   pointer-events: none;
   z-index: auto;
@@ -590,7 +568,6 @@ select,
   border-radius: 999px;
   display: inline-block;
 }
-
 
 .lg .lg-ico {
   width: 15px;
@@ -1007,7 +984,6 @@ select,
   overflow: hidden;
 }
 
-
 /* Edit event modal layout tweaks (controls fit better in footer) */
 #eventModal.modal {
   width: min(898px, 96vw);
@@ -1038,8 +1014,6 @@ select,
   }
 }
 
-
-
 .modal header {
   padding: 12px 18px;
   font-weight: 800;
@@ -1066,7 +1040,6 @@ select,
   font-weight: 900;
   letter-spacing: -0.02em;
 }
-
 
 .modal .content {
   position: relative;
@@ -1229,7 +1202,6 @@ textarea#inputDescription {
   border-bottom-left-radius: 0;
 }
 
-
 /* Multi-day visual borders */
 .ev--multi {
   border: 1px dashed #ffffff60;
@@ -1264,7 +1236,6 @@ textarea#inputDescription {
   display: none;
 }
 
-
 /* Light theme overrides for multi borders */
 html.light .ev--multi,
 body.light .ev--multi,
@@ -1289,7 +1260,6 @@ body.light .ev--multi,
 #filterText {
   border: 1px dashed var(--border);
 }
-
 
 #filterText.active {
   border-color: var(--accent);
@@ -1319,7 +1289,6 @@ body.light .ev--multi,
 #quickFilters {
   display: none !important;
 }
-
 
 /* === Calendar full-search results (Enter in search field) === */
 .calendar-search-results {
@@ -1511,7 +1480,6 @@ body.light .ev--multi,
   align-items: center;
 }
 
-
 .calendar-search-comment-item {
   cursor: pointer;
 }
@@ -1635,7 +1603,6 @@ body.light .ev--multi,
 #btnChat {
   display: none !important;
 }
-
 
 /* Info modal: width + grid layout + seen-by block */
 #infoModal.modal {
@@ -1835,8 +1802,6 @@ body.light .ev--multi,
   color: var(--muted);
   font-size: 12px;
 }
-
-
 
 .btn.btn-icon {
   display: inline-flex;
