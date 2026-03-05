@@ -8,9 +8,12 @@ use App\Models\EventMessageMysqlRepository;
 use App\Models\EventMysqlRepository; // <--- ЗМІНЕНО: Використовуємо MySQL репозиторій
 use App\Models\LoggingEventRepository;
 use App\Core\Database;
+use App\Controllers\Traits\ApiCommonTrait;
 
 final class ApiEventsController
 {
+    use ApiCommonTrait;
+
     /** @var \App\Models\EventRepositoryInterface */
     private $repo;
     private EventMessageMysqlRepository $messageRepo;
@@ -23,38 +26,6 @@ final class ApiEventsController
         $this->messageRepo = new EventMessageMysqlRepository();
         $this->documentRepo = new DocumentMysqlRepository();
     }
-
-    private function json($data, int $code = 200): void
-    {
-        if (!headers_sent()) {
-            header('Content-Type: application/json; charset=utf-8');
-            header('Cache-Control: no-store');
-            http_response_code($code);
-        }
-        echo json_encode($data, JSON_UNESCAPED_UNICODE);
-    }
-
-    private function parseJson(): ?array
-    {
-        $raw = file_get_contents('php://input');
-        if ($raw === false || $raw === '') return [];
-        $payload = json_decode($raw, true);
-        return is_array($payload) ? $payload : null;
-    }
-
-    private function requireCsrf(): bool
-    {
-        if (\App\Security\Csrf::validateHeader()) {
-            return true;
-        }
-        $this->json([
-            'ok'      => false,
-            'error'   => 'csrf',
-            'message' => 'Invalid or missing CSRF token',
-        ], 403);
-        return false;
-    }
-
 
     public function byDate(): void
     {

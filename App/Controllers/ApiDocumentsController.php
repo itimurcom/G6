@@ -8,9 +8,16 @@ use App\Models\DocumentMysqlRepository;
 use App\Models\EventMessageMysqlRepository;
 use App\Models\EventMysqlRepository;
 use App\Services\Audit\ActionLogger;
+use App\Controllers\Traits\ApiCommonTrait;
+use App\Controllers\Traits\ApiEventResourceTrait;
+use App\Controllers\Traits\ApiMessageResourceTrait;
 
 final class ApiDocumentsController
 {
+    use ApiCommonTrait;
+    use ApiEventResourceTrait;
+    use ApiMessageResourceTrait;
+
     private DocumentMysqlRepository $documents;
     private EventMessageMysqlRepository $messages;
     private EventMysqlRepository $events;
@@ -24,96 +31,9 @@ final class ApiDocumentsController
         $this->logger = new ActionLogger();
     }
 
-    private function json(array $data, int $code = 200): void
-    {
-        if (!headers_sent()) {
-            header('Content-Type: application/json; charset=utf-8');
-            header('Cache-Control: no-store');
-            http_response_code($code);
-        }
-        echo json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-    }
+    // json/parseJson/requireCsrf/currentUser/isAdmin/currentUserDisplay -> ApiCommonTrait
 
-    private function parseJson(): ?array
-    {
-        $raw = file_get_contents('php://input');
-        if ($raw === false || $raw === '') return [];
-        $payload = json_decode($raw, true);
-        return is_array($payload) ? $payload : null;
-    }
-
-    private function requireCsrf(?string $provided = null): bool
-    {
-        if (\App\Security\Csrf::validateAny($provided)) {
-            return true;
-        }
-        $this->json([
-            'ok' => false,
-            'error' => 'csrf',
-            'message' => 'Invalid or missing CSRF token',
-        ], 403);
-        return false;
-    }
-
-    private function currentUser(): array
-    {
-        return Auth::user() ?? [];
-    }
-
-    private function isAdmin(array $user): bool
-    {
-        $role = strtolower((string)($user['role'] ?? ''));
-        return $role === 'admin' || !empty($user['is_admin']);
-    }
-
-    private function currentUserDisplay(array $user): string
-    {
-        $name = trim((string)($user['name'] ?? ''));
-        if ($name !== '') return $name;
-        $login = trim((string)($user['login'] ?? ''));
-        if ($login !== '') return $login;
-        $id = (int)($user['id'] ?? 0);
-        return $id > 0 ? ('User #' . $id) : 'Користувач';
-    }
-
-    private function requireEvent(string $eventId): ?array
-    {
-        $eventId = trim($eventId);
-        if ($eventId === '') {
-            $this->json(['ok' => false, 'error' => 'event_id required'], 400);
-            return null;
-        }
-        try {
-            $event = $this->events->getById($eventId);
-        } catch (\Throwable $e) {
-            $this->json(['ok' => false, 'error' => 'internal', 'message' => $e->getMessage()], 500);
-            return null;
-        }
-        if (!$event) {
-            $this->json(['ok' => false, 'error' => 'not_found'], 404);
-            return null;
-        }
-        return $event;
-    }
-
-    private function requireMessage(int $messageId): ?array
-    {
-        if ($messageId <= 0) {
-            $this->json(['ok' => false, 'error' => 'message_id required'], 400);
-            return null;
-        }
-        try {
-            $row = $this->messages->getById($messageId);
-        } catch (\Throwable $e) {
-            $this->json(['ok' => false, 'error' => 'internal', 'message' => $e->getMessage()], 500);
-            return null;
-        }
-        if (!$row || !empty($row['deleted_at'])) {
-            $this->json(['ok' => false, 'error' => 'message_not_found'], 404);
-            return null;
-        }
-        return $row;
-    }
+    // requireEvent()/requireMessage() provided by traits
 
     /** @return array<int,array<string,mixed>> */
     private function collectUploadedFiles(): array

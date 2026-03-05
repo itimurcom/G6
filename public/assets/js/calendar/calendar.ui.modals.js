@@ -9,10 +9,7 @@
   var locale = 'uk-UA';
   var weekdayShortFmt = new Intl.DateTimeFormat(locale, { weekday: 'short' });
 
-  // Multi-day helpers
-  function __isoToUTCDate(iso) { var a = String(iso).split('-').map(Number); return new Date(Date.UTC(a[0], a[1] - 1, a[2])); }
-  function __addDaysUTC(d, n) { return new Date(d.getTime() + n * 86400000); }
-  function __fmtISO(d) { var y = d.getUTCFullYear(), m = String(d.getUTCMonth() + 1).padStart(2, '0'), da = String(d.getUTCDate()).padStart(2, '0'); return y + '-' + m + '-' + da; }
+  // Multi-day helpers (delegated to calendar.events.js)
   function __hasEventOn(dateISO, id) {
     try {
       var arr = (typeof Data !== 'undefined' && Data.getEventsFor) ? (Data.getEventsFor(dateISO) || []) : [];
@@ -21,22 +18,14 @@
     return false;
   }
   function __findStartDateByScan(id, hintISO) {
-    var cur = __isoToUTCDate(hintISO);
+    var cur = (Ev && Ev.isoToUTCDate) ? Ev.isoToUTCDate(hintISO) : new Date(hintISO + 'T00:00:00Z');
     for (var i = 0; i < 120; i++) {
-      var prev = __addDaysUTC(cur, -1);
-      var prevISO = __fmtISO(prev);
+      var prev = (Ev && Ev.addDaysUTC) ? Ev.addDaysUTC(cur, -1) : new Date(cur.getTime() - 86400000);
+      var prevISO = (Ev && Ev.fmtISO) ? Ev.fmtISO(prev) : (function(d){var y=d.getUTCFullYear(),m=String(d.getUTCMonth()+1).padStart(2,'0'),da=String(d.getUTCDate()).padStart(2,'0');return y+'-'+m+'-'+da;})(prev);
       if (!__hasEventOn(prevISO, id)) break;
       cur = prev;
     }
-    return __fmtISO(cur);
-  }
-  function ukDayWord(n) {
-    n = Math.abs(n) % 100;
-    var n1 = n % 10;
-    if (n > 10 && n < 20) return 'днів';
-    if (n1 > 1 && n1 < 5) return 'дні';
-    if (n1 == 1) return 'день';
-    return 'днів';
+    return (Ev && Ev.fmtISO) ? Ev.fmtISO(cur) : (function(d){var y=d.getUTCFullYear(),m=String(d.getUTCMonth()+1).padStart(2,'0'),da=String(d.getUTCDate()).padStart(2,'0');return y+'-'+m+'-'+da;})(cur);
   }
 
   // === Current user & permissions ===
@@ -3140,7 +3129,7 @@ function __renderEventHistory(host, items, currentEvent) {
         if (de >= ds) {
           var days = Math.round((de - ds) / 86400000) + 1;
           if (days > 1) {
-            __endBlock = '<div class="info-item"><strong>Дата завершення:</strong> ' + Ev.formatISO(ev.end_date) + ' (' + days + ' ' + ukDayWord(days) + ')</div>';
+            __endBlock = '<div class="info-item"><strong>Дата завершення:</strong> ' + Ev.formatISO(ev.end_date) + ' (' + days + ' ' + ((Ev && Ev.ukDayWord) ? Ev.ukDayWord(days) : 'днів') + ')</div>';
           }
         } else {
           __endBlock = '<div class="info-item"><strong>Дата завершення:</strong> ' + Ev.formatISO(ev.end_date) + '</div>';

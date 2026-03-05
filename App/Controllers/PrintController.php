@@ -9,6 +9,7 @@ use App\Core\Request;
 use App\Models\EventMessageMysqlRepository;
 use App\Models\EventMysqlRepository;
 use App\Models\UserNameResolver;
+use App\Services\EventViewHelper;
 use PDO;
 
 final class PrintController
@@ -180,23 +181,23 @@ final class PrintController
         $meId = (int)(Auth::id() ?? 0);
         $authorId = (int)($event['user_id'] ?? 0);
         $authorName = $authorId > 0 ? ($this->userNames->getNameById($authorId) ?? ('User #' . $authorId)) : '—';
-        $owner = $this->parseOwnerField($event['owner'] ?? '');
-        $responsible = $this->ownerDisplay($owner);
+        $owner = EventViewHelper::parseOwnerField($event['owner'] ?? '');
+        $responsible = $this->ownerDisplayForPrint($owner);
         $startIso = (string)($event['start_date'] ?? '');
         $endIso = trim((string)($event['end_date'] ?? ''));
-        $durationDays = $this->durationDays($startIso, $endIso);
+        $durationDays = EventViewHelper::durationDays($startIso, $endIso);
         $badges = $this->eventBadges($event, $meId, $owner);
 
         $passportRows = [
             ['label' => 'ID події', 'value' => $event['id'] ?? '—'],
-            ['label' => 'Тип', 'value' => $this->typeLabel((string)($event['type'] ?? 'other'))],
-            ['label' => 'Дата початку', 'value' => $this->formatDate($startIso)],
-            ['label' => 'Дата завершення', 'value' => $endIso !== '' ? $this->formatDate($endIso) : '—'],
+            ['label' => 'Тип', 'value' => EventViewHelper::typeLabel((string)($event['type'] ?? 'other'))],
+            ['label' => 'Дата початку', 'value' => EventViewHelper::formatDate($startIso)],
+            ['label' => 'Дата завершення', 'value' => $endIso !== '' ? EventViewHelper::formatDate($endIso) : '—'],
             ['label' => 'Час', 'value' => trim((string)($event['time'] ?? '')) !== '' ? (string)$event['time'] : '—'],
-            ['label' => 'Тривалість', 'value' => $durationDays > 1 ? ($durationDays . ' ' . $this->ukDayWord($durationDays)) : '1 день'],
+            ['label' => 'Тривалість', 'value' => $durationDays > 1 ? ($durationDays . ' ' . EventViewHelper::ukDayWord($durationDays)) : '1 день'],
             ['label' => 'Відповідальний', 'value' => $responsible],
             ['label' => 'Автор події', 'value' => $authorName],
-            ['label' => 'Створено', 'value' => $this->formatDateTime((string)($event['created_at'] ?? ''))],
+            ['label' => 'Створено', 'value' => EventViewHelper::formatDateTime((string)($event['created_at'] ?? ''))],
             ['label' => 'Терміновість', 'value' => !empty($event['urgent']) ? 'так' : 'ні'],
             ['label' => 'Виконано', 'value' => !empty($event['done']) ? 'так' : 'ні'],
             ['label' => 'Вхідний №', 'value' => trim((string)($event['incoming_no'] ?? '')) !== '' ? (string)$event['incoming_no'] : '—'],
@@ -280,12 +281,12 @@ final class PrintController
 
     private function mapEventLine(array $event, string $dateIso): array
     {
-        $owner = $this->parseOwnerField($event['owner'] ?? '');
+        $owner = EventViewHelper::parseOwnerField($event['owner'] ?? '');
         return [
             'time' => trim((string)($event['time'] ?? '')) !== '' ? (string)$event['time'] : '—',
             'title' => trim((string)($event['title'] ?? '')) !== '' ? (string)$event['title'] : '(без назви)',
-            'type' => $this->typeLabel((string)($event['type'] ?? 'other')),
-            'responsible' => $this->ownerDisplay($owner),
+            'type' => EventViewHelper::typeLabel((string)($event['type'] ?? 'other')),
+            'responsible' => $this->ownerDisplayForPrint($owner),
             'description' => trim((string)($event['description'] ?? '')),
             'badges' => $this->eventBadges($event, (int)(Auth::id() ?? 0), $owner),
             'date' => $dateIso,
@@ -345,7 +346,7 @@ final class PrintController
         $grouped = [];
         $seen = [];
         foreach ($events as $event) {
-            if (!$this->isOverdue($event)) continue;
+            if (!EventViewHelper::isOverdueDateOnly($event)) continue;
             $start = trim((string)($event['start_date'] ?? ''));
             if ($start === '' || $start >= $cutoffExclusive) continue;
             $id = trim((string)($event['id'] ?? ''));
@@ -372,7 +373,7 @@ final class PrintController
                 if ($meId > 0 && $authorId === $meId) $out[] = $event;
                 continue;
             }
-            $owner = $this->parseOwnerField($event['owner'] ?? '');
+            $owner = EventViewHelper::parseOwnerField($event['owner'] ?? '');
             $isMine = false;
             if (($owner['type'] ?? '') === 'user') {
                 $ownerId = (int)($owner['user_id'] ?? 0);
@@ -440,7 +441,7 @@ final class PrintController
             $label = $labels[$action]['text'] ?? $action;
             $summary = $this->auditSummary($action, $payload);
             $out[] = [
-                'created_at' => $this->formatDateTime((string)($row['created_at'] ?? '')),
+                'created_at' => EventViewHelper::formatDateTime((string)($row['created_at'] ?? '')),
                 'user_name' => trim((string)($row['user_name'] ?? '')) !== '' ? (string)$row['user_name'] : '—',
                 'label' => $label,
                 'summary' => $summary,
@@ -475,23 +476,6 @@ final class PrintController
         return '';
     }
 
-    private function typeLabel(string $type): string
-    {
-        return match ($type) {
-            'mi' => 'ТЛГ: МИ',
-            'nas' => 'ТЛГ: НАС',
-            'evt' => 'Захід',
-            default => 'Інше',
-        };
-    }
-
-    private function formatDate(string $iso): string
-    {
-        $iso = trim($iso);
-        if ($iso === '') return '—';
-        try { return (new \DateTimeImmutable($iso))->format('d.m.Y'); } catch (\Throwable $_) { return $iso; }
-    }
-
     private function formatDateLong(string $iso): string
     {
         try {
@@ -500,15 +484,8 @@ final class PrintController
             $res = $fmt->format($dt);
             return $res ?: $dt->format('d.m.Y');
         } catch (\Throwable $_) {
-            return $this->formatDate($iso);
+            return EventViewHelper::formatDate($iso);
         }
-    }
-
-    private function formatDateTime(string $value): string
-    {
-        $value = trim($value);
-        if ($value === '') return '—';
-        try { return (new \DateTimeImmutable($value))->format('d.m.Y H:i:s'); } catch (\Throwable $_) { return $value; }
     }
 
     private function formatMonthTitle(int $year, int $month): string
@@ -522,40 +499,6 @@ final class PrintController
         return sprintf('%02d.%04d', $month, $year);
     }
 
-    private function durationDays(string $startIso, string $endIso): int
-    {
-        $startIso = trim($startIso);
-        $endIso = trim($endIso);
-        if ($startIso === '' || $endIso === '') return 1;
-        try {
-            $start = new \DateTimeImmutable($startIso);
-            $end = new \DateTimeImmutable($endIso);
-            if ($end < $start) return 1;
-            return (int)$start->diff($end)->days + 1;
-        } catch (\Throwable $_) {
-            return 1;
-        }
-    }
-
-    private function ukDayWord(int $days): string
-    {
-        $n = abs($days) % 100;
-        $n1 = $n % 10;
-        if ($n > 10 && $n < 20) return 'днів';
-        if ($n1 > 1 && $n1 < 5) return 'дні';
-        if ($n1 === 1) return 'день';
-        return 'днів';
-    }
-
-    private function isOverdue(array $event): bool
-    {
-        if (!empty($event['done'])) return false;
-        $endDate = trim((string)($event['end_date'] ?? ''));
-        $startDate = trim((string)($event['start_date'] ?? ''));
-        $dateIso = $endDate !== '' ? $endDate : $startDate;
-        if ($dateIso === '') return false;
-        return $dateIso < date('Y-m-d');
-    }
 
     private function eventBadges(array $event, int $meId, array $owner): array
     {
@@ -565,33 +508,8 @@ final class PrintController
         if (!empty($event['done'])) $badges[] = 'Виконано';
         if ($authorId > 0 && $meId > 0 && $authorId === $meId) $badges[] = 'Моя подія';
         if (($owner['type'] ?? '') === 'user' && (int)($owner['user_id'] ?? 0) > 0 && (int)$owner['user_id'] === $meId && empty($event['done'])) $badges[] = 'На виконанні';
-        if ($this->isOverdue($event)) $badges[] = 'Подія прострочена';
+        if (EventViewHelper::isOverdueDateOnly($event)) $badges[] = 'Подія прострочена';
         return $badges;
-    }
-
-    private function parseOwnerField(mixed $owner): array
-    {
-        try {
-            if ($owner === null) return ['type' => 'text', 'text' => '', 'user_id' => 0, 'login' => '', 'name' => '', 'label' => ''];
-            $s = trim((string)$owner);
-            if ($s === '') return ['type' => 'text', 'text' => '', 'user_id' => 0, 'login' => '', 'name' => '', 'label' => ''];
-            if ($s[0] === '{' && str_ends_with($s, '}')) {
-                $decoded = json_decode($s, true);
-                if (is_array($decoded)) {
-                    $type = strtolower((string)($decoded['t'] ?? $decoded['type'] ?? 'text'));
-                    if ($type === 'user') {
-                        return [
-                            'type' => 'user', 'text' => '', 'user_id' => (int)($decoded['id'] ?? $decoded['user_id'] ?? 0),
-                            'login' => trim((string)($decoded['login'] ?? '')), 'name' => trim((string)($decoded['name'] ?? '')), 'label' => trim((string)($decoded['label'] ?? '')),
-                        ];
-                    }
-                    return ['type' => 'text', 'text' => trim((string)($decoded['text'] ?? $decoded['value'] ?? '')), 'user_id' => 0, 'login' => '', 'name' => '', 'label' => ''];
-                }
-            }
-            return ['type' => 'text', 'text' => $s, 'user_id' => 0, 'login' => '', 'name' => '', 'label' => ''];
-        } catch (\Throwable $_) {
-            return ['type' => 'text', 'text' => trim((string)$owner), 'user_id' => 0, 'login' => '', 'name' => '', 'label' => ''];
-        }
     }
 
 
@@ -626,7 +544,7 @@ final class PrintController
         return $value;
     }
 
-    private function ownerDisplay(array $owner): string
+    private function ownerDisplayForPrint(array $owner): string
     {
         if (($owner['type'] ?? '') === 'user') {
             $name = trim((string)($owner['name'] ?? ''));
@@ -641,4 +559,6 @@ final class PrintController
         $text = trim((string)($owner['text'] ?? ''));
         return $text !== '' ? $text : '—';
     }
+
+    // ownerDisplay/date/type helpers are in EventViewHelper
 }

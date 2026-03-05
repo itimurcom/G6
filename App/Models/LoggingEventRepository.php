@@ -8,14 +8,15 @@ use App\Core\Auth;
 use App\Core\Database;
 
 /**
- * LoggingEventRepository — тонкий декоратор над файловим репозиторієм подій,
- * який НІЧОГО не змінює у бізнес‑логіці збереження подій, а лише:
- *   1) делегує виклики у FileEventRepository;
- *   2) після успішних змін записує дію в audit.ndjson через ActionLogger.
+ * LoggingEventRepository — тонкий декоратор над "inner" репозиторієм подій.
+ *
+ * Не змінює бізнес‑логіку збереження, а лише:
+ *   1) делегує виклики у внутрішній репозиторій (наразі зазвичай MySQL);
+ *   2) після успішних змін пише аудит через ActionLogger.
  *
  * ВАЖЛИВО:
  *  - Сигнатури методів підлаштовані під те, як ApiEventsController викликає $this->repo.
- *  - Всередині ми адаптуємо payload до формату FileEventRepository.
+ *  - "inner" навмисно не типізується жорстко, щоб уникати TypeError при зміні реалізації.
  */
 final class LoggingEventRepository
 {
@@ -25,8 +26,8 @@ final class LoggingEventRepository
     private ActionLogger $logger;
 
     /**
-     * @param object $inner Очікується екземпляр FileEventRepository
-     *                      (але навмисно не типізуємо жорстко, щоб не ловити TypeError).
+     * @param object $inner Будь-яка реалізація репозиторію подій з методами,
+     *                      які викликає цей декоратор.
      */
     public function __construct($inner)
     {

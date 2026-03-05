@@ -6,9 +6,12 @@ namespace App\Controllers;
 use App\Models\UserMysqlRepository;
 use App\Models\EventMysqlRepository;
 use App\Core\Auth;
+use App\Controllers\Traits\ApiCommonTrait;
 
 final class ApiUsersController
 {
+    use ApiCommonTrait;
+
     private UserMysqlRepository $users;
     private EventMysqlRepository $events;
 
@@ -18,33 +21,11 @@ final class ApiUsersController
         $this->events = new EventMysqlRepository();
     }
 
-    // --- Допоміжні методи ---
-
-    private function json($data, int $code = 200): void
-    {
-        if (!headers_sent()) {
-            header('Content-Type: application/json; charset=utf-8');
-            header('Cache-Control: no-store');
-            http_response_code($code);
-        }
-        echo json_encode($data, JSON_UNESCAPED_UNICODE);
-    }
-
-    private function parseJson(): ?array
-    {
-        $raw = file_get_contents('php://input');
-        if ($raw === false || $raw === '') return [];
-        $payload = json_decode($raw, true);
-        return is_array($payload) ? $payload : null;
-    }
-
     private function checkAdmin(): bool
     {
-        $me = Auth::user();
+        $me = $this->currentUser();
         if (!$me) return false;
-        
-        $role = strtolower((string)($me['role'] ?? ''));
-        return ($role === 'admin' || !empty($me['is_admin']));
+        return $this->isAdmin($me);
     }
 
     // --- Публічні методи API ---

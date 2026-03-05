@@ -38,6 +38,30 @@
     return y + '-' + m + '-' + da;
   }
 
+  // UTC date helpers (used by multi-day scanning in UI)
+  function isoToUTCDate(iso) {
+    var a = String(iso).split('-').map(Number);
+    return new Date(Date.UTC(a[0], a[1] - 1, a[2]));
+  }
+  function addDaysUTC(d, n) {
+    return new Date(d.getTime() + (n || 0) * 86400000);
+  }
+  function fmtISO(d) {
+    var y = d.getUTCFullYear();
+    var m = String(d.getUTCMonth() + 1).padStart(2, '0');
+    var da = String(d.getUTCDate()).padStart(2, '0');
+    return y + '-' + m + '-' + da;
+  }
+
+  function ukDayWord(n) {
+    n = Math.abs(n) % 100;
+    var n1 = n % 10;
+    if (n > 10 && n < 20) return 'днів';
+    if (n1 > 1 && n1 < 5) return 'дні';
+    if (n1 === 1) return 'день';
+    return 'днів';
+  }
+
   function sameDate(a, b) {
     return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
   }
@@ -270,6 +294,9 @@
     defaultTime,
     pad2,
     toISODate,
+    isoToUTCDate,
+    addDaysUTC,
+    fmtISO,
     sameDate,
     escapeHtml,
     norm,
@@ -277,6 +304,7 @@
     parseOwnerField,
     ownerDisplay,
     ownerUserId,
+    ukDayWord,
     buildMatcher,
     migrateArray,
     updateEventTimeInArray
