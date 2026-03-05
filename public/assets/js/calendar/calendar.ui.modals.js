@@ -602,12 +602,20 @@
   }
 
   function __threadGetMaxFileSizeMb() {
-    // Stored in Cabinet Settings (Local Storage): ui-max-file-mb
+    // Global server-side setting injected into layouts: window.__APP_SETTINGS.upload.max_file_mb
     var def = 100;
     var v = def;
+
     try {
-      v = parseInt(localStorage.getItem('ui-max-file-mb') || '', 10);
+      var g = (window.__APP_SETTINGS && window.__APP_SETTINGS.upload) ? window.__APP_SETTINGS.upload.max_file_mb : null;
+      if (g !== null && g !== undefined && g !== '') {
+        v = parseInt(g, 10);
+      } else {
+        // Back-compat fallback: old localStorage key
+        v = parseInt(localStorage.getItem('ui-max-file-mb') || '', 10);
+      }
     } catch (_) { v = def; }
+
     if (!isFinite(v) || v <= 0) v = def;
     if (v < 1) v = 1;
     if (v > 1024) v = 1024;

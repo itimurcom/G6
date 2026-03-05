@@ -116,6 +116,10 @@ $router->get('/api/documents/download',        [\App\Controllers\ApiDocumentsCon
 $router->post('/api/documents/upload',         [\App\Controllers\ApiDocumentsController::class, 'upload']);
 $router->post('/api/documents/delete',         [\App\Controllers\ApiDocumentsController::class, 'delete']);
 
+// ---- Settings API ----
+$router->get('/api/settings/upload',           [\App\Controllers\ApiSettingsController::class, 'getUpload']);
+$router->post('/api/settings/upload',          [\App\Controllers\ApiSettingsController::class, 'setUpload']);
+
 
 // Legacy V1 endpoints removed after V2 cutover (hard delete).
 // ---- Backup API (export/import) ----

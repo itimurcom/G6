@@ -7,6 +7,24 @@ $__csrf = \App\Security\Csrf::token();
 ?>
 <meta name="csrf-token" content="<?= htmlspecialchars($__csrf, ENT_QUOTES) ?>">
 
+<?php
+$__uploadMaxMb = 100;
+try {
+  $__uploadMaxMb = (new \App\Models\AppSettingMysqlRepository())->getInt('upload.max_file_mb', 100);
+} catch (\Throwable $e) {
+  $__uploadMaxMb = 100;
+}
+$__uploadMaxMb = max(1, min(1024, (int)$__uploadMaxMb));
+?>
+<script>
+  (function () {
+    window.__APP_SETTINGS = window.__APP_SETTINGS || {};
+    window.__APP_SETTINGS.upload = window.__APP_SETTINGS.upload || {};
+    window.__APP_SETTINGS.upload.max_file_mb = <?= (int)$__uploadMaxMb ?>;
+  })();
+</script>
+
+
 <!-- Base UI styles -->
 <script>
   (function () {

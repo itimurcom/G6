@@ -7,6 +7,7 @@ use App\Core\Auth;
 use App\Models\DocumentMysqlRepository;
 use App\Models\EventMessageMysqlRepository;
 use App\Models\EventMysqlRepository;
+use App\Models\AppSettingMysqlRepository;
 use App\Services\Audit\ActionLogger;
 use App\Controllers\Traits\ApiCommonTrait;
 use App\Controllers\Traits\ApiEventResourceTrait;
@@ -21,6 +22,7 @@ final class ApiDocumentsController
     private DocumentMysqlRepository $documents;
     private EventMessageMysqlRepository $messages;
     private EventMysqlRepository $events;
+    private AppSettingMysqlRepository $settings;
     private ActionLogger $logger;
 
     public function __construct()
@@ -28,12 +30,27 @@ final class ApiDocumentsController
         $this->documents = new DocumentMysqlRepository();
         $this->messages = new EventMessageMysqlRepository();
         $this->events = new EventMysqlRepository();
+        $this->settings = new AppSettingMysqlRepository();
         $this->logger = new ActionLogger();
     }
 
     // json/parseJson/requireCsrf/currentUser/isAdmin/currentUserDisplay -> ApiCommonTrait
 
     // requireEvent()/requireMessage() provided by traits
+
+    private function getUploadMaxFileSizeMb(): int
+    {
+        $max = $this->settings->getInt('upload.max_file_mb', 100);
+        $max = (int)$max;
+        if ($max < 1) $max = 1;
+        if ($max > 1024) $max = 1024;
+        return $max;
+    }
+
+    private function getUploadMaxFileSizeBytes(): int
+    {
+        return $this->getUploadMaxFileSizeMb() * 1024 * 1024;
+    }
 
     /** @return array<int,array<string,mixed>> */
     private function collectUploadedFiles(): array
@@ -284,6 +301,22 @@ final class ApiDocumentsController
                 $this->json(['ok' => false, 'error' => 'tmp_missing', 'message' => 'Тимчасовий файл не знайдено.', 'file' => $name], 400);
                 return;
             }
+            $maxBytes = $this->getUploadMaxFileSizeBytes();
+            $actualSize = $size > 0 ? $size : (int)@filesize($tmpPath);
+            if ($actualSize <= 0) {
+                $actualSize = 0;
+            }
+            if ($actualSize > $maxBytes) {
+                $this->json([
+                    'ok' => false,
+                    'error' => 'file_too_large',
+                    'message' => 'Файл завеликий. Максимум: ' . $this->getUploadMaxFileSizeMb() . ' MB.',
+                    'file' => $name,
+                    'max_file_mb' => $this->getUploadMaxFileSizeMb(),
+                ], 413);
+                return;
+            }
+
             $blob = @file_get_contents($tmpPath);
             if (!is_string($blob) || $blob === '') {
                 $this->json(['ok' => false, 'error' => 'read_failed', 'message' => 'Не вдалося прочитати завантажений файл.', 'file' => $name], 400);

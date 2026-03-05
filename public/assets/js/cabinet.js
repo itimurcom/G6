@@ -194,55 +194,147 @@
             apply(v);
         });
     });
-})()
+})();
 
 
-// Cabinet Settings: Max file size for uploads in comments (ui-max-file-mb) — ADD ONLY
+// Cabinet Settings: Max file size for uploads in comments (GLOBAL, server-side) — ADD ONLY
 (function () {
-    var KEY = 'ui-max-file-mb';
-    var input = document.getElementById('uiMaxFileMb');
-    if (!input) return;
+    var input = document.getElementById("uiMaxFileMb");
+    if (!input) return; // Visible only for admin
 
-    function read() {
-        try {
-            var v = parseInt(localStorage.getItem(KEY) || '', 10);
-            if (!isFinite(v) || v <= 0) return 100;
-            return v;
-        } catch (e) {
-            return 100;
-        }
-    }
+    var btn = document.getElementById("uiMaxFileMbSave");
+    var status = document.getElementById("uiMaxFileMbStatus");
 
-    function clamp(v) {
-        var n = parseInt(v, 10);
-        if (!isFinite(n) || n <= 0) n = 100;
+    var def = 100;
+    var lastSaved = null;
+    var inFlight = false;
+
+    function clamp(n) {
+        n = parseInt(n || 0, 10) || def;
         if (n < 1) n = 1;
         if (n > 1024) n = 1024;
         return n;
     }
 
-    function write(v) {
-        try { localStorage.setItem(KEY, String(v)); } catch (e) { /* no-op */ }
+    function csrfToken() {
+        var meta = document.querySelector('meta[name="csrf-token"]');
+        return meta ? (meta.getAttribute("content") || "") : "";
     }
 
-    function apply(v) {
-        var val = clamp(v);
-        input.value = String(val);
-        write(val);
+    function toast(msg, kind, ms) {
+        if (window.UiToast && typeof window.UiToast.show === "function") {
+            window.UiToast.show(String(msg || ""), String(kind || "info"), ms || 1800);
+        }
     }
 
-    // init
-    apply(read());
+    function setStatus(text) {
+        if (!status) return;
+        status.textContent = String(text || "");
+    }
 
-    input.addEventListener('change', function () {
-        apply(input.value);
+    function setValue(v) {
+        input.value = String(clamp(v));
+    }
+
+    function setDirty(isDirty) {
+        if (btn) btn.disabled = !isDirty;
+        if (isDirty) setStatus("Не збережено");
+    }
+
+    function markSaved(v) {
+        lastSaved = clamp(v);
+        setDirty(false);
+        setStatus("Збережено");
+    }
+
+    function load() {
+        fetch("/api/settings/upload", { method: "GET", credentials: "same-origin" })
+            .then(function (r) { return r.json ? r.json() : null; })
+            .then(function (j) {
+                if (!j || !j.ok || !j.upload) return;
+                setValue(j.upload.max_file_mb);
+                markSaved(j.upload.max_file_mb);
+            })
+            .catch(function () {
+                // keep current value
+                var cur = clamp(input.value);
+                setValue(cur);
+                markSaved(cur);
+            });
+    }
+
+    function save(v) {
+        if (inFlight) return;
+        var max = clamp(v);
+        inFlight = true;
+        setStatus("Збереження…");
+        if (btn) btn.disabled = true;
+
+        var body = new FormData();
+        body.append("_csrf", csrfToken());
+        body.append("max_file_mb", String(max));
+
+        fetch("/api/settings/upload", { method: "POST", credentials: "same-origin", body: body })
+            .then(function (r) { return r.json ? r.json() : null; })
+            .then(function (j) {
+                inFlight = false;
+                if (!j) {
+                    setStatus("Помилка збереження");
+                    setDirty(true);
+                    return;
+                }
+                if (j.ok && j.upload) {
+                    setValue(j.upload.max_file_mb);
+                    markSaved(j.upload.max_file_mb);
+                    toast("Збережено: максимум " + String(j.upload.max_file_mb) + " MB", "success", 1200);
+                    try {
+                        window.__APP_SETTINGS = window.__APP_SETTINGS || {};
+                        window.__APP_SETTINGS.upload = window.__APP_SETTINGS.upload || {};
+                        window.__APP_SETTINGS.upload.max_file_mb = j.upload.max_file_mb;
+                    } catch (e) { /* no-op */ }
+                } else {
+                    setStatus("Не вдалося зберегти");
+                    setDirty(true);
+                    toast("Не вдалося зберегти налаштування", "error", 2200);
+                }
+            })
+            .catch(function () {
+                inFlight = false;
+                setStatus("Не вдалося зберегти");
+                setDirty(true);
+                toast("Не вдалося зберегти налаштування", "error", 2200);
+            });
+    }
+
+    function isDirty() {
+        if (lastSaved === null) return true;
+        return clamp(input.value) !== lastSaved;
+    }
+
+    // init from server (and keep current value if request fails)
+    load();
+
+    // UX: explicit save button + Enter
+    if (btn) {
+        btn.addEventListener("click", function () {
+            if (!isDirty()) return;
+            save(input.value);
+        });
+    }
+
+    input.addEventListener("input", function () {
+        setDirty(isDirty());
     });
 
-    input.addEventListener('blur', function () {
-        apply(input.value);
+    input.addEventListener("keydown", function (e) {
+        if (e.key === "Enter") {
+            e.preventDefault();
+            if (isDirty()) save(input.value);
+        }
     });
 })();
 ;
+
 
 // P15.7: cabinet toast payload (password change success)
 (function () {

@@ -197,17 +197,35 @@ $__toastErr = \App\Core\Session::flash('toast_error');
           </div>
         </div>
 
+<?php if (!empty($is_admin)): ?>
         <div class="cab-card">
           <div class="cab-card__title">Максимальний розмір файла</div>
           <div class="cab-card__body">
+            <?php
+              $__uploadMaxMb = 100;
+              try {
+                $__uploadMaxMb = (new \App\Models\AppSettingMysqlRepository())->getInt('upload.max_file_mb', 100);
+              } catch (\Throwable $e) {
+                $__uploadMaxMb = 100;
+              }
+              $__uploadMaxMb = max(1, min(1024, (int)$__uploadMaxMb));
+            ?>
             <div class="field">
               <label for="uiMaxFileMb">Максимум (MB)</label>
-              <input id="uiMaxFileMb" class="input" type="number" min="1" max="1024" step="1" value="100" />
+              <div class="row" style="display:flex; gap:10px; align-items:center;">
+                <input id="uiMaxFileMb" class="input" type="number" min="1" max="1024" step="1" value="<?= (int)$__uploadMaxMb ?>" style="width:50%; min-width:220px;" />
+                <button id="uiMaxFileMbSave" type="button" class="btn btn--primary" disabled aria-label="Зберегти" title="Зберегти" style="padding:10px 14px; min-width:48px; display:flex; align-items:center; justify-content:center;">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" focusable="false" style="display:block;">
+                    <use href="#i-floppy-save"></use>
+                  </svg>
+                </button>
+              </div>
+              <span id="uiMaxFileMbStatus" class="hint" style="margin:8px 0 0 0; display:inline-block;">Завантаження…</span>
             </div>
-            <div class="hint">Застосовується до завантаження файлів у коментарях. Налаштування зберігається в браузері (Local Storage). За замовчуванням: 100 MB.</div>
+            <div class="hint">Застосовується до завантаження файлів у коментарях. Глобальне налаштування для всього проекту (зберігається на сервері). За замовчуванням: 100 MB.</div>
           </div>
         </div>
-
+<?php endif; ?>
       </div>
     </section>
 

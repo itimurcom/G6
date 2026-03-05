@@ -3,11 +3,9 @@
      style="position:absolute;width:0;height:0;overflow:hidden"
      aria-hidden="true" focusable="false">
   <symbol id="i-floppy-save" viewBox="0 0 24 24">
-    <path d="M4 4h11l5 5v9a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"/>
-    <path d="M4 10h16"/>
-    <rect x="7" y="14" width="6" height="4" rx="1"/>
-    <path d="M12 7v6"/>
-    <path d="M9 10l3 3 3-3"/>
+    <path fill="currentColor" fill-rule="evenodd" d="M4 2H16L22 8V20L20 22H4L2 20V4L4 2ZM5.5 10H18.5V20H5.5V10ZM9.5 3.5H14.5V8.5H9.5V3.5Z"/>
+    <rect x="7" y="13" width="10" height="2" fill="currentColor"/>
+    <rect x="7" y="16.5" width="10" height="2" fill="currentColor"/>
   </symbol>
 
   <symbol id="i-floppy-load" viewBox="0 0 24 24">
