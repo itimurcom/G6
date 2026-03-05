@@ -20,6 +20,10 @@ var Data = (global.CalendarApp && global.CalendarApp.data) || null;
   var audioCtx = null;
   var soundEnabled = true;
 
+  // AudioContext cannot start without user gesture in modern browsers
+  var audioUnlocked = false;
+  var audioUnlockBound = false;
+
   var stackRoot = null;
   var listEl = null;
   var titleCountEl = null;
@@ -44,11 +48,35 @@ var Data = (global.CalendarApp && global.CalendarApp.data) || null;
   }
 
   function ensureAudio() {
+    if (!audioUnlocked) return null;
     if (audioCtx) return audioCtx;
     var Ctx = global.AudioContext || global.webkitAudioContext;
     if (!Ctx) return null;
-    audioCtx = new Ctx();
+    try {
+      audioCtx = new Ctx();
+    } catch (_) {
+      audioCtx = null;
+    }
     return audioCtx;
+  }
+
+  function bindAudioUnlockOnce() {
+    if (audioUnlockBound) return;
+    audioUnlockBound = true;
+
+    function unlock() {
+      audioUnlocked = true;
+      if (!soundEnabled) return;
+      try {
+        var ctx = ensureAudio();
+        if (ctx && ctx.state === 'suspended') ctx.resume();
+      } catch (_) { }
+    }
+
+    try { global.document.addEventListener('pointerdown', unlock, { once: true, capture: true }); } catch (_) {
+      try { global.document.addEventListener('mousedown', unlock, { once: true, capture: true }); } catch (_) { }
+    }
+    try { global.document.addEventListener('keydown', unlock, { once: true, capture: true }); } catch (_) { }
   }
 
   function playBeep() {
@@ -367,6 +395,7 @@ var Data = (global.CalendarApp && global.CalendarApp.data) || null;
     if (kind === 'event_title_changed') return 'Змінено назву події.';
     if (kind === 'event_desc_changed' || kind === 'event_description_changed') return 'Змінено опис події.';
     if (kind === 'event_owner_changed') return 'Змінено виконавця.';
+    if (kind === 'event_exec_confirm') return 'Подію призначено вам «На виконанні». Підтвердьте: натисніть «Прийняв». (Цю активність неможливо закрити інакше)';
     if (kind === 'event_message_created') return 'Додано коментар у події.';
     if (kind === 'event_message_updated') return 'Відредаговано коментар у події.';
     if (kind === 'event_message_deleted') return 'Видалено коментар з події.';
@@ -517,6 +546,8 @@ var Data = (global.CalendarApp && global.CalendarApp.data) || null;
     stackRoot.appendChild(shell);
     document.body.appendChild(stackRoot);
 
+    // Prepare audio unlock hook (no AudioContext is created until user gesture)
+    try { bindAudioUnlockOnce(); } catch (_) { }
 
     btnSound.addEventListener('click', function () {
       soundEnabled = !soundEnabled;
@@ -527,6 +558,7 @@ var Data = (global.CalendarApp && global.CalendarApp.data) || null;
 
       // user gesture: unlock audio
       if (soundEnabled) {
+        audioUnlocked = true;
         try {
           var ctx = ensureAudio();
           if (ctx && ctx.state === 'suspended') ctx.resume();
@@ -541,11 +573,34 @@ var Data = (global.CalendarApp && global.CalendarApp.data) || null;
           try { console.warn('[notify] seen-all failed'); } catch (_) { }
           return;
         }
+        // Keep execution-confirmation items (they cannot be closed except "Прийняв")
         try {
-          if (listEl) listEl.innerHTML = '';
-          for (var k in byKey) { if (Object.prototype.hasOwnProperty.call(byKey, k)) delete byKey[k]; }
-          for (var ek in byEventKind) { if (Object.prototype.hasOwnProperty.call(byEventKind, ek)) delete byEventKind[ek]; }
+          var keep = {};
+          var keepEk = {};
+
+          for (var k in byKey) {
+            if (!Object.prototype.hasOwnProperty.call(byKey, k)) continue;
+            var el = byKey[k];
+            var baseKind = '';
+            try { baseKind = String((el && el.getAttribute) ? (el.getAttribute('data-kind') || '') : ''); } catch (_) { baseKind = ''; }
+            if (baseKind === 'event_exec_confirm') {
+              keep[k] = el;
+            } else {
+              try { if (el && el.parentNode) el.parentNode.removeChild(el); } catch (_) { }
+            }
+          }
+
+          // rebuild byEventKind only for kept items
+          for (var ek in byEventKind) {
+            if (!Object.prototype.hasOwnProperty.call(byEventKind, ek)) continue;
+            var kk = byEventKind[ek];
+            if (kk && keep[kk]) keepEk[ek] = kk;
+          }
+
+          byKey = keep;
+          byEventKind = keepEk;
         } catch (_) { }
+
         updateCount();
         try { setTimeout(fetchUpdates, 300); } catch (_) { }
       });
@@ -638,6 +693,27 @@ var Data = (global.CalendarApp && global.CalendarApp.data) || null;
       .catch(function () { return false; });
   }
 
+  function acceptExecution(eventId) {
+    var eid = String(eventId || '');
+    if (!eid) return Promise.resolve({ ok: false, status: 0, payload: { ok: false, error: 'event_id' } });
+
+    return fetch('/api/confirmations/accept', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ event_id: eid })
+    })
+      .then(function (r) {
+        return r.json().catch(function(){ return null; }).then(function (p) {
+          return { ok: !!(r.ok && p && p.ok === true), status: (r && r.status) ? r.status : 0, payload: p };
+        });
+      })
+      .catch(function (e) {
+        var msg = '';
+        try { msg = (e && e.message) ? String(e.message) : String(e || 'network error'); } catch (_) { msg = 'network error'; }
+        return { ok: false, status: 0, payload: { ok: false, error: 'network', message: msg } };
+      });
+  }
+
   function addNotifyToast(notif, suppressBeep) {
     ensureUI();
     if (!listEl) return false;
@@ -676,6 +752,8 @@ var Data = (global.CalendarApp && global.CalendarApp.data) || null;
     item.dataset.key = key;
     item.dataset.eventId = eid;
     item.dataset.kind = kind;
+    // base kind (without @suffix) for UI rules
+    try { item.setAttribute('data-kind', String(baseKind || kind)); } catch (_) { }
     item.dataset.date = String(dateISO || '');
     item.dataset.type = String(type || 'other');
 
@@ -722,25 +800,73 @@ ttl.appendChild(titleLine);
 ttl.appendChild(subtitle);
     row.appendChild(ttl);
 
-    // Per-item action: mark this activity as viewed (single)
+    // Per-item actions
     var itemActions = document.createElement('div');
     itemActions.className = 'notif-item-actions';
 
-    var markOneBtn = document.createElement('button');
-    markOneBtn.type = 'button';
-    markOneBtn.className = 'notif-iconbtn notif-iconbtn--sm notif-markone';
-    markOneBtn.title = 'Переглянуто';
-    markOneBtn.setAttribute('aria-label', 'Позначити як переглянуте');
-    setBtnSvg(markOneBtn, svgIconMarkOne());
+    // Execution confirmation: cannot be closed except "Прийняв"
+    if (baseKind === 'event_exec_confirm') {
+      var acceptBtn = document.createElement('button');
+      acceptBtn.type = 'button';
+      acceptBtn.className = 'notif-acceptbtn';
+      acceptBtn.title = 'Прийняв';
+      acceptBtn.setAttribute('aria-label', 'Прийняв');
+      acceptBtn.innerHTML = '<span class="notif-acceptbtn__ico">' + svgIconMarkOne() + '</span><span class="notif-acceptbtn__txt">Прийняв</span>';
 
-    markOneBtn.addEventListener('click', function (e) {
-      try { if (e && e.stopPropagation) e.stopPropagation(); } catch (_) { }
-      markSeen(notif).then(function (ok) {
-        if (ok) removeItem(key);
+      acceptBtn.addEventListener('click', function (e) {
+        try { if (e && e.stopPropagation) e.stopPropagation(); } catch (_) { }
+        try { acceptBtn.disabled = true; acceptBtn.classList.add('is-busy'); } catch (_) { }
+        acceptExecution(eid).then(function (res) {
+          if (res && res.ok) {
+            removeItem(key);
+            try { setTimeout(fetchUpdates, 250); } catch (_) { }
+            return;
+          }
+
+          var msg = '';
+          try {
+            msg = (res && res.payload && (res.payload.message || res.payload.error)) ? String(res.payload.message || res.payload.error) : '';
+          } catch (_) { msg = ''; }
+          if (!msg) {
+            try { msg = (res && res.status) ? ('HTTP ' + String(res.status)) : 'Помилка'; } catch (_) { msg = 'Помилка'; }
+          }
+
+          try { acceptBtn.disabled = false; acceptBtn.classList.remove('is-busy'); } catch (_) { }
+          try {
+            var t = acceptBtn.querySelector('.notif-acceptbtn__txt');
+            if (t) t.textContent = 'Помилка';
+            acceptBtn.title = msg;
+            acceptBtn.classList.add('is-error');
+            setTimeout(function(){
+              try { if (t) t.textContent = 'Прийняв'; } catch (_) { }
+              try { acceptBtn.classList.remove('is-error'); } catch (_) { }
+              try { acceptBtn.title = 'Прийняв'; } catch (_) { }
+            }, 1800);
+          } catch (_) { }
+
+          try { console.warn('[notify] accept failed:', msg, res); } catch (_) { }
+        });
       });
-    });
 
-    itemActions.appendChild(markOneBtn);
+      itemActions.appendChild(acceptBtn);
+    } else {
+      var markOneBtn = document.createElement('button');
+      markOneBtn.type = 'button';
+      markOneBtn.className = 'notif-iconbtn notif-iconbtn--sm notif-markone';
+      markOneBtn.title = 'Переглянуто';
+      markOneBtn.setAttribute('aria-label', 'Позначити як переглянуте');
+      setBtnSvg(markOneBtn, svgIconMarkOne());
+
+      markOneBtn.addEventListener('click', function (e) {
+        try { if (e && e.stopPropagation) e.stopPropagation(); } catch (_) { }
+        markSeen(notif).then(function (ok) {
+          if (ok) removeItem(key);
+        });
+      });
+
+      itemActions.appendChild(markOneBtn);
+    }
+
     row.appendChild(itemActions);
 
     var body = document.createElement('div');
@@ -751,7 +877,7 @@ ttl.appendChild(subtitle);
       try { body.style.color = 'var(--danger, #ff4d4d)'; } catch (_) { }
     }
 
-        // Visible "Відкрити" link (buttons block is temporarily hidden by CSS)
+    // Visible "Відкрити" link (buttons block is temporarily hidden by CSS)
     var links = null;
     if (baseKind !== 'event_deleted') {
       links = document.createElement('div');
@@ -828,19 +954,8 @@ ttl.appendChild(subtitle);
       }
     } catch (_) { }
 
-        var btns = document.createElement('div');
+    var btns = document.createElement('div');
     btns.className = 'notif-buttons';
-
-    var viewedBtn = document.createElement('button');
-    viewedBtn.type = 'button';
-    viewedBtn.className = 'notif-btn primary viewed';
-    viewedBtn.textContent = 'Переглянуто';
-
-    viewedBtn.addEventListener('click', function () {
-      markSeen(notif).then(function (ok) {
-        if (ok) removeItem(key);
-      });
-    });
 
     // Deleted events can't be opened (no "Відкрити")
     if (baseKind !== 'event_deleted') {
@@ -855,7 +970,19 @@ ttl.appendChild(subtitle);
       btns.appendChild(openBtn);
     }
 
-    btns.appendChild(viewedBtn);
+    // Execution confirmation: cannot be closed/marked as viewed.
+    if (baseKind !== 'event_exec_confirm') {
+      var viewedBtn = document.createElement('button');
+      viewedBtn.type = 'button';
+      viewedBtn.className = 'notif-btn primary viewed';
+      viewedBtn.textContent = 'Переглянуто';
+      viewedBtn.addEventListener('click', function () {
+        markSeen(notif).then(function (ok) {
+          if (ok) removeItem(key);
+        });
+      });
+      btns.appendChild(viewedBtn);
+    }
 
 
     item.appendChild(row);

@@ -77,6 +77,8 @@ $router->get('/print/event',                [\App\Controllers\PrintController::c
 // ---- API V2 (table-like) ----
 $router->get('/api/events/by-date',         [\App\Controllers\ApiEventsController::class,       'byDate']);
 $router->get('/api/events/by-range',        [\App\Controllers\ApiEventsController::class,       'byRange']);
+$router->get('/api/confirmations/my',      [\App\Controllers\ApiConfirmationsController::class, 'my']);
+$router->post('/api/confirmations/accept', [\App\Controllers\ApiConfirmationsController::class, 'accept']);
 $router->get('/api/notify/unseen',        [\App\Controllers\ApiNotifyController::class,       'unseen']);
 $router->get('/api/notify/seen-by-event', [\App\Controllers\ApiNotifyController::class,       'seenByEvent']);
 $router->post('/api/notify/viewed',       [\App\Controllers\ApiNotifyController::class,       'viewed']);

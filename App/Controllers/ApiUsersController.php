@@ -134,28 +134,59 @@ final class ApiUsersController
 
     /**
      * GET /api/users/get?id=1
-     * Отримання одного користувача
+     * Отримання одного користувача (для UI підстановок).
+     *
+     * - доступно будь-якому авторизованому користувачу
+     * - для НЕ-admin повертає лише безпечний мінімум полів
      */
     public function get(): void
     {
-        if (!$this->checkAdmin()) {
-            $this->json(['ok'=>false, 'error'=>'forbidden'], 403);
+        $uid = Auth::id();
+        if (!$uid) {
+            $this->json(['ok'=>false, 'error'=>'unauthorized'], 401);
             return;
         }
 
         $id = (int)($_GET['id'] ?? 0);
-        if ($id <= 0) { $this->json(['ok'=>false,'error'=>'id required'], 400); return; }
+        if ($id <= 0) {
+            $this->json(['ok'=>false,'error'=>'id required'], 400);
+            return;
+        }
 
         try {
             $u = $this->users->findById($id);
-            if (!$u) { $this->json(['ok'=>false,'error'=>'not_found'], 404); return; }
-            
+            if (!$u) {
+                $this->json(['ok'=>false,'error'=>'not_found'], 404);
+                return;
+            }
+
+            // ніколи не віддаємо хеш пароля
             unset($u['password_hash']);
+
+            $me = $this->currentUser();
+            $isAdmin = !empty($me) && $this->isAdmin($me);
+
+            if (!$isAdmin) {
+                // Безпечна мінімальна відповідь для звичайних користувачів
+                $safe = [
+                    'id'    => (int)($u['id'] ?? 0),
+                    'login' => (string)($u['login'] ?? ''),
+                    'name'  => (string)((($u['name'] ?? '') !== '') ? $u['name'] : ($u['login'] ?? '')),
+                    'has_avatar' => !empty($u['has_avatar']),
+                    'avatar_url' => $u['avatar_url'] ?? null,
+                    'avatar_version' => $u['avatar_version'] ?? null,
+                ];
+                $this->json(['ok'=>true, 'user'=>$safe]);
+                return;
+            }
+
+            // Admin: можна віддати повний запис (окрім пароля)
             $this->json(['ok'=>true, 'user'=>$u]);
         } catch (\Throwable $e) {
             $this->json(['ok'=>false,'error'=>'internal','message'=>$e->getMessage()], 500);
         }
     }
+
 
 
     /**

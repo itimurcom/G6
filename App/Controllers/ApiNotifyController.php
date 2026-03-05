@@ -224,10 +224,20 @@ final class ApiNotifyController extends Controller
 
         try {
             if ($id > 0) {
+                // IMPORTANT: execution-confirmation activity cannot be closed via /seen
+                // It can only be closed by accepting the task (POST /api/confirmations/accept).
+                $stKind = $this->db->prepare('SELECT kind FROM user_notifications WHERE id = :id AND user_id = :uid');
+                $stKind->execute(['id' => $id, 'uid' => $uid]);
+                $kind = (string)($stKind->fetchColumn() ?: '');
+                if ($kind === 'event_exec_confirm') {
+                    return $this->json(['ok'=>false,'error'=>'not_allowed'], 409);
+                }
+
                 $st = $this->db->prepare('UPDATE user_notifications SET seen_at = NOW() WHERE id = :id AND user_id = :uid');
                 $st->execute(['id' => $id, 'uid' => $uid]);
             } else {
-                $st = $this->db->prepare('UPDATE user_notifications SET seen_at = NOW() WHERE event_id = :eid AND user_id = :uid AND seen_at IS NULL');
+                // Do not close execution confirmations here
+                $st = $this->db->prepare("UPDATE user_notifications SET seen_at = NOW()\n                    WHERE event_id = :eid AND user_id = :uid AND seen_at IS NULL\n                      AND kind <> 'event_exec_confirm'");
                 $st->execute(['eid' => $eventId, 'uid' => $uid]);
             }
             return $this->json(['ok'=>true]);
@@ -244,7 +254,8 @@ final class ApiNotifyController extends Controller
         if ($uid <= 0) return $this->json(['ok'=>false,'error'=>'unauthorized'], 401);
 
         try {
-            $st = $this->db->prepare('UPDATE user_notifications SET seen_at = NOW() WHERE user_id = :uid AND seen_at IS NULL');
+            // Do not close execution confirmations here
+            $st = $this->db->prepare("UPDATE user_notifications SET seen_at = NOW()\n                WHERE user_id = :uid AND seen_at IS NULL\n                  AND kind <> 'event_exec_confirm'");
             $st->execute(['uid' => $uid]);
             return $this->json(['ok'=>true]);
         } catch (\Throwable $e) {

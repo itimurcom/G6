@@ -7,6 +7,10 @@ use App\Models\DocumentMysqlRepository;
 use App\Models\EventMessageMysqlRepository;
 use App\Models\EventMysqlRepository; // <--- ЗМІНЕНО: Використовуємо MySQL репозиторій
 use App\Models\LoggingEventRepository;
+use App\Models\EventConfirmationMysqlRepository;
+use App\Models\UserNameResolver;
+use App\Services\Audit\ActionLogger;
+use App\Services\EventViewHelper;
 use App\Core\Database;
 use App\Controllers\Traits\ApiCommonTrait;
 
@@ -18,6 +22,9 @@ final class ApiEventsController
     private $repo;
     private EventMessageMysqlRepository $messageRepo;
     private DocumentMysqlRepository $documentRepo;
+    private EventConfirmationMysqlRepository $confirmations;
+    private UserNameResolver $userNames;
+    private ActionLogger $auditLogger;
 
     public function __construct()
     {
@@ -25,9 +32,60 @@ final class ApiEventsController
         $this->repo = new LoggingEventRepository(new EventMysqlRepository());
         $this->messageRepo = new EventMessageMysqlRepository();
         $this->documentRepo = new DocumentMysqlRepository();
+        $this->confirmations = new EventConfirmationMysqlRepository();
+        $this->userNames = new UserNameResolver();
+        $this->auditLogger = new ActionLogger();
     }
 
-    public function byDate(): void
+    
+    private function ownerUserIdFromOwnerField(string $ownerRaw): int
+    {
+        try {
+            $parsed = EventViewHelper::parseOwnerField($ownerRaw);
+            if (($parsed['type'] ?? '') === 'user') {
+                return (int)($parsed['user_id'] ?? 0);
+            }
+        } catch (\Throwable $e) { }
+        return 0;
+    }
+
+    private function ownerDisplayFromOwnerField(string $ownerRaw): string
+    {
+        try {
+            $parsed = EventViewHelper::parseOwnerField($ownerRaw);
+            return EventViewHelper::ownerDisplay($parsed, fn(int $uid) => $this->userNames->getNameById($uid));
+        } catch (\Throwable $e) { }
+        return trim($ownerRaw) !== '' ? trim($ownerRaw) : '—';
+    }
+
+    private function ensureExecutionConfirmationIfNeeded(string $eventId, array $eventRow, ?int $actorId = null): void
+    {
+        // Create confirmation only when owner is a system user and event is not done
+        $ownerRaw = (string)($eventRow['owner'] ?? '');
+        $assigneeId = $this->ownerUserIdFromOwnerField($ownerRaw);
+        if ($assigneeId <= 0) return;
+        if (!empty($eventRow['done'])) return;
+
+        $payload = [
+            'event' => [
+                'id' => (string)($eventRow['id'] ?? $eventId),
+                'title' => (string)($eventRow['title'] ?? ''),
+                'start_date' => (string)($eventRow['start_date'] ?? ''),
+                'end_date' => (string)($eventRow['end_date'] ?? ''),
+                'time' => (string)($eventRow['time'] ?? ''),
+                'owner' => $ownerRaw,
+            ],
+            'kind' => 'execution_confirmation',
+        ];
+
+        try {
+            $this->confirmations->ensurePending($eventId, $assigneeId, $actorId, $payload);
+        } catch (\Throwable $e) {
+            // confirmations must not break event save
+        }
+    }
+
+public function byDate(): void
     {
         $date = (string)($_GET['date'] ?? '');
         if ($date === '') { $this->json(['ok'=>false,'error'=>'date required'], 400); return; }
@@ -87,6 +145,15 @@ final class ApiEventsController
             $res = $this->repo->create($payload['date'] ?? '', $payload);
             $id = is_array($res) ? ($res['id'] ?? '') : $res;
 
+                        // After create: if assigned to a system user, create execution confirmation
+            try {
+                $created = $this->repo->getById($id);
+                if (is_array($created)) {
+                    $actorId = (int)(\App\Core\Auth::id() ?? 0);
+                    $this->ensureExecutionConfirmationIfNeeded($id, $created, $actorId);
+                }
+            } catch (\Throwable $e) { /* ignore */ }
+
             $this->json(['ok'=>true,'id'=>$id], 201);
         } catch (\Throwable $e) {
             $this->json(['ok'=>false,'error'=>$e->getMessage()], 400);
@@ -103,8 +170,54 @@ final class ApiEventsController
         if ($id === '') { $this->json(['ok'=>false,'error'=>'id required'], 400); return; }
         unset($payload['id']);
         try {
+            $before = null;
+            try { $before = $this->repo->getById($id); } catch (\Throwable $__e) { $before = null; }
+            $ownerBeforeRaw = is_array($before) ? (string)($before['owner'] ?? '') : '';
+            $ownerBeforeUid = $this->ownerUserIdFromOwnerField($ownerBeforeRaw);
+
             if (isset($payload['event']) && is_array($payload['event'])) { unset($payload['event']['user_id']); }
             $ok = $this->repo->updateById($id, $payload);
+
+            // Post-update: detect assignee change and manage confirmation
+            try {
+                $after = $this->repo->getById($id);
+                if (is_array($after)) {
+                    $ownerAfterRaw = (string)($after['owner'] ?? '');
+                    $ownerAfterUid = $this->ownerUserIdFromOwnerField($ownerAfterRaw);
+                    $actorId = (int)(\App\Core\Auth::id() ?? 0);
+
+                    if ($ownerBeforeRaw !== $ownerAfterRaw) {
+                        // Journal + Event history: assignee changed
+                        $beforeDisp = $this->ownerDisplayFromOwnerField($ownerBeforeRaw);
+                        $afterDisp  = $this->ownerDisplayFromOwnerField($ownerAfterRaw);
+                        try {
+                            $msg = '🔄 Виконавця змінено: ' . $beforeDisp . ' → ' . $afterDisp;
+                            if ($actorId > 0) {
+                                $this->messageRepo->create($id, $actorId, $msg);
+                            }
+                        } catch (\Throwable $__e2) { }
+                        try {
+                            $this->auditLogger->log('calendar.event.assignee_change', 'success', [
+                                'entity_type' => 'event',
+                                'entity_id' => $id,
+                                'event_title' => (string)($after['title'] ?? ''),
+                                'assignee_before' => $beforeDisp,
+                                'assignee_after' => $afterDisp,
+                                'assignee_before_user_id' => $ownerBeforeUid,
+                                'assignee_after_user_id' => $ownerAfterUid,
+                            ]);
+                        } catch (\Throwable $__e3) { }
+                    }
+
+                    // If assignee is a system user -> ensure pending confirmation; otherwise cancel pending
+                    if ($ownerAfterUid > 0) {
+                        $this->ensureExecutionConfirmationIfNeeded($id, $after, $actorId);
+                    } else {
+                        try { $this->confirmations->cancelPendingForEvent($id, $actorId); } catch (\Throwable $__e4) { }
+                    }
+                }
+            } catch (\Throwable $__e) { }
+
             $this->json(['ok'=>(bool)$ok]);
         } catch (\Throwable $e) {
             $this->json(['ok'=>false,'error'=>'internal','message'=>$e->getMessage()], 500);

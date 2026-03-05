@@ -112,6 +112,7 @@
 
   // Current user (for marking "my" events in the calendar grid)
   var __ME_ID = 0;
+  var __ME_LOGIN = '';
   var __ME_FETCH_STARTED = false;
   var __ME_READY = false;
 
@@ -123,9 +124,13 @@
         .then(function (r) { return r.json(); })
         .then(function (x) {
           try {
-            if (x && x.ok && x.user && x.user.id != null) {
+            if (x && x.ok && x.user) {
               var id = parseInt(x.user.id, 10) || 0;
               if (id > 0) __ME_ID = id;
+              try {
+                var lg = String(x.user.login || '').trim();
+                if (lg) __ME_LOGIN = lg;
+              } catch (_) { }
             }
           } catch (_) { }
           __ME_READY = true;
@@ -154,8 +159,22 @@
     if (!__ME_READY) return false;
     if (!__ME_ID) return false;
     if (ev && ev.done) return false;
+
     var ownerUid = __ownerUserId(ev);
-    return (ownerUid > 0 && ownerUid === __ME_ID);
+    if (ownerUid > 0) return (ownerUid === __ME_ID);
+
+    // Fallback: if owner is stored as plain label (not JSON), try to match current login
+    if (__ME_LOGIN) {
+      var t = '';
+      try { t = __ownerText(ev) || ''; } catch (_) { t = ''; }
+      if (t) {
+        var s = String(t).toLowerCase();
+        var lg = String(__ME_LOGIN).toLowerCase();
+        if (s.indexOf('(' + lg + ')') !== -1 || s === lg) return true;
+      }
+    }
+
+    return false;
   }
 
 

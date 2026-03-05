@@ -29,7 +29,7 @@
   }
 
   // === Current user & permissions ===
-  var __me = { id: 0, role: null, isAdmin: false };
+  var __me = { id: 0, role: null, login: '', isAdmin: false };
 
   function getCurrentUserId() {
     var mt = document.getElementById('planning-today');
@@ -47,6 +47,7 @@
             __me.role = x.user.role || null;
             var __rl = String(__me.role || '').toLowerCase();
             __me.isAdmin = (__rl === 'admin' || __rl === 'superadmin' || __rl === 'root' || !!x.user.is_admin);
+            try { __me.login = String(x.user.login || '').trim(); } catch (_) { }
             var __id = parseInt((x.user.id || '0'), 10) || 0;
             if (__id > 0) { __me.id = __id; }
           }
@@ -90,7 +91,24 @@
     var meId = (__me && __me.id) || getCurrentUserId() || 0;
     if (!meId) return false;
     var ownerId = __ownerUserIdForInfo(ev);
-    return (ownerId > 0 && ownerId === meId);
+    if (ownerId > 0) return (ownerId === meId);
+
+    // Fallback: if owner is stored as plain label (not JSON), try to match current login
+    if (__me && __me.login) {
+      var t = '';
+      try {
+        t = (Ev && typeof Ev.ownerDisplay === 'function') ? (Ev.ownerDisplay(ev) || '') : ((ev && ev.owner) ? String(ev.owner) : '');
+      } catch (_) {
+        t = (ev && ev.owner) ? String(ev.owner) : '';
+      }
+      if (t) {
+        var s = String(t).toLowerCase();
+        var lg = String(__me.login).toLowerCase();
+        if (s.indexOf('(' + lg + ')') !== -1 || s === lg) return true;
+      }
+    }
+
+    return false;
   }
 
   function __isOverdueForInfo(ev, fallbackDateISO) {
@@ -2958,6 +2976,17 @@ function __historyBuildLine(it, currentEvent) {
   var diff = [];
   var titleChange = null;
 
+  function __historyShort(s, n) {
+    try {
+      s = (s === undefined || s === null) ? '' : String(s);
+      s = s.replace(/\s+/g, ' ').trim();
+      n = parseInt(n, 10) || 120;
+      if (!s) return '';
+      if (s.length <= n) return s;
+      return s.slice(0, Math.max(0, n - 1)).trim() + '…';
+    } catch (_) { return ''; }
+  }
+
   if (action === 'calendar.event.create') {
     line = 'Користувач "' + actor + '" створив подію' + (title ? (' "' + title + '"') : '');
   } else if (action === 'calendar.event.delete') {
@@ -2986,6 +3015,31 @@ function __historyBuildLine(it, currentEvent) {
     } else {
       line = 'Користувач "' + actor + '" оновив подію';
     }
+  } else if (action === 'calendar.event.assignee_change') {
+    var b = (it && it.assignee_before !== undefined && it.assignee_before !== null) ? String(it.assignee_before) : '';
+    var a = (it && it.assignee_after !== undefined && it.assignee_after !== null) ? String(it.assignee_after) : '';
+    if (b || a) line = 'Користувач "' + actor + '" змінив виконавця: ' + (b || '—') + ' → ' + (a || '—');
+    else line = 'Користувач "' + actor + '" змінив виконавця';
+  } else if (action === 'calendar.event.accept') {
+    var at = (it && it.accepted_at !== undefined && it.accepted_at !== null) ? String(it.accepted_at) : '';
+    line = 'Користувач "' + actor + '" прийняв подію на виконання' + (at ? (' (' + at + ')') : '');
+  } else if (action === 'event.message.create') {
+    var p1 = __historyShort((it && (it.message_preview || it.after_preview)) || '', 120);
+    line = 'Користувач "' + actor + '" додав коментар' + (p1 ? (': "' + p1 + '"') : '');
+  } else if (action === 'event.message.update') {
+    var p2b = __historyShort((it && (it.before_preview || it.message_preview)) || '', 80);
+    var p2a = __historyShort((it && (it.after_preview || it.message_preview)) || '', 80);
+    if (p2b || p2a) line = 'Користувач "' + actor + '" змінив коментар ("' + (p2b || '—') + '" → "' + (p2a || '—') + '")';
+    else line = 'Користувач "' + actor + '" змінив коментар';
+  } else if (action === 'event.message.delete') {
+    var p3 = __historyShort((it && (it.deleted_message_preview || it.message_preview)) || '', 120);
+    line = 'Користувач "' + actor + '" видалив коментар' + (p3 ? (': "' + p3 + '"') : '');
+  } else if (action === 'document.upload') {
+    var fnUp = __historyShort((it && (it.original_name || it.file_name || it.name)) || '', 120);
+    line = 'Користувач "' + actor + '" завантажив файл' + (fnUp ? (': ' + fnUp) : '');
+  } else if (action === 'document.delete') {
+    var fnDel = __historyShort((it && (it.original_name || it.file_name || it.name)) || '', 120);
+    line = 'Користувач "' + actor + '" видалив файл' + (fnDel ? (': ' + fnDel) : '');
   } else if (action === 'calendar.event.close') {
     line = 'Користувач "' + actor + '" закрив подію';
   } else {

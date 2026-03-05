@@ -128,6 +128,36 @@ body.light #notifStack,
   gap: 6px;
 }
 
+/* "Прийняв" button for execution confirmation (cannot be closed otherwise) */
+#notifStack .notif-acceptbtn {
+  height: 34px;
+  border-radius: 12px;
+  padding: 0 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: 1px solid color-mix(in oklab, var(--accent) 55%, var(--border));
+  background: color-mix(in oklab, var(--accent) 18%, transparent);
+  color: var(--fg);
+  cursor: pointer;
+  font-weight: 900;
+  font-size: var(--fs-sm);
+}
+
+#notifStack .notif-acceptbtn:hover { filter: brightness(1.06); }
+#notifStack .notif-acceptbtn:active { filter: brightness(.96); }
+#notifStack .notif-acceptbtn[disabled],
+#notifStack .notif-acceptbtn.is-busy {
+  opacity: .65;
+  cursor: default;
+}
+
+#notifStack .notif-acceptbtn__ico svg {
+  width: 18px;
+  height: 18px;
+}
+
 #notifStack .notif-iconbtn.notif-iconbtn--sm {
   width: 38px;
   height: 34px;

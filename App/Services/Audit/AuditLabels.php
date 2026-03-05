@@ -37,6 +37,16 @@ class AuditLabels
                 'css'  => 't-update',
                 'tags' => 'edit update зміна' 
             ],
+            'calendar.event.assignee_change' => [
+                'text' => 'Зміна виконавця (на виконанні)',
+                'css'  => 't-update',
+                'tags' => 'assignee owner responsible виконавець на виконанні'
+            ],
+            'calendar.event.accept' => [
+                'text' => 'Прийнято подію на виконання',
+                'css'  => 't-update',
+                'tags' => 'accept confirm прийняв виконання'
+            ],
             'calendar.event.delete' => [
                 'text' => 'Видалення події',
                 'css'  => 't-delete',

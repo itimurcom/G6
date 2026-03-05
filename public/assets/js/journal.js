@@ -383,6 +383,8 @@
         if (action === 'auth.logout') return 'Вихід із системи';
         if (action === 'calendar.event.create') return 'Створення події';
         if (action === 'calendar.event.update') return 'Зміна події';
+        if (action === 'calendar.event.assignee_change') return 'Зміна виконавця (на виконанні)';
+        if (action === 'calendar.event.accept') return 'Прийнято подію на виконання';
         if (action === 'calendar.event.delete') return 'Видалення події';
         if (action === 'calendar.event.done') return 'Зміна статусу виконання';
         if (action === 'calendar.event.urgent') return 'Зміна терміновості';
@@ -420,6 +422,8 @@
         if (it.action === 'auth.logout') return 't-logout';
         if (it.action === 'calendar.event.create') return 't-create';
         if (it.action === 'calendar.event.update') return 't-update';
+        if (it.action === 'calendar.event.assignee_change') return 't-update';
+        if (it.action === 'calendar.event.accept') return 't-update';
         if (it.action === 'calendar.event.delete') return 't-delete';
         if (it.action === 'calendar.event.done') return 't-update';
         if (it.action === 'calendar.event.urgent') return 't-update';
@@ -805,6 +809,15 @@
                 sub = 'Зміни: ' + changes.slice(0, 3).map(function (c) { return c.label; }).join(', ');
                 if (changes.length > 3) sub += ' …';
             }
+        } else if (action === 'calendar.event.assignee_change') {
+            var b = (it.assignee_before !== undefined && it.assignee_before !== null) ? String(it.assignee_before) : '';
+            var a = (it.assignee_after !== undefined && it.assignee_after !== null) ? String(it.assignee_after) : '';
+            if (b || a) sub = 'Виконавець: ' + (b || '—') + ' → ' + (a || '—');
+        } else if (action === 'calendar.event.accept') {
+            var at = (it.accepted_at !== undefined && it.accepted_at !== null) ? String(it.accepted_at) : '';
+            var who = (it.assignee_name !== undefined && it.assignee_name !== null) ? String(it.assignee_name) : '';
+            if (who) sub = 'Виконавець: ' + who;
+            if (at) sub = (sub ? (sub + ' · ') : '') + 'Прийнято: ' + at;
         } else if (action === 'calendar.event.done') {
             sub = 'Статус: ' + ((it.done === true || String(it.done) === '1' || String(it.done) === 'true') ? 'виконано' : 'не виконано');
         } else if (action === 'calendar.event.urgent') {
