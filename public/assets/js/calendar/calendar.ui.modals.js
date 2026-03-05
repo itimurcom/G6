@@ -523,7 +523,8 @@
       case 'delete':
         return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 7h14M9 7V5.8c0-.44.36-.8.8-.8h4.4c.44 0 .8.36.8.8V7m-8.2 0 .6 10.2c.05.99.87 1.8 1.87 1.8h4.86c1 0 1.82-.81 1.87-1.8L17.2 7M10 10.2v5.6m4-5.6v5.6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
       case 'save':
-        return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5 9.2 17 19 7.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+        // Use the project-wide "Save" icon (single-color floppy) from layouts/partials/icons.php.
+        return '<svg aria-hidden="true" focusable="false"><use href="#i-floppy-save"></use></svg>';
       case 'preview':
         return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Zm9.5 3a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
       case 'download':
@@ -602,20 +603,12 @@
   }
 
   function __threadGetMaxFileSizeMb() {
-    // Global server-side setting injected into layouts: window.__APP_SETTINGS.upload.max_file_mb
+    // Stored in Cabinet Settings (Local Storage): ui-max-file-mb
     var def = 100;
     var v = def;
-
     try {
-      var g = (window.__APP_SETTINGS && window.__APP_SETTINGS.upload) ? window.__APP_SETTINGS.upload.max_file_mb : null;
-      if (g !== null && g !== undefined && g !== '') {
-        v = parseInt(g, 10);
-      } else {
-        // Back-compat fallback: old localStorage key
-        v = parseInt(localStorage.getItem('ui-max-file-mb') || '', 10);
-      }
+      v = parseInt(localStorage.getItem('ui-max-file-mb') || '', 10);
     } catch (_) { v = def; }
-
     if (!isFinite(v) || v <= 0) v = def;
     if (v < 1) v = 1;
     if (v > 1024) v = 1024;
