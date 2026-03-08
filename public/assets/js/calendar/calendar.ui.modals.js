@@ -2591,6 +2591,42 @@
     }
   }
 
+  function __infoOwnerTextHtml(userId) {
+    var uid = parseInt(userId || 0, 10) || 0;
+    if (uid <= 0) return '—';
+    return '<span class="info-owner-user" data-user-id="' + uid + '">ID ' + uid + '</span>';
+  }
+
+  function __hydrateInfoOwnerText(root) {
+    var host = root || document;
+    if (!host || !host.querySelectorAll) return;
+    var nodes = host.querySelectorAll('.info-owner-user[data-user-id]');
+    if (!nodes || !nodes.length) return;
+    var Users = window.API && window.API.Users ? window.API.Users : null;
+    for (var i = 0; i < nodes.length; i++) {
+      (function (el) {
+        if (!(el instanceof HTMLElement)) return;
+        var uid = parseInt(el.getAttribute('data-user-id') || '0', 10) || 0;
+        if (uid <= 0) { el.textContent = '—'; return; }
+        el.textContent = 'ID ' + uid;
+        if (!Users || typeof Users.get !== 'function') return;
+        Users.get(uid).then(function (u) {
+          try {
+            if (Users && typeof Users.text === 'function') {
+              el.textContent = Users.text(u);
+              return;
+            }
+          } catch (_) { }
+          var name = (u && typeof u.name === 'string' && u.name.trim()) ? u.name.trim() : '';
+          var login = (u && u.login) ? String(u.login) : '';
+          el.textContent = name || login ? (name + (login ? ' (' + login + ')' : '') + ' : ' + uid) : ('ID ' + uid);
+        }).catch(function () {
+          el.textContent = 'ID ' + uid;
+        });
+      })(nodes[i]);
+    }
+  }
+
   function __setEditScopeUi(scope, ev) {
     var limited = (scope === 'limited');
     __toggleHidden(fieldWrapTitleEdit, limited);
@@ -3304,9 +3340,7 @@ function __renderEventHistory(host, items, currentEvent) {
     var __time = (ev.time && String(ev.time).trim() !== '') ? String(ev.time).trim() : '';
     var __dateTimeHtml = Ev.formatISO(dateISO) + ' (' + __weekday + ')' + (__time ? (' (' + Ev.escapeHtml(__time) + ')') : '');
 
-    var __ownerHtml = (parseInt(ev.user_id || 0, 10) > 0)
-      ? '<span class="user--name" data-user-id="' + parseInt(ev.user_id, 10) + '"></span>'
-      : '—';
+    var __ownerHtml = __infoOwnerTextHtml(ev.user_id);
 
     var __descRaw = (typeof ev.description === 'string') ? ev.description : '';
     var __descHtml = (__descRaw && String(__descRaw).trim() !== '') ? Ev.escapeHtml(__descRaw) : '—';
@@ -3369,6 +3403,7 @@ function __renderEventHistory(host, items, currentEvent) {
         '</details>'
       ) : '');
 if (infoContent) infoContent.innerHTML = html;
+    try { __hydrateInfoOwnerText(infoContent); } catch (_) { }
     __setInfoHeaderBadges(ev, dateISO);
     setInfoModalType(ev.type);
 
