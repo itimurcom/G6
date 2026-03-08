@@ -8,6 +8,7 @@ use App\Core\Database;
 use App\Models\DocumentMysqlRepository;
 use App\Models\EventMessageMysqlRepository;
 use App\Models\EventMysqlRepository;
+use App\Services\EventViewHelper;
 use App\Services\Audit\ActionLogger;
 use App\Controllers\Traits\ApiCommonTrait;
 use App\Controllers\Traits\ApiEventResourceTrait;
@@ -129,6 +130,57 @@ final class ApiEventMessagesController
         return (bool)$this->notifyHasPayloadColumn;
     }
 
+    /** @return array<int> */
+    private function collectNotificationUserIds(string $eventId, int $actorId): array
+    {
+        $ids = [];
+        if ($actorId > 0) {
+            $ids[$actorId] = true;
+        }
+
+        try {
+            $event = $this->events->getById($eventId);
+            if (is_array($event)) {
+                $authorId = (int)($event['user_id'] ?? 0);
+                if ($authorId > 0) {
+                    $ids[$authorId] = true;
+                }
+
+                $ownerRaw = (string)($event['owner'] ?? '');
+                if ($ownerRaw !== '') {
+                    try {
+                        $owner = EventViewHelper::parseOwnerField($ownerRaw);
+                        if (($owner['type'] ?? '') === 'user') {
+                            $assigneeId = (int)($owner['user_id'] ?? 0);
+                            if ($assigneeId > 0) {
+                                $ids[$assigneeId] = true;
+                            }
+                        }
+                    } catch (\Throwable $e) {
+                    }
+                }
+            }
+        } catch (\Throwable $e) {
+        }
+
+        try {
+            $db = Database::connect();
+            $st = $db->prepare('SELECT DISTINCT user_id FROM event_messages WHERE event_id = :eid AND deleted_at IS NULL AND user_id IS NOT NULL AND user_id > 0');
+            $st->execute(['eid' => $eventId]);
+            foreach (($st->fetchAll(\PDO::FETCH_ASSOC) ?: []) as $row) {
+                $uid = (int)($row['user_id'] ?? 0);
+                if ($uid > 0) {
+                    $ids[$uid] = true;
+                }
+            }
+        } catch (\Throwable $e) {
+        }
+
+        $out = array_map('intval', array_keys($ids));
+        sort($out, SORT_NUMERIC);
+        return $out;
+    }
+
     private function notifyFanout(string $kind, string $eventId, ?array $payload = null): void
     {
         $eventId = trim($eventId);
@@ -154,9 +206,8 @@ final class ApiEventMessagesController
         try {
             $db = Database::connect();
             $actorId = (int)(Auth::id() ?? 0);
-            $stUsers = $db->query('SELECT id FROM users');
-            $users = $stUsers ? $stUsers->fetchAll(\PDO::FETCH_ASSOC) : [];
-            if (!$users) return;
+            $userIds = $this->collectNotificationUserIds($eventId, $actorId);
+            if (!$userIds) return;
 
             if ($this->notifyHasPayloadColumn()) {
                 $sql = "INSERT INTO user_notifications (user_id, kind, event_id, actor_user_id, created_at, payload)\n".
@@ -167,8 +218,7 @@ final class ApiEventMessagesController
                     ? json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)
                     : null;
 
-                foreach ($users as $u) {
-                    $uid = (int)($u['id'] ?? 0);
+                foreach ($userIds as $uid) {
                     if ($uid <= 0) continue;
                     $st->execute([
                         'uid' => $uid,
@@ -185,8 +235,7 @@ final class ApiEventMessagesController
                    "VALUES (:uid, :kind, :eid, :actor, NOW())\n".
                    "ON DUPLICATE KEY UPDATE seen_at = NULL, created_at = VALUES(created_at), actor_user_id = VALUES(actor_user_id)";
             $st = $db->prepare($sql);
-            foreach ($users as $u) {
-                $uid = (int)($u['id'] ?? 0);
+            foreach ($userIds as $uid) {
                 if ($uid <= 0) continue;
                 $st->execute([
                     'uid' => $uid,

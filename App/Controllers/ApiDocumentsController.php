@@ -186,6 +186,87 @@ final class ApiDocumentsController
         }
     }
 
+
+    private function loadAccessibleDocumentById(int $id, bool $binary = false): ?array
+    {
+        if ($id <= 0) {
+            if ($binary) {
+                http_response_code(400);
+                echo 'Bad Request';
+            } else {
+                $this->json(['ok' => false, 'error' => 'id required'], 400);
+            }
+            return null;
+        }
+
+        try {
+            $doc = $this->documents->getById($id, false);
+        } catch (\Throwable $e) {
+            if ($binary) {
+                http_response_code(500);
+                echo 'Internal Server Error';
+            } else {
+                $this->json(['ok' => false, 'error' => 'internal', 'message' => $e->getMessage()], 500);
+            }
+            return null;
+        }
+
+        if (!is_array($doc) || !empty($doc['deleted_at'])) {
+            if ($binary) {
+                http_response_code(404);
+                echo 'Not Found';
+            } else {
+                $this->json(['ok' => false, 'error' => 'not_found'], 404);
+            }
+            return null;
+        }
+
+        $eventId = trim((string)($doc['event_id'] ?? ''));
+        if ($eventId === '') {
+            if ($binary) {
+                http_response_code(404);
+                echo 'Not Found';
+            } else {
+                $this->json(['ok' => false, 'error' => 'not_found'], 404);
+            }
+            return null;
+        }
+
+        try {
+            $event = $this->events->getById($eventId);
+        } catch (\Throwable $e) {
+            if ($binary) {
+                http_response_code(500);
+                echo 'Internal Server Error';
+            } else {
+                $this->json(['ok' => false, 'error' => 'internal', 'message' => $e->getMessage()], 500);
+            }
+            return null;
+        }
+
+        if (!is_array($event)) {
+            if ($binary) {
+                http_response_code(404);
+                echo 'Not Found';
+            } else {
+                $this->json(['ok' => false, 'error' => 'not_found'], 404);
+            }
+            return null;
+        }
+
+        if (!$this->canCurrentUserAccessEvent($event)) {
+            if ($binary) {
+                http_response_code(403);
+                echo 'Forbidden';
+            } else {
+                $this->json(['ok' => false, 'error' => 'forbidden'], 403);
+            }
+            return null;
+        }
+
+        return $doc;
+    }
+
     private function canDeleteDocument(array $document, array $user): bool
     {
         $uid = (int)($user['id'] ?? 0);
@@ -392,9 +473,8 @@ final class ApiDocumentsController
         }
 
         try {
-            $current = $this->documents->getById($id, false);
+            $current = $this->loadAccessibleDocumentById($id);
             if (!$current) {
-                $this->json(['ok' => false, 'error' => 'not_found'], 404);
                 return;
             }
             if (!$this->canDeleteDocument($current, $user)) {
@@ -431,9 +511,8 @@ final class ApiDocumentsController
     public function view(): void
     {
         $id = (int)($_GET['id'] ?? 0);
-        if ($id <= 0) {
-            http_response_code(400);
-            echo 'Bad Request';
+        $docMeta = $this->loadAccessibleDocumentById($id, true);
+        if (!$docMeta) {
             return;
         }
 
@@ -468,9 +547,8 @@ final class ApiDocumentsController
     public function download(): void
     {
         $id = (int)($_GET['id'] ?? 0);
-        if ($id <= 0) {
-            http_response_code(400);
-            echo 'Bad Request';
+        $docMeta = $this->loadAccessibleDocumentById($id, true);
+        if (!$docMeta) {
             return;
         }
 
