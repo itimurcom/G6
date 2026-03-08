@@ -24,21 +24,29 @@
         </div>
         </div>
 <!-- 2. Назва події (повна ширина) -->
-      <div>
+      <div id="fieldWrapTitleEdit">
         <label for="inputTitle">Назва події</label>
         <input id="inputTitle" name="title" type="text" placeholder="Напр., Статус-дзвінок" required>
       </div>
+      <div id="fieldWrapTitleView" class="event-view-field" hidden>
+        <label>Назва події</label>
+        <div id="viewTitle" class="event-view-value">—</div>
+      </div>
 
       <!-- 3. Опис (повна ширина, 3 рядки, закруглені кути як у input) -->
-      <div>
+      <div id="fieldWrapDescriptionEdit">
         <label for="inputDescription">Опис</label>
         <textarea id="inputDescription" name="description" rows="3"
           placeholder="Детальний опис події..." style="border-radius:8px;"></textarea>
       </div>
+      <div id="fieldWrapDescriptionView" class="event-view-field" hidden>
+        <label>Опис</label>
+        <div id="viewDescription" class="event-view-value event-view-value--multiline">—</div>
+      </div>
 
       <!-- 4. Відповідальний | Тип -->
       <div class="row">
-        <div>
+        <div id="fieldWrapOwnerEdit">
           <label for="inputOwner">Відповідальний</label>
           <div class="owner-autocomplete">
             <input id="inputOwner" name="owner" type="text" placeholder="Ім'я (login) або довільний текст" autocomplete="off">
@@ -46,7 +54,11 @@
             <div id="ownerSuggest" class="owner-suggest" hidden></div>
           </div>
         </div>
-        <div>
+        <div id="fieldWrapOwnerView" class="event-view-field" hidden>
+          <label>Відповідальний</label>
+          <div id="viewOwner" class="event-view-value">—</div>
+        </div>
+        <div id="fieldWrapTypeEdit">
           <label for="inputType">Тип</label>
           <select id="inputType" name="type" required>
             <option value="mi">ТЛГ: МИ</option>
@@ -54,6 +66,10 @@
             <option value="evt" selected>Захід</option>
             <option value="other">Інше</option>
           </select>
+        </div>
+        <div id="fieldWrapTypeView" class="event-view-field" hidden>
+          <label>Тип</label>
+          <div id="viewType" class="event-view-value">—</div>
         </div>
       </div>
 

@@ -89,9 +89,64 @@ final class ApiEventsController
         return $this->ownerUserIdFromOwnerField($ownerRaw) === $meId;
     }
 
+    private function canCurrentUserFullyEditEvent(array $event): bool
+    {
+        $access = $this->currentAccessUser();
+        if (!empty($access['is_admin'])) {
+            return true;
+        }
+
+        $meId = (int)($access['id'] ?? 0);
+        if ($meId <= 0) {
+            return false;
+        }
+
+        $authorId = (int)($event['user_id'] ?? 0);
+        return $authorId === $meId;
+    }
+
+    private function canCurrentUserAssigneeEditEvent(array $event): bool
+    {
+        if ($this->canCurrentUserFullyEditEvent($event)) {
+            return true;
+        }
+
+        $access = $this->currentAccessUser();
+        $meId = (int)($access['id'] ?? 0);
+        if ($meId <= 0) {
+            return false;
+        }
+
+        $ownerRaw = (string)($event['owner'] ?? '');
+        return $this->ownerUserIdFromOwnerField($ownerRaw) === $meId;
+    }
+
     private function canCurrentUserEditEvent(array $event): bool
     {
-        return $this->canCurrentUserViewEvent($event);
+        return $this->canCurrentUserAssigneeEditEvent($event);
+    }
+
+    private function sanitizeLimitedAssigneeUpdatePayload(array $payload, array $before): array
+    {
+        $sanitized = [];
+
+        if (array_key_exists('date', $payload)) {
+            $sanitized['date'] = $payload['date'];
+        }
+
+        $eventIn = isset($payload['event']) && is_array($payload['event']) ? $payload['event'] : [];
+        $eventOut = [];
+        foreach (['time', 'urgent', 'done', 'incoming_no', 'outgoing_no', 'end_date'] as $field) {
+            if (array_key_exists($field, $eventIn)) {
+                $eventOut[$field] = $eventIn[$field];
+            }
+        }
+
+        if ($eventOut !== []) {
+            $sanitized['event'] = $eventOut;
+        }
+
+        return $sanitized;
     }
 
     private function filterVisibleEventList(array $rows): array
@@ -252,6 +307,9 @@ public function byDate(): void
             $ownerBeforeUid = $this->ownerUserIdFromOwnerField($ownerBeforeRaw);
 
             if (isset($payload['event']) && is_array($payload['event'])) { unset($payload['event']['user_id']); }
+            if (!$this->canCurrentUserFullyEditEvent($before)) {
+                $payload = $this->sanitizeLimitedAssigneeUpdatePayload($payload, $before);
+            }
             $ok = $this->repo->updateById($id, $payload);
 
             // Post-update: detect assignee change and manage confirmation

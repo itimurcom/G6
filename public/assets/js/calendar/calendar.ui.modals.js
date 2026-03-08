@@ -56,13 +56,49 @@
     } catch (_) { }
   })();
 
-  function canEditEvent(ev) {
+  function __isAssignedToMeRaw(ev) {
+    if (!ev) return false;
+    var meId = (__me && __me.id) || getCurrentUserId() || 0;
+    if (!meId) return false;
+    var ownerId = __ownerUserIdForInfo(ev);
+    if (ownerId > 0) return (ownerId === meId);
+
+    if (__me && __me.login) {
+      var t = '';
+      try {
+        t = (Ev && typeof Ev.ownerDisplay === 'function') ? (Ev.ownerDisplay(ev) || '') : ((ev && ev.owner) ? String(ev.owner) : '');
+      } catch (_) {
+        t = (ev && ev.owner) ? String(ev.owner) : '';
+      }
+      if (t) {
+        var s = String(t).toLowerCase();
+        var lg = String(__me.login).toLowerCase();
+        if (s.indexOf('(' + lg + ')') !== -1 || s === lg) return true;
+      }
+    }
+
+    return false;
+  }
+
+  function canFullEditEvent(ev) {
     if (!ev) return false;
     var uid = parseInt(ev.user_id || 0, 10) || 0;
     var meId = __me.id || getCurrentUserId() || 0;
-    if (__me.isAdmin === true) return true;
-    if (uid > 0 && meId > 0 && uid === meId) return true;
-    return __ownerUserIdForInfo(ev) === meId;
+    return (__me.isAdmin === true) || (uid > 0 && meId > 0 && uid === meId);
+  }
+
+  function canLimitedEditEvent(ev) {
+    return !canFullEditEvent(ev) && __isAssignedToMeRaw(ev);
+  }
+
+  function canEditEvent(ev) {
+    return canFullEditEvent(ev) || canLimitedEditEvent(ev);
+  }
+
+  function __getEditScope(ev) {
+    if (canFullEditEvent(ev)) return 'full';
+    if (canLimitedEditEvent(ev)) return 'limited';
+    return 'none';
   }
 
   function __isMyEventForInfo(ev) {
@@ -90,27 +126,7 @@
 
   function __isAssignedToMeForInfo(ev) {
     if (!ev || ev.done) return false;
-    var meId = (__me && __me.id) || getCurrentUserId() || 0;
-    if (!meId) return false;
-    var ownerId = __ownerUserIdForInfo(ev);
-    if (ownerId > 0) return (ownerId === meId);
-
-    // Fallback: if owner is stored as plain label (not JSON), try to match current login
-    if (__me && __me.login) {
-      var t = '';
-      try {
-        t = (Ev && typeof Ev.ownerDisplay === 'function') ? (Ev.ownerDisplay(ev) || '') : ((ev && ev.owner) ? String(ev.owner) : '');
-      } catch (_) {
-        t = (ev && ev.owner) ? String(ev.owner) : '';
-      }
-      if (t) {
-        var s = String(t).toLowerCase();
-        var lg = String(__me.login).toLowerCase();
-        if (s.indexOf('(' + lg + ')') !== -1 || s === lg) return true;
-      }
-    }
-
-    return false;
+    return __isAssignedToMeRaw(ev);
   }
 
   function __isOverdueForInfo(ev, fallbackDateISO) {
@@ -2130,6 +2146,22 @@
   var inputOutgoing = $id('inputOutgoing');
   var inputDescription = $id('inputDescription');
 
+  var fieldWrapTitleEdit = $id('fieldWrapTitleEdit');
+  var fieldWrapTitleView = $id('fieldWrapTitleView');
+  var fieldWrapDescriptionEdit = $id('fieldWrapDescriptionEdit');
+  var fieldWrapDescriptionView = $id('fieldWrapDescriptionView');
+  var fieldWrapOwnerEdit = $id('fieldWrapOwnerEdit');
+  var fieldWrapOwnerView = $id('fieldWrapOwnerView');
+  var fieldWrapTypeEdit = $id('fieldWrapTypeEdit');
+  var fieldWrapTypeView = $id('fieldWrapTypeView');
+
+  var viewTitle = $id('viewTitle');
+  var viewDescription = $id('viewDescription');
+  var viewOwner = $id('viewOwner');
+  var viewType = $id('viewType');
+
+  var __lockedEditFields = null;
+
   // Info modal
   var infoOverlay = $id('infoOverlay');
   var infoModal = infoOverlay ? infoOverlay.querySelector('.modal') : null;
@@ -2539,6 +2571,60 @@
     });
   }
 
+  function __toggleHidden(el, hide) {
+    if (!el) return;
+    if (hide) el.setAttribute('hidden', '');
+    else el.removeAttribute('hidden');
+  }
+
+  function __setViewText(el, value, fallback) {
+    if (!el) return;
+    var txt = (value == null || String(value).trim() === '') ? (fallback || '—') : String(value);
+    el.textContent = txt;
+  }
+
+  function __ownerDisplayTextForEdit(ev) {
+    try {
+      return (Ev && typeof Ev.ownerDisplay === 'function') ? (Ev.ownerDisplay(ev) || '—') : ((ev && ev.owner) ? String(ev.owner) : '—');
+    } catch (_) {
+      return (ev && ev.owner) ? String(ev.owner) : '—';
+    }
+  }
+
+  function __setEditScopeUi(scope, ev) {
+    var limited = (scope === 'limited');
+    __toggleHidden(fieldWrapTitleEdit, limited);
+    __toggleHidden(fieldWrapTitleView, !limited);
+    __toggleHidden(fieldWrapDescriptionEdit, limited);
+    __toggleHidden(fieldWrapDescriptionView, !limited);
+    __toggleHidden(fieldWrapOwnerEdit, limited);
+    __toggleHidden(fieldWrapOwnerView, !limited);
+    __toggleHidden(fieldWrapTypeEdit, limited);
+    __toggleHidden(fieldWrapTypeView, !limited);
+
+    if (limited && ev) {
+      __setViewText(viewTitle, ev.title || '', '—');
+      __setViewText(viewDescription, ev.description || '', '—');
+      __setViewText(viewOwner, __ownerDisplayTextForEdit(ev), '—');
+      __setViewText(viewType, (Ev && typeof Ev.labelForType === 'function') ? Ev.labelForType(ev.type) : (ev.type || '—'), '—');
+    }
+
+    if (!limited) {
+      __lockedEditFields = null;
+    }
+
+    if (overlay && overlay.dataset) overlay.dataset.editScope = scope || 'full';
+  }
+
+  function __lockLimitedEditFields(ev) {
+    __lockedEditFields = {
+      title: (ev && ev.title) ? String(ev.title) : '',
+      owner: (ev && ev.owner) ? String(ev.owner) : '',
+      type: (ev && ev.type) ? String(ev.type) : 'evt',
+      description: (ev && ev.description) ? String(ev.description) : ''
+    };
+  }
+
   function openModalNew(dateISO) {
     var modalTitle = $id('modalTitle');
     var inputEndDate = $id('inputEndDate');
@@ -2571,6 +2657,7 @@
     if (inputOutgoing) inputOutgoing.value = '';
     if (inputDescription) inputDescription.value = '';
 
+    __setEditScopeUi('full', null);
     setEditModalType(inputType ? inputType.value : 'evt');
     applyUrgentClass();
     applyDoneClass();
@@ -2587,7 +2674,8 @@
     var ev = arr.find(function (e) { return e.id === id; });
     if (!ev) return;
 
-    if (typeof canEditEvent === 'function' && !canEditEvent(ev)) { return; }
+    var __editScope = (typeof __getEditScope === 'function') ? __getEditScope(ev) : ((typeof canEditEvent === 'function' && canEditEvent(ev)) ? 'full' : 'none');
+    if (__editScope === 'none') { return; }
 
     if (inputSpanDays) {
       var ed = ev.end_date || '';
@@ -2610,8 +2698,11 @@
     overlay.dataset.origDate = dateISO;
     overlay.dataset.id = id;
 
-    // Allow delete while editing (permissions are enforced by UI + API)
-    if (btnDelete) { btnDelete.removeAttribute('hidden'); btnDelete.removeAttribute('aria-hidden'); btnDelete.removeAttribute('tabindex'); }
+    // Allow delete only for full edit mode (permissions are enforced by UI + API)
+    if (btnDelete) {
+      if (__editScope === 'full') { btnDelete.removeAttribute('hidden'); btnDelete.removeAttribute('aria-hidden'); btnDelete.removeAttribute('tabindex'); }
+      else { btnDelete.setAttribute('hidden', ''); btnDelete.setAttribute('aria-hidden', 'true'); btnDelete.setAttribute('tabindex', '-1'); }
+    }
     overlay.dataset.startDate = ev.start_date || dateISO;
 
     if (inputDate) inputDate.value = dateISO;
@@ -2634,11 +2725,17 @@
     if (inputOutgoing) inputOutgoing.value = ev.outgoing_no || '';
     if (inputDescription) inputDescription.value = ev.description || '';
 
+    __setEditScopeUi(__editScope, ev);
+    if (__editScope === 'limited') __lockLimitedEditFields(ev);
     setEditModalType(inputType ? inputType.value : 'evt');
     applyUrgentClass();
     applyDoneClass();
     __ownerInitAutocompleteOnce();
     showOverlay();
+    setTimeout(function () {
+      var focusEl = (__editScope === 'limited') ? (inputDate || inputTime || inputIncoming || inputOutgoing) : (inputTitle || inputDate);
+      try { if (focusEl) focusEl.focus(); } catch (_) { }
+    }, 0);
   }
 
   /* ===== Інфо ===== */
@@ -3384,6 +3481,13 @@ if (infoContent) infoContent.innerHTML = html;
       outgoing_no: (inputOutgoing && inputOutgoing.value || '').trim(),
       description: (inputDescription && inputDescription.value || '').trim()
     };
+
+    if (overlay && overlay.dataset && overlay.dataset.editScope === 'limited' && __lockedEditFields) {
+      ev.title = __lockedEditFields.title || '';
+      ev.owner = __lockedEditFields.owner || '';
+      ev.type = __lockedEditFields.type || 'evt';
+      ev.description = __lockedEditFields.description || '';
+    }
     // FIX: Preserve or assign ev.user_id so "My tasks" updates immediately after save
     (function ensureUserId() {
       try {

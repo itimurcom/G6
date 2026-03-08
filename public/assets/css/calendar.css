@@ -1854,3 +1854,27 @@ body.light .ev--multi,
 .btn.btn--pdf {
   white-space: nowrap;
 }
+.event-view-field {
+  display: block;
+}
+
+.event-view-value {
+  min-height: 42px;
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: color-mix(in oklab, var(--event-bg) 82%, var(--bg));
+  color: var(--fg);
+  box-sizing: border-box;
+}
+
+.event-view-value--multiline {
+  display: block;
+  min-height: calc(1em * 1.5 * 3 + 22px);
+  line-height: 1.5;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
