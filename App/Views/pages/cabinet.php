@@ -53,7 +53,6 @@ $__cabHasAvatar = !empty($u['has_avatar']) && !empty($u['avatar_url']);
     <?php endif; ?>
     <span class="lg" data-tab="journal">Журнал</span>
   </nav>
-  <span class="user--name" data-user-id="<?= (int)($u['id'] ?? 0) ?>">loading…</span>
 </header>
 
 <div tabs="cabinet-wrap">
