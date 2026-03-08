@@ -1434,8 +1434,8 @@ body.light .ev--multi,
   --info-btn-neutral-border: color-mix(in srgb, var(--border) 82%, transparent);
   --info-btn-green-bg: #16a34a;
   --info-btn-green-border: #15803d;
-  --info-btn-blue-bg: var(--accent);
-  --info-btn-blue-border: color-mix(in srgb, var(--accent) 72%, var(--border) 28%);
+  --info-btn-blue-bg: #2563eb;
+  --info-btn-blue-border: #1d4ed8;
   --info-btn-red-bg: #ef4444;
   --info-btn-red-border: #dc2626;
 }
@@ -1854,6 +1854,11 @@ body.light .ev--multi,
 .btn.btn--pdf {
   white-space: nowrap;
 }
+
+.event-view-field[hidden] {
+  display: none !important;
+}
+
 .event-view-field {
   display: block;
 }

@@ -160,7 +160,7 @@
 
   function __infoStatusBadgesHtml(ev, fallbackDateISO, variant) {
     var showAssigned = __isAssignedToMeForInfo(ev);
-    var showMy = (!showAssigned && __isMyEventForInfo(ev));
+    var showMy = __isMyEventForInfo(ev);
     var showOverdue = __isOverdueForInfo(ev, fallbackDateISO);
     if (!showAssigned && !showMy && !showOverdue) return '';
 
