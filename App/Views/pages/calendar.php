@@ -136,5 +136,5 @@
   </div>
 </div>
 
-<? include __DIR__ . '/../layouts/modals/editEvent.php'; ?>
-<? include __DIR__ . '/../layouts/modals/infoEvent.php'; ?>
+<?php include __DIR__ . '/../layouts/modals/editEvent.php'; ?>
+<?php include __DIR__ . '/../layouts/modals/infoEvent.php'; ?>
