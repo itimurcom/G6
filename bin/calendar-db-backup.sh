@@ -16,6 +16,7 @@ TS="$(date +%F_%H%M%S)"
 OUT="$BACKUP_DIR/${DB_NAME}_${TS}.sql.gz"
 
 mysqldump \
+  --no-defaults \
   --host="$DB_HOST" \
   --user="$DB_USER" \
   --password="$DB_PASS" \
