@@ -273,6 +273,20 @@ body.light #notifStack,
 #notifStack .notif-item[data-type="other"] { border-left: 3px solid color-mix(in oklab, var(--type-other) 70%, transparent); }
 #notifStack .notif-item[data-type="overdue"] { border-left: 3px solid color-mix(in oklab, var(--type-overdue) 70%, transparent); }
 
+#notifStack .notif-link {
+  color: #60a5fa;
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 2px;
+}
+
+#notifStack .notif-link:hover {
+  color: #93c5fd;
+}
+
+#notifStack .notif-link:active {
+  color: #bfdbfe;
+}
 
 #notifStack .notif-link.is-disabled,
 #notifStack .notif-link[aria-disabled="true"] {
