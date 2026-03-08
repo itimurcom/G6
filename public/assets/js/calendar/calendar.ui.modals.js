@@ -60,7 +60,9 @@
     if (!ev) return false;
     var uid = parseInt(ev.user_id || 0, 10) || 0;
     var meId = __me.id || getCurrentUserId() || 0;
-    return (__me.isAdmin === true) || (uid > 0 && meId > 0 && uid === meId);
+    if (__me.isAdmin === true) return true;
+    if (uid > 0 && meId > 0 && uid === meId) return true;
+    return __ownerUserIdForInfo(ev) === meId;
   }
 
   function __isMyEventForInfo(ev) {

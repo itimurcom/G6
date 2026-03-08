@@ -58,6 +58,80 @@ final class ApiEventsController
         return trim($ownerRaw) !== '' ? trim($ownerRaw) : '—';
     }
 
+
+    private function currentAccessUser(): array
+    {
+        $me = \App\Core\Auth::user();
+        $meId = (int)($me['id'] ?? 0);
+        $role = strtolower((string)($me['role'] ?? ''));
+        $isAdmin = ($role === 'admin') || !empty($me['is_admin']);
+        return ['id' => $meId, 'is_admin' => $isAdmin];
+    }
+
+    private function canCurrentUserViewEvent(array $event): bool
+    {
+        $access = $this->currentAccessUser();
+        if (!empty($access['is_admin'])) {
+            return true;
+        }
+
+        $meId = (int)($access['id'] ?? 0);
+        if ($meId <= 0) {
+            return false;
+        }
+
+        $authorId = (int)($event['user_id'] ?? 0);
+        if ($authorId === $meId) {
+            return true;
+        }
+
+        $ownerRaw = (string)($event['owner'] ?? '');
+        return $this->ownerUserIdFromOwnerField($ownerRaw) === $meId;
+    }
+
+    private function canCurrentUserEditEvent(array $event): bool
+    {
+        return $this->canCurrentUserViewEvent($event);
+    }
+
+    private function filterVisibleEventList(array $rows): array
+    {
+        $filtered = [];
+        foreach ($rows as $row) {
+            if (is_array($row) && $this->canCurrentUserViewEvent($row)) {
+                $filtered[] = $row;
+            }
+        }
+        return $filtered;
+    }
+
+    private function filterVisibleEventMap(array $map): array
+    {
+        foreach ($map as $date => $rows) {
+            $map[$date] = is_array($rows) ? $this->filterVisibleEventList($rows) : [];
+        }
+        return $map;
+    }
+
+    private function filterVisibleExtendedRows(array $rows): array
+    {
+        $filtered = [];
+        foreach ($rows as $row) {
+            if (!is_array($row)) {
+                continue;
+            }
+            $eventId = trim((string)($row['event_id'] ?? ''));
+            if ($eventId === '') {
+                continue;
+            }
+            $event = $this->repo->getById($eventId);
+            if (is_array($event) && $this->canCurrentUserViewEvent($event)) {
+                $filtered[] = $row;
+            }
+        }
+        return $filtered;
+    }
+
     private function ensureExecutionConfirmationIfNeeded(string $eventId, array $eventRow, ?int $actorId = null): void
     {
         // Create confirmation only when owner is a system user and event is not done
@@ -90,7 +164,7 @@ public function byDate(): void
         $date = (string)($_GET['date'] ?? '');
         if ($date === '') { $this->json(['ok'=>false,'error'=>'date required'], 400); return; }
         try {
-            $rows = $this->decorateEventListWithActivityCounts($this->repo->listByDate($date));
+            $rows = $this->decorateEventListWithActivityCounts($this->filterVisibleEventList($this->repo->listByDate($date)));
             $this->json(['ok'=>true,'date'=>$date,'events'=>$rows]);
         } catch (\Throwable $e) {
             $this->json(['ok'=>false,'error'=>'internal','message'=>$e->getMessage()], 500);
@@ -103,7 +177,7 @@ public function byDate(): void
         $end   = (string)($_GET['end'] ?? '');
         if ($start === '' || $end === '') { $this->json(['ok'=>false,'error'=>'start/end required'], 400); return; }
         try {
-            $map = $this->decorateEventMapWithActivityCounts($this->repo->listByRange($start, $end));
+            $map = $this->decorateEventMapWithActivityCounts($this->filterVisibleEventMap($this->repo->listByRange($start, $end)));
             $this->json(['ok'=>true,'data'=>$map,'start'=>$start,'end'=>$end]);
         } catch (\Throwable $e) {
             $this->json(['ok'=>false,'error'=>'internal','message'=>$e->getMessage()], 500);
@@ -116,7 +190,7 @@ public function byDate(): void
         if ($id === '') { $this->json(['ok'=>false,'error'=>'id required'], 400); return; }
         try {
             $row = $this->repo->getById($id);
-            if (!$row) { $this->json(['ok'=>false,'error'=>'not_found'], 404); return; }
+            if (!$row || !$this->canCurrentUserViewEvent($row)) { $this->json(['ok'=>false,'error'=>'not_found'], 404); return; }
             $row = $this->decorateEventRowWithActivityCounts($row, $this->fetchEventActivityCounts([$id]));
             $this->json(['ok'=>true,'event'=>$row]);
         } catch (\Throwable $e) {
@@ -172,6 +246,8 @@ public function byDate(): void
         try {
             $before = null;
             try { $before = $this->repo->getById($id); } catch (\Throwable $__e) { $before = null; }
+            if (!$before) { $this->json(['ok'=>false,'error'=>'not_found'], 404); return; }
+            if (!$this->canCurrentUserEditEvent($before)) { $this->json(['ok'=>false,'error'=>'forbidden'], 403); return; }
             $ownerBeforeRaw = is_array($before) ? (string)($before['owner'] ?? '') : '';
             $ownerBeforeUid = $this->ownerUserIdFromOwnerField($ownerBeforeRaw);
 
@@ -264,6 +340,9 @@ public function byDate(): void
         $done = (bool)($payload['done'] ?? 1);
         if ($id === '') { $this->json(['ok'=>false,'error'=>'id required'], 400); return; }
         try {
+            $ev = $this->repo->getById($id);
+            if (!$ev) { $this->json(['ok'=>false,'error'=>'not_found'], 404); return; }
+            if (!$this->canCurrentUserEditEvent($ev)) { $this->json(['ok'=>false,'error'=>'forbidden'], 403); return; }
             $ok = $this->repo->setDone($id, $done);
             $this->json(['ok'=>(bool)$ok]);
         } catch (\Throwable $e) {
@@ -281,6 +360,9 @@ public function byDate(): void
         $urgent = (bool)($payload['urgent'] ?? 1);
         if ($id === '') { $this->json(['ok'=>false,'error'=>'id required'], 400); return; }
         try {
+            $ev = $this->repo->getById($id);
+            if (!$ev) { $this->json(['ok'=>false,'error'=>'not_found'], 404); return; }
+            if (!$this->canCurrentUserEditEvent($ev)) { $this->json(['ok'=>false,'error'=>'forbidden'], 403); return; }
             $ok = $this->repo->setUrgent($id, $urgent);
             $this->json(['ok'=>(bool)$ok]);
         } catch (\Throwable $e) {
@@ -300,6 +382,7 @@ public function byDate(): void
         try {
             $ev = $this->repo->getById($id);
             if (!$ev) { $this->json(['ok'=>false,'error'=>'not_found'], 404); return; }
+            if (!$this->canCurrentUserEditEvent($ev)) { $this->json(['ok'=>false,'error'=>'forbidden'], 403); return; }
 
             $date = (string)($ev['_date'] ?? ($payload['date'] ?? ''));
             $date = substr($date, 0, 10);
@@ -344,8 +427,8 @@ public function byDate(): void
         }
 
         try {
-            $comments = $this->messageRepo->searchText($q, $type !== '' ? $type : null, $limit, $offset);
-            $files = $this->documentRepo->searchByOriginalName($q, $type !== '' ? $type : null, $limit, $offset);
+            $comments = $this->filterVisibleExtendedRows($this->messageRepo->searchText($q, $type !== '' ? $type : null, $limit, $offset));
+            $files = $this->filterVisibleExtendedRows($this->documentRepo->searchByOriginalName($q, $type !== '' ? $type : null, $limit, $offset));
             $this->json([
                 'ok' => true,
                 'comments' => $comments,
@@ -475,7 +558,22 @@ public function byDate(): void
         $limit  = isset($_GET['limit'])  ? (int)$_GET['limit']  : 200;
         $offset = isset($_GET['offset']) ? (int)$_GET['offset'] : 0;
         try {
-            $rows = $this->repo->search($filters, $limit, $offset);
+            $chunk = max($limit, 200);
+            if ($chunk > 500) { $chunk = 500; }
+            $rows = [];
+            $scanOffset = $offset;
+            $iterations = 0;
+            do {
+                $batch = $this->repo->search($filters, $chunk, $scanOffset);
+                $rows = array_merge($rows, $this->filterVisibleEventList($batch));
+                $scanOffset += count($batch);
+                $iterations++;
+                if (count($batch) < $chunk) { break; }
+            } while (count($rows) < $limit && $iterations < 10);
+
+            if (count($rows) > $limit) {
+                $rows = array_slice($rows, 0, $limit);
+            }
             $this->json(['ok'=>true,'data'=>$rows,'limit'=>$limit,'offset'=>$offset]);
         } catch (\Throwable $e) {
             $this->json(['ok'=>false,'error'=>'internal','message'=>$e->getMessage()], 500);
