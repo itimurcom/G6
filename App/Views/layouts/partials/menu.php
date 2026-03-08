@@ -11,6 +11,47 @@ $mk = static function(string $href) use ($path): string {
     }
     return (strpos($path, $href) === 0) ? ' is-active' : '';
 };
+
+$menuUser = null;
+$menuUserName = '';
+$menuUserLogin = '';
+$menuUserAvatarUrl = '';
+$menuUserHasAvatar = false;
+$menuUserInitials = 'U';
+
+if ($isAuth) {
+    try {
+        $menuUser = \App\Core\Auth::user();
+    } catch (\Throwable $__) {
+        $menuUser = null;
+    }
+
+    $menuUserName = trim((string)($menuUser['name'] ?? ($_SESSION['user']['name'] ?? '')));
+    $menuUserLogin = trim((string)($menuUser['login'] ?? ($_SESSION['user']['login'] ?? '')));
+    if ($menuUserName === '') {
+        $menuUserName = $menuUserLogin !== '' ? $menuUserLogin : 'Користувач';
+    }
+
+    $menuUserHasAvatar = !empty($menuUser['has_avatar']);
+    $avatarVersion = trim((string)($menuUser['avatar_version'] ?? ''));
+    $menuUserId = (int)($menuUser['id'] ?? ($_SESSION['user']['id'] ?? 0));
+    if ($menuUserHasAvatar && $menuUserId > 0) {
+        $menuUserAvatarUrl = '/api/users/avatar?id=' . $menuUserId . ($avatarVersion !== '' ? ('&v=' . rawurlencode($avatarVersion)) : '');
+    }
+
+    $parts = preg_split('/\s+/u', trim($menuUserName)) ?: [];
+    $letters = [];
+    foreach ($parts as $part) {
+        $part = trim((string)$part);
+        if ($part === '') continue;
+        $letters[] = mb_strtoupper(mb_substr($part, 0, 1, 'UTF-8'), 'UTF-8');
+        if (count($letters) >= 2) break;
+    }
+    if (!$letters && $menuUserLogin !== '') {
+        $letters[] = mb_strtoupper(mb_substr($menuUserLogin, 0, 1, 'UTF-8'), 'UTF-8');
+    }
+    $menuUserInitials = implode('', $letters) ?: 'U';
+}
 ?>
 <div class="sidebar-panel" role="dialog" aria-label="Меню">
   <div class="sidebar-head">
@@ -21,6 +62,22 @@ $mk = static function(string $href) use ($path): string {
       </svg>
     </button>
   </div>
+
+  <?php if ($isAuth): ?>
+    <a class="sidebar-user" href="/cabinet" aria-label="Відкрити кабінет користувача">
+      <span class="sidebar-user__avatar<?= $menuUserHasAvatar ? ' has-image' : '' ?>">
+        <?php if ($menuUserHasAvatar && $menuUserAvatarUrl !== ''): ?>
+          <img src="<?= htmlspecialchars($menuUserAvatarUrl, ENT_QUOTES) ?>" alt="Аватар користувача">
+        <?php else: ?>
+          <span><?= htmlspecialchars($menuUserInitials, ENT_QUOTES) ?></span>
+        <?php endif; ?>
+      </span>
+      <span class="sidebar-user__meta">
+        <span class="sidebar-user__name"><?= htmlspecialchars($menuUserName, ENT_QUOTES) ?></span>
+        <span class="sidebar-user__login"><?= htmlspecialchars($menuUserLogin !== '' ? ('@' . $menuUserLogin) : '@user', ENT_QUOTES) ?></span>
+      </span>
+    </a>
+  <?php endif; ?>
 
   <nav class="sidebar-menu" aria-label="Навігація">
     <a class="sidebar-link<?= $mk('/') ?>" href="/">Планування</a>
