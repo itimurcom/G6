@@ -83,14 +83,6 @@ final class ApiConfirmationsController
             $acceptedAt = (string)($res['accepted_at'] ?? '');
             $meName = $this->userNames->getNameById($uid) ?? ('User #' . $uid);
 
-            // Event history: add message under the accepting user
-            try {
-                $msg = '✅ Прийняв на виконання' . ($acceptedAt !== '' ? (' (' . $acceptedAt . ')') : '');
-                $this->messages->create($eventId, $uid, $msg);
-            } catch (\Throwable $e) {
-                // history must not break accept
-            }
-
             // Journal (audit)
             try {
                 $this->logger->log('calendar.event.accept', 'success', [

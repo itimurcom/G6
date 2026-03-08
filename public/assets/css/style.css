@@ -235,7 +235,7 @@
   --bg: #0b0f16;
   --fg: #e5e7eb;
   --muted: #9ca3af;
-  --accent: #60a5fa;
+  --accent: #2563eb;
   --border: #1f2937;
   --today: #fbbf24;
   --event-bg: #0f172a;
@@ -244,7 +244,7 @@
   --panel: color-mix(in oklab, var(--bg) 88%, var(--event-bg));
   --card: color-mix(in oklab, var(--bg) 92%, var(--event-bg));
 
-  --type-mi: #3b82f6;
+  --type-mi: #2563eb;
   /* --type-nas:#f97316; */
   --type-nas: #f916b1;
   --type-evt: #22c55e;

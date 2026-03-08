@@ -321,15 +321,9 @@ public function byDate(): void
                     $actorId = (int)(\App\Core\Auth::id() ?? 0);
 
                     if ($ownerBeforeRaw !== $ownerAfterRaw) {
-                        // Journal + Event history: assignee changed
+                        // Journal only: assignee changed
                         $beforeDisp = $this->ownerDisplayFromOwnerField($ownerBeforeRaw);
                         $afterDisp  = $this->ownerDisplayFromOwnerField($ownerAfterRaw);
-                        try {
-                            $msg = '🔄 Виконавця змінено: ' . $beforeDisp . ' → ' . $afterDisp;
-                            if ($actorId > 0) {
-                                $this->messageRepo->create($id, $actorId, $msg);
-                            }
-                        } catch (\Throwable $__e2) { }
                         try {
                             $this->auditLogger->log('calendar.event.assignee_change', 'success', [
                                 'entity_type' => 'event',
