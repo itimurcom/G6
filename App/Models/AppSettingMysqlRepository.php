@@ -9,12 +9,9 @@ use PDO;
 final class AppSettingMysqlRepository
 {
     private PDO $db;
-    private static bool $schemaEnsured = false;
-
     public function __construct()
     {
         $this->db = Database::connect();
-        $this->ensureSchema();
         // Ensure defaults exist (global settings)
         $this->ensureDefaultInt('upload.max_file_mb', 100);
     }
@@ -71,22 +68,5 @@ final class AppSettingMysqlRepository
         $sql = 'INSERT IGNORE INTO `app_settings` (`key`, `value`, `updated_at`) VALUES (:k, :v, NOW())';
         $st = $this->db->prepare($sql);
         $st->execute(['k' => $key, 'v' => (string)$value]);
-    }
-
-    private function ensureSchema(): void
-    {
-        if (self::$schemaEnsured) {
-            return;
-        }
-
-        $sql = "CREATE TABLE IF NOT EXISTS `app_settings` (
-            `key` VARCHAR(191) NOT NULL,
-            `value` TEXT NOT NULL,
-            `updated_at` DATETIME NULL DEFAULT NULL,
-            PRIMARY KEY (`key`)
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci";
-
-        $this->db->exec($sql);
-        self::$schemaEnsured = true;
     }
 }

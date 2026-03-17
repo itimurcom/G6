@@ -8,13 +8,10 @@ use PDO;
 
 class UserMysqlRepository implements UserRepositoryInterface {
     private PDO $db;
-    private static bool $avatarSchemaEnsured = false;
-
     private const SAFE_SELECT = "id, name, login, email, password_hash, role, is_admin, created_at, updated_at, avatar_mime, avatar_filename, avatar_updated_at";
 
     public function __construct() {
         $this->db = Database::connect();
-        $this->ensureAvatarSchema();
     }
 
     public function all(): array {
@@ -155,40 +152,5 @@ class UserMysqlRepository implements UserRepositoryInterface {
             $url .= '&v=' . rawurlencode($version);
         }
         return $url;
-    }
-
-    private function ensureAvatarSchema(): void
-    {
-        if (self::$avatarSchemaEnsured) return;
-
-        try {
-            $existing = [];
-            $st = $this->db->query("SHOW COLUMNS FROM users");
-            foreach (($st ? $st->fetchAll(PDO::FETCH_ASSOC) : []) as $col) {
-                $existing[strtolower((string)($col['Field'] ?? ''))] = true;
-            }
-
-            $queries = [];
-            if (!isset($existing['avatar_blob'])) {
-                $queries[] = "ALTER TABLE users ADD COLUMN avatar_blob MEDIUMBLOB NULL AFTER updated_at";
-            }
-            if (!isset($existing['avatar_mime'])) {
-                $queries[] = "ALTER TABLE users ADD COLUMN avatar_mime VARCHAR(191) NULL AFTER avatar_blob";
-            }
-            if (!isset($existing['avatar_filename'])) {
-                $queries[] = "ALTER TABLE users ADD COLUMN avatar_filename VARCHAR(255) NULL AFTER avatar_mime";
-            }
-            if (!isset($existing['avatar_updated_at'])) {
-                $queries[] = "ALTER TABLE users ADD COLUMN avatar_updated_at DATETIME NULL AFTER avatar_filename";
-            }
-
-            foreach ($queries as $sql) {
-                $this->db->exec($sql);
-            }
-        } catch (\Throwable $e) {
-            // avatar schema prep must never break auth/app boot
-        }
-
-        self::$avatarSchemaEnsured = true;
     }
 }

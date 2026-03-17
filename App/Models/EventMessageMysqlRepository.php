@@ -9,12 +9,9 @@ use PDO;
 final class EventMessageMysqlRepository implements EventMessageRepositoryInterface
 {
     private PDO $db;
-    private static bool $schemaEnsured = false;
-
     public function __construct()
     {
         $this->db = Database::connect();
-        $this->ensureSchema();
     }
 
     public function listByEvent(string $eventId, bool $includeDeleted = false, int $limit = 200, int $offset = 0): array
@@ -387,47 +384,5 @@ final class EventMessageMysqlRepository implements EventMessageRepositoryInterfa
                 'avatar_version' => (string)($row['author_avatar_updated_at'] ?? ''),
             ],
         ];
-    }
-
-    private function ensureSchema(): void
-    {
-        if (self::$schemaEnsured) {
-            return;
-        }
-
-        $sqlMessages = "CREATE TABLE IF NOT EXISTS `event_messages` (
-            `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
-            `event_id` VARCHAR(32) NOT NULL,
-            `user_id` INT NOT NULL,
-            `message_text` LONGTEXT NOT NULL,
-            `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-            `updated_at` DATETIME NULL DEFAULT NULL,
-            `edited_at` DATETIME NULL DEFAULT NULL,
-            `deleted_at` DATETIME NULL DEFAULT NULL,
-            `deleted_by_user_id` INT NULL DEFAULT NULL,
-            PRIMARY KEY (`id`),
-            KEY `idx_event_created` (`event_id`, `created_at`),
-            KEY `idx_event_active` (`event_id`, `deleted_at`),
-            KEY `idx_author_created` (`user_id`, `created_at`)
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci";
-
-        $sqlAttachments = "CREATE TABLE IF NOT EXISTS `event_message_attachments` (
-            `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
-            `message_id` BIGINT UNSIGNED NOT NULL,
-            `stored_name` VARCHAR(255) NOT NULL,
-            `original_name` VARCHAR(255) NOT NULL,
-            `mime_type` VARCHAR(191) NOT NULL DEFAULT '',
-            `file_size` BIGINT UNSIGNED NOT NULL DEFAULT 0,
-            `storage_path` VARCHAR(500) NOT NULL,
-            `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-            `uploaded_by_user_id` INT NOT NULL,
-            PRIMARY KEY (`id`),
-            KEY `idx_message_created` (`message_id`, `created_at`),
-            KEY `idx_storage_path` (`storage_path`)
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci";
-
-        $this->db->exec($sqlMessages);
-        $this->db->exec($sqlAttachments);
-        self::$schemaEnsured = true;
     }
 }
