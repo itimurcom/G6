@@ -58,29 +58,6 @@ final class LoggingEventRepository
     // PERSISTENT NOTIFICATIONS (user_notifications)
     // ---------------------------------------------------------------------
 
-    private function notifyHasPayloadColumn(\PDO $db): bool
-    {
-        static $cached = null;
-        if ($cached !== null) {
-            return (bool)$cached;
-        }
-
-        try {
-            $st = $db->prepare(
-                "SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS\n".
-                "WHERE TABLE_SCHEMA = DATABASE()\n".
-                "  AND TABLE_NAME = 'user_notifications'\n".
-                "  AND COLUMN_NAME = 'payload'"
-            );
-            $st->execute();
-            $cached = ((int)$st->fetchColumn() > 0);
-        } catch (\Throwable $e) {
-            $cached = false;
-        }
-
-        return (bool)$cached;
-    }
-
     private function snapshotEvent(?array $row, string $fallbackId = ''): ?array
     {
         if (!is_array($row)) {

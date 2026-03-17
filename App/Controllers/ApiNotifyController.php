@@ -20,7 +20,6 @@ use PDO;
 final class ApiNotifyController extends Controller
 {
     private PDO $db;
-    private ?bool $hasPayloadColumn = null;
 
     public function __construct() {
         $this->db = Database::connect();
@@ -70,29 +69,6 @@ final class ApiNotifyController extends Controller
         return false;
     }
 
-    private function hasPayloadColumn(): bool
-    {
-        if ($this->hasPayloadColumn !== null) {
-            return (bool)$this->hasPayloadColumn;
-        }
-
-        try {
-            $st = $this->db->prepare(
-                "SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS\n".
-                "WHERE TABLE_SCHEMA = DATABASE()\n".
-                "  AND TABLE_NAME = 'user_notifications'\n".
-                "  AND COLUMN_NAME = 'payload'"
-            );
-            $st->execute();
-            $n = (int)$st->fetchColumn();
-            $this->hasPayloadColumn = ($n > 0);
-        } catch (\Throwable $e) {
-            $this->hasPayloadColumn = false;
-        }
-
-        return (bool)$this->hasPayloadColumn;
-    }
-
     public function unseen(Request $r): string
     {
         $uid = $this->currentUserId();
@@ -106,13 +82,9 @@ final class ApiNotifyController extends Controller
         $limit = max(1, min(200, (int)($r->input('limit') ?? 50)));
 
         try {
-            // 1) Fetch unseen notification rows (no JOIN to avoid schema drift issues).
-            $cols = 'id, user_id, kind, event_id, actor_user_id, created_at, seen_at';
-            if ($this->hasPayloadColumn()) {
-                $cols .= ', payload';
-            }
+            // 1) Fetch unseen notification rows.
             $sql = "
-                SELECT {$cols}
+                SELECT id, user_id, kind, event_id, actor_user_id, created_at, seen_at, payload
                 FROM user_notifications
                 WHERE user_id = :uid AND seen_at IS NULL
                 ORDER BY id DESC

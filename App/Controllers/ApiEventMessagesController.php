@@ -22,7 +22,6 @@ final class ApiEventMessagesController
     private DocumentMysqlRepository $documents;
     private EventMysqlRepository $events;
     private ActionLogger $logger;
-    private ?bool $notifyHasPayloadColumn = null;
 
     public function __construct()
     {
@@ -105,29 +104,6 @@ final class ApiEventMessagesController
         } catch (\Throwable $e) {
             // audit must never break API response
         }
-    }
-
-    private function notifyHasPayloadColumn(): bool
-    {
-        if ($this->notifyHasPayloadColumn !== null) {
-            return (bool)$this->notifyHasPayloadColumn;
-        }
-
-        try {
-            $db = Database::connect();
-            $st = $db->prepare(
-                "SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS\n".
-                "WHERE TABLE_SCHEMA = DATABASE()\n".
-                "  AND TABLE_NAME = 'user_notifications'\n".
-                "  AND COLUMN_NAME = 'payload'"
-            );
-            $st->execute();
-            $this->notifyHasPayloadColumn = ((int)$st->fetchColumn() > 0);
-        } catch (\Throwable $e) {
-            $this->notifyHasPayloadColumn = false;
-        }
-
-        return (bool)$this->notifyHasPayloadColumn;
     }
 
     /** @return array<int> */

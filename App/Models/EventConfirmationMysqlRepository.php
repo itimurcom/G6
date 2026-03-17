@@ -17,33 +17,10 @@ use PDO;
 final class EventConfirmationMysqlRepository
 {
     private PDO $db;
-    private ?bool $notifyHasPayloadColumn = null;
 
     public function __construct()
     {
         $this->db = Database::connect();
-    }
-
-private function notifyHasPayloadColumn(): bool
-    {
-        if ($this->notifyHasPayloadColumn !== null) {
-            return (bool)$this->notifyHasPayloadColumn;
-        }
-
-        try {
-            $st = $this->db->prepare(
-                "SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS\n".
-                "WHERE TABLE_SCHEMA = DATABASE()\n".
-                "  AND TABLE_NAME = 'user_notifications'\n".
-                "  AND COLUMN_NAME = 'payload'"
-            );
-            $st->execute();
-            $this->notifyHasPayloadColumn = ((int)$st->fetchColumn() > 0);
-        } catch (\Throwable $e) {
-            $this->notifyHasPayloadColumn = false;
-        }
-
-        return (bool)$this->notifyHasPayloadColumn;
     }
 
     /**
@@ -198,31 +175,17 @@ private function notifyHasPayloadColumn(): bool
     private function notifyAssignee(int $assigneeUserId, string $eventId, ?int $actorId = null, ?array $payload = null): void
     {
         $kind = 'event_exec_confirm';
-        if ($this->notifyHasPayloadColumn()) {
-            $sql = "INSERT INTO user_notifications (user_id, kind, event_id, actor_user_id, created_at, payload)
-                    VALUES (:uid, :kind, :eid, :actor, NOW(), :payload)
-                    ON DUPLICATE KEY UPDATE seen_at = NULL, created_at = VALUES(created_at), actor_user_id = VALUES(actor_user_id), payload = VALUES(payload)";
-            $st = $this->db->prepare($sql);
-            $payloadJson = $payload !== null ? json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) : null;
-            $st->execute([
-                'uid' => $assigneeUserId,
-                'kind' => $kind,
-                'eid' => $eventId,
-                'actor' => ($actorId && $actorId > 0) ? $actorId : null,
-                'payload' => $payloadJson,
-            ]);
-            return;
-        }
-
-        $sql = "INSERT INTO user_notifications (user_id, kind, event_id, actor_user_id, created_at)
-                VALUES (:uid, :kind, :eid, :actor, NOW())
-                ON DUPLICATE KEY UPDATE seen_at = NULL, created_at = VALUES(created_at), actor_user_id = VALUES(actor_user_id)";
+        $sql = "INSERT INTO user_notifications (user_id, kind, event_id, actor_user_id, created_at, payload)
+                VALUES (:uid, :kind, :eid, :actor, NOW(), :payload)
+                ON DUPLICATE KEY UPDATE seen_at = NULL, created_at = VALUES(created_at), actor_user_id = VALUES(actor_user_id), payload = VALUES(payload)";
         $st = $this->db->prepare($sql);
+        $payloadJson = $payload !== null ? json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) : null;
         $st->execute([
             'uid' => $assigneeUserId,
             'kind' => $kind,
             'eid' => $eventId,
             'actor' => ($actorId && $actorId > 0) ? $actorId : null,
+            'payload' => $payloadJson,
         ]);
     }
 
