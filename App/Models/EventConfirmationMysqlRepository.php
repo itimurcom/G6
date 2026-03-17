@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace App\Models;
 
 use App\Core\Database;
+use App\Services\UserNotificationWriter;
 use PDO;
 
 /**
@@ -22,6 +23,7 @@ final class EventConfirmationMysqlRepository
     {
         $this->db = Database::connect();
     }
+
 
     /**
      * Create (or refresh) pending confirmation for assignee.
@@ -175,18 +177,8 @@ final class EventConfirmationMysqlRepository
     private function notifyAssignee(int $assigneeUserId, string $eventId, ?int $actorId = null, ?array $payload = null): void
     {
         $kind = 'event_exec_confirm';
-        $sql = "INSERT INTO user_notifications (user_id, kind, event_id, actor_user_id, created_at, payload)
-                VALUES (:uid, :kind, :eid, :actor, NOW(), :payload)
-                ON DUPLICATE KEY UPDATE seen_at = NULL, created_at = VALUES(created_at), actor_user_id = VALUES(actor_user_id), payload = VALUES(payload)";
-        $st = $this->db->prepare($sql);
-        $payloadJson = $payload !== null ? json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) : null;
-        $st->execute([
-            'uid' => $assigneeUserId,
-            'kind' => $kind,
-            'eid' => $eventId,
-            'actor' => ($actorId && $actorId > 0) ? $actorId : null,
-            'payload' => $payloadJson,
-        ]);
+        $writer = new UserNotificationWriter($this->db);
+        $writer->upsertOne($assigneeUserId, $kind, $eventId, $actorId, $payload);
     }
 
     private function markNotifySeen(int $assigneeUserId, string $eventId): void

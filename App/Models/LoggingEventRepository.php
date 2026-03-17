@@ -6,6 +6,7 @@ namespace App\Models;
 use App\Services\Audit\ActionLogger;
 use App\Core\Auth;
 use App\Core\Database;
+use App\Services\UserNotificationWriter;
 
 /**
  * LoggingEventRepository — тонкий декоратор над "inner" репозиторієм подій.
@@ -57,6 +58,7 @@ final class LoggingEventRepository
     // ---------------------------------------------------------------------
     // PERSISTENT NOTIFICATIONS (user_notifications)
     // ---------------------------------------------------------------------
+
 
     private function snapshotEvent(?array $row, string $fallbackId = ''): ?array
     {
@@ -132,47 +134,20 @@ final class LoggingEventRepository
             $users = $stU ? $stU->fetchAll(\PDO::FETCH_ASSOC) : [];
             if (!$users) return;
 
-            $hasPayload = $this->notifyHasPayloadColumn($db);
-
-            if ($hasPayload) {
-                $sql = "INSERT INTO user_notifications (user_id, kind, event_id, actor_user_id, created_at, payload)\n".
-                       "VALUES (:uid, :kind, :eid, :actor, NOW(), :payload)\n".
-                       "ON DUPLICATE KEY UPDATE seen_at = NULL, created_at = VALUES(created_at), actor_user_id = VALUES(actor_user_id), payload = VALUES(payload)";
-                $st = $db->prepare($sql);
-
-                $payloadJson = $payload !== null
-                    ? json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)
-                    : null;
-
-                foreach ($users as $u) {
-                    $uid = (int)($u['id'] ?? 0);
-                    if ($uid <= 0) continue;
-                    $st->execute([
-                        'uid' => $uid,
-                        'kind' => $kind,
-                        'eid' => $eventId,
-                        'actor' => $actorId,
-                        'payload' => $payloadJson,
-                    ]);
-                }
-            } else {
-                $sql = "INSERT INTO user_notifications (user_id, kind, event_id, actor_user_id, created_at)\n".
-                       "VALUES (:uid, :kind, :eid, :actor, NOW())\n".
-                       "ON DUPLICATE KEY UPDATE seen_at = NULL, created_at = VALUES(created_at), actor_user_id = VALUES(actor_user_id)";
-                $st = $db->prepare($sql);
-                foreach ($users as $u) {
-                    $uid = (int)($u['id'] ?? 0);
-                    if ($uid <= 0) continue;
-                    $st->execute([
-                        'uid' => $uid,
-                        'kind' => $kind,
-                        'eid' => $eventId,
-                        'actor' => $actorId,
-                    ]);
+            $userIds = [];
+            foreach ($users as $u) {
+                $uid = (int)($u['id'] ?? 0);
+                if ($uid > 0) {
+                    $userIds[] = $uid;
                 }
             }
+            if (!$userIds) return;
+
+            $writer = new UserNotificationWriter($db);
+            $writer->upsertMany($userIds, $kind, $eventId, $actorId, $payload);
         } catch (\Throwable $e) {
             // Notifications must never break business logic.
+            error_log('[activity-notify] LoggingEventRepository::notifyFanout failed for kind=' . $kind . ' event_id=' . $eventId . ': ' . $e->getMessage());
         }
     }
 

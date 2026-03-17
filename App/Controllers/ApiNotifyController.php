@@ -82,7 +82,7 @@ final class ApiNotifyController extends Controller
         $limit = max(1, min(200, (int)($r->input('limit') ?? 50)));
 
         try {
-            // 1) Fetch unseen notification rows.
+            // 1) Fetch unseen notification rows (no JOIN to keep Activity resilient).
             $sql = "
                 SELECT id, user_id, kind, event_id, actor_user_id, created_at, seen_at, payload
                 FROM user_notifications
