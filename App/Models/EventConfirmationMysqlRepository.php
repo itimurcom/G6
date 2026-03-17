@@ -17,81 +17,12 @@ use PDO;
 final class EventConfirmationMysqlRepository
 {
     private PDO $db;
-    private static bool $schemaEnsured = false;
     private ?bool $notifyHasPayloadColumn = null;
 
     public function __construct()
     {
         $this->db = Database::connect();
-        $this->ensureSchema();
     }
-
-        private function ensureSchema(): void
-    {
-        if (self::$schemaEnsured) return;
-
-        // Create base table (new installs)
-        $sql = "CREATE TABLE IF NOT EXISTS `event_confirmations` (
-            `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
-            `event_id` VARCHAR(32) NOT NULL,
-            `assignee_user_id` INT NOT NULL,
-            `created_by_user_id` INT NULL,
-            `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-            `accepted_at` DATETIME NULL,
-            `accepted_by_user_id` INT NULL,
-            `viewed_at` DATETIME NULL,
-            `canceled_at` DATETIME NULL,
-            `canceled_by_user_id` INT NULL,
-            `pending_slot` TINYINT NULL,
-            PRIMARY KEY (`id`),
-            KEY `idx_event` (`event_id`),
-            KEY `idx_assignee_pending` (`assignee_user_id`, `pending_slot`, `created_at`),
-            UNIQUE KEY `ux_pending_event_assignee` (`event_id`, `assignee_user_id`, `pending_slot`)
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;";
-
-        $this->db->exec($sql);
-
-
-        // Migrate older schema (if table existed without pending_slot / proper unique)
-        try {
-            $st = $this->db->prepare(
-                "SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS\n".
-                "WHERE TABLE_SCHEMA = DATABASE()\n".
-                "  AND TABLE_NAME = 'event_confirmations'\n".
-                "  AND COLUMN_NAME = 'pending_slot'"
-            );
-            $st->execute();
-            $hasPendingSlot = ((int)$st->fetchColumn() > 0);
-            if (!$hasPendingSlot) {
-                $this->db->exec("ALTER TABLE event_confirmations ADD COLUMN pending_slot TINYINT NULL");
-            }
-
-            // Ensure unique index ux_pending_event_assignee exists and uses pending_slot
-            $st2 = $this->db->prepare(
-                "SELECT COUNT(*) FROM INFORMATION_SCHEMA.STATISTICS\n".
-                "WHERE TABLE_SCHEMA = DATABASE()\n".
-                "  AND TABLE_NAME = 'event_confirmations'\n".
-                "  AND INDEX_NAME = 'ux_pending_event_assignee'"
-            );
-            $st2->execute();
-            $hasUx = ((int)$st2->fetchColumn() > 0);
-
-            if ($hasUx) {
-                // Drop and recreate to be sure it matches (safe even if already correct)
-                try { $this->db->exec("ALTER TABLE event_confirmations DROP INDEX ux_pending_event_assignee"); } catch (\Throwable $e) { }
-            }
-            $this->db->exec("ALTER TABLE event_confirmations ADD UNIQUE KEY ux_pending_event_assignee (event_id, assignee_user_id, pending_slot)");
-
-            // Backfill pending_slot for existing pending rows (accepted/canceled remain NULL)
-            $this->db->exec("UPDATE event_confirmations SET pending_slot = 1 WHERE accepted_at IS NULL AND canceled_at IS NULL");
-            $this->db->exec("UPDATE event_confirmations SET pending_slot = NULL WHERE accepted_at IS NOT NULL OR canceled_at IS NOT NULL");
-        } catch (\Throwable $e) {
-            // Migration failure should not block app
-        }
-
-        self::$schemaEnsured = true;
-    }
-
 
 private function notifyHasPayloadColumn(): bool
     {
