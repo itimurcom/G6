@@ -18,7 +18,6 @@ final class EventConfirmationMysqlRepository
 {
     private PDO $db;
     private static bool $schemaEnsured = false;
-    private static bool $notifySchemaEnsured = false;
     private ?bool $notifyHasPayloadColumn = null;
 
     public function __construct()
@@ -52,8 +51,6 @@ final class EventConfirmationMysqlRepository
 
         $this->db->exec($sql);
 
-        // Ensure notification table exists (some installs may not have executed the SQL migration yet)
-        $this->ensureNotifySchema();
 
         // Migrate older schema (if table existed without pending_slot / proper unique)
         try {
@@ -95,48 +92,6 @@ final class EventConfirmationMysqlRepository
         self::$schemaEnsured = true;
     }
 
-    private function ensureNotifySchema(): void
-    {
-        if (self::$notifySchemaEnsured) return;
-
-        try {
-            $sql = "CREATE TABLE IF NOT EXISTS `user_notifications` (
-              `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
-              `user_id` INT NOT NULL,
-              `kind` VARCHAR(32) NOT NULL DEFAULT 'event_new',
-              `event_id` VARCHAR(32) NOT NULL,
-              `actor_user_id` INT NULL,
-              `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-              `seen_at` DATETIME NULL,
-              PRIMARY KEY (`id`),
-              UNIQUE KEY `ux_user_kind_event` (`user_id`, `kind`, `event_id`),
-              KEY `idx_user_seen` (`user_id`, `seen_at`),
-              KEY `idx_event_id` (`event_id`)
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;";
-            $this->db->exec($sql);
-
-            // If table existed without the UNIQUE key, ensure it exists.
-            try {
-                $st = $this->db->prepare(
-                    "SELECT COUNT(*) FROM INFORMATION_SCHEMA.STATISTICS\n".
-                    "WHERE TABLE_SCHEMA = DATABASE()\n".
-                    "  AND TABLE_NAME = 'user_notifications'\n".
-                    "  AND INDEX_NAME = 'ux_user_kind_event'"
-                );
-                $st->execute();
-                $hasUx = ((int)$st->fetchColumn() > 0);
-                if (!$hasUx) {
-                    try { $this->db->exec("ALTER TABLE user_notifications ADD UNIQUE KEY ux_user_kind_event (user_id, kind, event_id)"); } catch (\Throwable $e) { }
-                }
-            } catch (\Throwable $e) {
-                // ignore
-            }
-        } catch (\Throwable $e) {
-            // Do not block the app if schema cannot be created
-        }
-
-        self::$notifySchemaEnsured = true;
-    }
 
 private function notifyHasPayloadColumn(): bool
     {
