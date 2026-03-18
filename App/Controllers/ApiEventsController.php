@@ -246,7 +246,7 @@ public function byDate(): void
         try {
             $row = $this->repo->getById($id);
             if (!$row || !$this->canCurrentUserViewEvent($row)) { $this->json(['ok'=>false,'error'=>'not_found'], 404); return; }
-            $row = $this->decorateEventRowWithActivityCounts($row, $this->fetchEventActivityCounts([$id]));
+            $row = $this->decorateEventRowWithActivityCounts($row, $this->fetchEventActivityCounts([$id]), $this->fetchEventExecutionAcceptanceMeta([$id]));
             $this->json(['ok'=>true,'event'=>$row]);
         } catch (\Throwable $e) {
             $this->json(['ok'=>false,'error'=>'internal','message'=>$e->getMessage()], 500);
@@ -546,15 +546,92 @@ public function byDate(): void
         return $counts;
     }
 
-    /** @param array<string,mixed> $row @param array<string,array{comments_count:int,files_count:int}> $counts */
-    private function decorateEventRowWithActivityCounts(array $row, array $counts): array
+    /** @param array<int|string> $eventIds @return array<string,array{accepted_at:string,accepted_by_user_id:int,accepted_by_name:string,accepted_marks_count:int,accepted_marks:array<int,array{accepted_at:string,accepted_by_user_id:int,accepted_by_name:string}>}> */
+    private function fetchEventExecutionAcceptanceMeta(array $eventIds): array
+    {
+        $ids = [];
+        foreach ($eventIds as $eventId) {
+            $eventId = trim((string)$eventId);
+            if ($eventId === '') continue;
+            $ids[$eventId] = true;
+        }
+        $ids = array_keys($ids);
+        if ($ids === []) {
+            return [];
+        }
+
+        $pdo = Database::connect();
+        $placeholders = implode(', ', array_fill(0, count($ids), '?'));
+        $sql = "SELECT ec.event_id, ec.accepted_at, ec.accepted_by_user_id
+                FROM event_confirmations ec
+                WHERE ec.accepted_at IS NOT NULL
+                  AND ec.event_id IN ({$placeholders})
+                ORDER BY ec.event_id ASC, ec.accepted_at DESC, ec.id DESC";
+
+        $st = $pdo->prepare($sql);
+        $st->execute($ids);
+        $out = [];
+        $nameCache = [];
+        foreach (($st->fetchAll(\PDO::FETCH_ASSOC) ?: []) as $row) {
+            $eventId = trim((string)($row['event_id'] ?? ''));
+            if ($eventId === '') continue;
+
+            $acceptedByUserId = (int)($row['accepted_by_user_id'] ?? 0);
+            $acceptedByName = '';
+            if ($acceptedByUserId > 0) {
+                if (!array_key_exists($acceptedByUserId, $nameCache)) {
+                    $nameCache[$acceptedByUserId] = (string)($this->userNames->getNameById($acceptedByUserId) ?? ('User #' . $acceptedByUserId));
+                }
+                $acceptedByName = (string)$nameCache[$acceptedByUserId];
+            }
+
+            if (!isset($out[$eventId])) {
+                $out[$eventId] = [
+                    'accepted_at' => '',
+                    'accepted_by_user_id' => 0,
+                    'accepted_by_name' => '',
+                    'accepted_marks_count' => 0,
+                    'accepted_marks' => [],
+                ];
+            }
+
+            $item = [
+                'accepted_at' => (string)($row['accepted_at'] ?? ''),
+                'accepted_by_user_id' => $acceptedByUserId,
+                'accepted_by_name' => $acceptedByName,
+            ];
+
+            if ((int)$out[$eventId]['accepted_marks_count'] === 0) {
+                $out[$eventId]['accepted_at'] = $item['accepted_at'];
+                $out[$eventId]['accepted_by_user_id'] = $item['accepted_by_user_id'];
+                $out[$eventId]['accepted_by_name'] = $item['accepted_by_name'];
+            }
+
+            $out[$eventId]['accepted_marks_count'] = (int)$out[$eventId]['accepted_marks_count'] + 1;
+            $out[$eventId]['accepted_marks'][] = $item;
+        }
+        return $out;
+    }
+
+    /** @param array<string,mixed> $row @param array<string,array{comments_count:int,files_count:int}> $counts @param array<string,array{accepted_at:string,accepted_by_user_id:int,accepted_by_name:string,accepted_marks_count:int,accepted_marks:array<int,array{accepted_at:string,accepted_by_user_id:int,accepted_by_name:string}>}> $acceptanceMeta */
+    private function decorateEventRowWithActivityCounts(array $row, array $counts, array $acceptanceMeta = []): array
     {
         $eventId = trim((string)($row['id'] ?? ''));
         $meta = ($eventId !== '' && isset($counts[$eventId]))
             ? $counts[$eventId]
             : ['comments_count' => 0, 'files_count' => 0];
+        $accepted = ($eventId !== '' && isset($acceptanceMeta[$eventId]))
+            ? $acceptanceMeta[$eventId]
+            : ['accepted_at' => '', 'accepted_by_user_id' => 0, 'accepted_by_name' => '', 'accepted_marks_count' => 0, 'accepted_marks' => []];
+
         $row['comments_count'] = (int)($meta['comments_count'] ?? 0);
         $row['files_count'] = (int)($meta['files_count'] ?? 0);
+        $row['accepted_at'] = (string)($accepted['accepted_at'] ?? '');
+        $row['accepted_by_user_id'] = (int)($accepted['accepted_by_user_id'] ?? 0);
+        $row['accepted_by_name'] = (string)($accepted['accepted_by_name'] ?? '');
+        $row['accepted_marks_count'] = (int)($accepted['accepted_marks_count'] ?? 0);
+        $row['accepted_marks'] = is_array($accepted['accepted_marks'] ?? null) ? array_values($accepted['accepted_marks']) : [];
+        $row['is_accepted_for_execution'] = ($row['accepted_at'] !== '');
         return $row;
     }
 
@@ -567,8 +644,9 @@ public function byDate(): void
             if ($eventId !== '') $ids[] = $eventId;
         }
         $counts = $this->fetchEventActivityCounts($ids);
+        $acceptanceMeta = $this->fetchEventExecutionAcceptanceMeta($ids);
         foreach ($rows as $i => $row) {
-            $rows[$i] = $this->decorateEventRowWithActivityCounts($row, $counts);
+            $rows[$i] = $this->decorateEventRowWithActivityCounts($row, $counts, $acceptanceMeta);
         }
         return $rows;
     }
@@ -585,10 +663,11 @@ public function byDate(): void
             }
         }
         $counts = $this->fetchEventActivityCounts($ids);
+        $acceptanceMeta = $this->fetchEventExecutionAcceptanceMeta($ids);
         foreach ($map as $date => $rows) {
             if (!is_array($rows)) continue;
             foreach ($rows as $i => $row) {
-                $rows[$i] = $this->decorateEventRowWithActivityCounts((array)$row, $counts);
+                $rows[$i] = $this->decorateEventRowWithActivityCounts((array)$row, $counts, $acceptanceMeta);
             }
             $map[$date] = $rows;
         }
@@ -626,6 +705,7 @@ public function byDate(): void
             if (count($rows) > $limit) {
                 $rows = array_slice($rows, 0, $limit);
             }
+            $rows = $this->decorateEventListWithActivityCounts($rows);
             $this->json(['ok'=>true,'data'=>$rows,'limit'=>$limit,'offset'=>$offset]);
         } catch (\Throwable $e) {
             $this->json(['ok'=>false,'error'=>'internal','message'=>$e->getMessage()], 500);

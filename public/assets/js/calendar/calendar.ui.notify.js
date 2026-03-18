@@ -184,9 +184,73 @@ var Data = (global.CalendarApp && global.CalendarApp.data) || null;
   // - On other pages: store pending {date,id} and navigate to /calendar
   var KEY_PENDING_OPEN = 'calendar.pendingOpenEvent';
 
-  function openEvent(dateISO, eventId) {
+  function __notifyStoreEventContext(eventRow, fallbackDateISO) {
+    try {
+      var data = (global.CalendarApp && global.CalendarApp.data) ? global.CalendarApp.data : null;
+      if (!data || typeof data._getCache !== 'function' || typeof data._setCache !== 'function') return null;
+
+      var eventObj = (eventRow && typeof eventRow === 'object') ? eventRow : null;
+      if (!eventObj) return null;
+
+      var eventId = String(eventObj.id || '').trim();
+      if (!eventId) return null;
+
+      var dateISO = String((eventObj._date || eventObj.start_date || fallbackDateISO || '')).slice(0, 10);
+      if (!dateISO) return null;
+
+      var current = data._getCache() || {};
+      var next = Object.assign({}, current);
+      for (var key in next) {
+        if (!Object.prototype.hasOwnProperty.call(next, key)) continue;
+        var bucket = Array.isArray(next[key]) ? next[key].slice() : [];
+        var filtered = [];
+        for (var i = 0; i < bucket.length; i++) {
+          var item = bucket[i];
+          if (!item || String(item.id || '') !== eventId) filtered.push(item);
+        }
+        next[key] = filtered;
+      }
+
+      var target = Array.isArray(next[dateISO]) ? next[dateISO].slice() : [];
+      target.push(eventObj);
+      next[dateISO] = target;
+      data._setCache(next);
+      return { event: eventObj, dateISO: dateISO };
+    } catch (_) {
+      return null;
+    }
+  }
+
+  function __notifyFetchEventContext(eventId, fallbackDateISO) {
+    var eid = String(eventId || '').trim();
+    var fallback = String(fallbackDateISO || '').slice(0, 10);
+    if (!eid) return Promise.reject(new Error('event id required'));
+
+    return fetch('/api/events/get?id=' + encodeURIComponent(eid), {
+      method: 'GET',
+      credentials: 'same-origin',
+      headers: { 'Accept': 'application/json' }
+    }).then(function (response) {
+      return response.json().catch(function () { return null; }).then(function (data) {
+        if (!response.ok || !data || data.ok === false || !data.event) {
+          var msg = data && (data.message || data.error) ? String(data.message || data.error) : ('HTTP ' + response.status);
+          throw new Error(msg);
+        }
+        var ctx = __notifyStoreEventContext(data.event || {}, fallback);
+        if (ctx && ctx.dateISO) return ctx;
+        return {
+          event: data.event || {},
+          dateISO: String((((data.event || {})._date) || ((data.event || {}).start_date) || fallback || '')).slice(0, 10)
+        };
+      });
+    });
+  }
+
+  function openEvent(dateISO, eventId, opts) {
     var d = String(dateISO || '');
     var eid = String(eventId || '');
+    opts = (opts && typeof opts === 'object') ? opts : {};
+    var forceReload = !!opts.forceReload;
     if (!eid || !d) return;
 
     try {
@@ -194,6 +258,17 @@ var Data = (global.CalendarApp && global.CalendarApp.data) || null;
       var data = (global.CalendarApp && global.CalendarApp.data) ? global.CalendarApp.data : null;
 
       if (ui && typeof ui.openInfo === 'function') {
+        if (forceReload) {
+          __notifyFetchEventContext(eid, d)
+            .then(function (ctx) {
+              try { ui.openInfo(ctx.dateISO || d, eid); } catch (_) { }
+            })
+            .catch(function () {
+              try { ui.openInfo(d, eid); } catch (_) { }
+            });
+          return;
+        }
+
         // If the event isn't in current cache — load store and retry.
         try {
           if (data && typeof data.getEventsFor === 'function') {
@@ -222,7 +297,7 @@ var Data = (global.CalendarApp && global.CalendarApp.data) || null;
     } catch (_) { }
 
     // Fallback: go to calendar and open after load
-    try { localStorage.setItem(KEY_PENDING_OPEN, JSON.stringify({ date: d, id: eid })); } catch (_) { }
+    try { localStorage.setItem(KEY_PENDING_OPEN, JSON.stringify({ date: d, id: eid, forceReload: forceReload ? 1 : 0 })); } catch (_) { }
     try { global.location.href = '/calendar'; } catch (_) { }
   }
 
@@ -236,6 +311,7 @@ var Data = (global.CalendarApp && global.CalendarApp.data) || null;
     try { p = JSON.parse(raw); } catch (_) { p = null; }
     var d = (p && p.date) ? String(p.date) : '';
     var eid = (p && p.id) ? String(p.id) : '';
+    var forceReload = !!(p && p.forceReload);
 
     if (!d || !eid) {
       try { localStorage.removeItem(KEY_PENDING_OPEN); } catch (_) { }
@@ -254,6 +330,18 @@ var Data = (global.CalendarApp && global.CalendarApp.data) || null;
           var openNow = function () {
             try { ui.openInfo(d, eid); } catch (_) { }
           };
+
+          if (forceReload) {
+            __notifyFetchEventContext(eid, d)
+              .then(function (ctx) {
+                try { ui.openInfo((ctx && ctx.dateISO) ? ctx.dateISO : d, eid); } catch (_) { }
+              })
+              .catch(function () { openNow(); });
+
+            global.clearInterval(t);
+            try { localStorage.removeItem(KEY_PENDING_OPEN); } catch (_) { }
+            return;
+          }
 
           try {
             if (data && typeof data.getEventsFor === 'function') {
@@ -819,6 +907,7 @@ ttl.appendChild(subtitle);
         acceptExecution(eid).then(function (res) {
           if (res && res.ok) {
             removeItem(key);
+            try { openEvent(dateISO, eid, { forceReload: true }); } catch (_) { }
             try { setTimeout(fetchUpdates, 250); } catch (_) { }
             return;
           }

@@ -3336,6 +3336,58 @@ function __renderEventHistory(host, items, currentEvent) {
 
     var __createdHtml = (ev.created_at ? Ev.escapeHtml(new Date(ev.created_at).toLocaleString(locale, { hour12: false })) : '—');
 
+    var __acceptedFooterHtml = '';
+    try {
+      var __acceptedAtRaw = (ev && ev.accepted_at !== undefined && ev.accepted_at !== null) ? String(ev.accepted_at).trim() : '';
+      var __acceptedMarks = Array.isArray(ev && ev.accepted_marks) ? ev.accepted_marks : [];
+      var __acceptedCount = parseInt((ev && ev.accepted_marks_count !== undefined && ev.accepted_marks_count !== null) ? ev.accepted_marks_count : (__acceptedMarks.length || (__acceptedAtRaw ? 1 : 0)), 10) || 0;
+      if (__acceptedAtRaw !== '' || __acceptedCount > 0) {
+        var __acceptedFormatOne = function (__mark) {
+          var __markAtRaw = (__mark && __mark.accepted_at !== undefined && __mark.accepted_at !== null) ? String(__mark.accepted_at).trim() : '';
+          if (__markAtRaw === '') return '';
+          var __markAtText = __markAtRaw;
+          try {
+            var __markDate = new Date(__markAtRaw);
+            if (!isNaN(__markDate.getTime())) {
+              __markAtText = __markDate.toLocaleString(locale, { hour12: false });
+            }
+          } catch (_) { }
+          var __markByText = (__mark && __mark.accepted_by_name) ? String(__mark.accepted_by_name) : '';
+          if (!__markByText && __mark && __mark.accepted_by_user_id) {
+            __markByText = 'User #' + String(__mark.accepted_by_user_id);
+          }
+          var __markParts = [];
+          if (__markByText) __markParts.push(Ev.escapeHtml(__markByText));
+          __markParts.push(Ev.escapeHtml(__markAtText));
+          return __markParts.join(' — ');
+        };
+
+        if (__acceptedMarks.length <= 1) {
+          var __singleMark = (__acceptedMarks.length === 1) ? __acceptedMarks[0] : {
+            accepted_at: __acceptedAtRaw,
+            accepted_by_name: (ev && ev.accepted_by_name) ? ev.accepted_by_name : '',
+            accepted_by_user_id: (ev && ev.accepted_by_user_id) ? ev.accepted_by_user_id : 0
+          };
+          var __singleText = __acceptedFormatOne(__singleMark);
+          if (__singleText) {
+            __acceptedFooterHtml = '<div class="info-accepted-footer"><strong>Прийнято на виконання:</strong> ' + __singleText + '</div>';
+          }
+        } else {
+          var __acceptedItemsHtml = __acceptedMarks.map(function (__mark, __idx) {
+            var __line = __acceptedFormatOne(__mark);
+            if (!__line) return '';
+            return '<div class="info-accepted-footer__item">' + Ev.escapeHtml(String(__idx + 1) + '.') + ' ' + __line + '</div>';
+          }).filter(Boolean).join('');
+          var __countText = String(__acceptedCount) + ' ' + (__acceptedCount === 1 ? 'відмітка' : (__acceptedCount >= 2 && __acceptedCount <= 4 ? 'відмітки' : 'відміток'));
+          __acceptedFooterHtml = ''
+            + '<details class="info-accepted-footer info-accepted-footer--details">'
+            +   '<summary><strong>Прийнято на виконання:</strong> ' + Ev.escapeHtml(__countText) + '</summary>'
+            +   '<div class="info-accepted-footer__list">' + __acceptedItemsHtml + '</div>'
+            + '</details>';
+        }
+      }
+    } catch (_) { }
+
     var __weekday = weekdayShortFmt.format(new Date(Date.UTC(y, m - 1, d)));
     var __time = (ev.time && String(ev.time).trim() !== '') ? String(ev.time).trim() : '';
     var __dateTimeHtml = Ev.formatISO(dateISO) + ' (' + __weekday + ')' + (__time ? (' (' + Ev.escapeHtml(__time) + ')') : '');
@@ -3403,6 +3455,22 @@ function __renderEventHistory(host, items, currentEvent) {
         '</details>'
       ) : '');
 if (infoContent) infoContent.innerHTML = html;
+    try {
+      var __infoFooterMeta = (infoOverlay && typeof infoOverlay.querySelector === 'function') ? infoOverlay.querySelector('footer > span') : null;
+      if (__infoFooterMeta) {
+        __infoFooterMeta.innerHTML = __acceptedFooterHtml || '';
+        __infoFooterMeta.style.display = 'flex';
+        __infoFooterMeta.style.alignItems = 'center';
+        __infoFooterMeta.style.justifyContent = 'flex-start';
+        __infoFooterMeta.style.flex = '1 1 auto';
+        __infoFooterMeta.style.textAlign = 'left';
+        __infoFooterMeta.style.fontSize = '13px';
+        __infoFooterMeta.style.lineHeight = '1.35';
+        __infoFooterMeta.style.color = 'var(--muted, #64748b)';
+        __infoFooterMeta.style.minWidth = '0';
+        __infoFooterMeta.style.paddingRight = '12px';
+      }
+    } catch (_) { }
     try { __hydrateInfoOwnerText(infoContent); } catch (_) { }
     __setInfoHeaderBadges(ev, dateISO);
     setInfoModalType(ev.type);
@@ -3464,6 +3532,12 @@ if (infoContent) infoContent.innerHTML = html;
 
   function closeInfo() {
     if (!infoOverlay) return;
+    try {
+      var __infoFooterMeta = (typeof infoOverlay.querySelector === 'function') ? infoOverlay.querySelector('footer > span') : null;
+      if (__infoFooterMeta) {
+        __infoFooterMeta.innerHTML = '';
+      }
+    } catch (_) { }
     try { __threadClosePreview(); } catch (_) { }
     if (infoOverlay.contains(document.activeElement)) { try { document.activeElement.blur(); } catch (_) { } }
     infoOverlay.classList.remove('show');
