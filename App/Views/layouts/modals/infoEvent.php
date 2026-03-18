@@ -24,7 +24,7 @@
       </div>
     </header>
     <div class="content" id="infoContent"></div>
-    <footer><span></span><div style="display:flex;gap:10px;flex-wrap:wrap;"><?php if ($is_admin): ?>
+    <footer><div id="infoFooterMeta" class="info-footer-meta"></div><div class="info-footer-actions"><?php if ($is_admin): ?>
 <button type="button" id="editEvBtn" class="btn btn--green btn-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 20h9"></path><path d="M16.5 3.5a2.12 2.12 0 1 1 3 3L7 19l-4 1 1-4 12.5-12.5Z"></path></svg><span>Редагувати</span></button>
 <?php else: ?>
 <button type="button" id="editEvBtn" class="btn btn--green btn-icon" hidden aria-hidden="true" tabindex="-1"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 20h9"></path><path d="M16.5 3.5a2.12 2.12 0 1 1 3 3L7 19l-4 1 1-4 12.5-12.5Z"></path></svg><span>Редагувати</span></button>

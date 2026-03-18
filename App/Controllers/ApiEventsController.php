@@ -337,11 +337,32 @@ public function byDate(): void
                         } catch (\Throwable $__e3) { }
                     }
 
-                    // If assignee is a system user -> ensure pending confirmation; otherwise cancel pending
-                    if ($ownerAfterUid > 0) {
-                        $this->ensureExecutionConfirmationIfNeeded($id, $after, $actorId);
-                    } else {
+                    $beforeDone = !empty($before['done']);
+                    $afterDone = !empty($after['done']);
+                    $assigneeChanged = ($ownerBeforeUid !== $ownerAfterUid);
+                    $reopenedForExecution = ($beforeDone && !$afterDone);
+
+                    // Confirmation lifecycle must react only to assignment/execution-state changes.
+                    // Do not refresh “Прийняв” activity on unrelated edits (date/time/status text changes).
+                    if ($afterDone || $ownerAfterUid <= 0) {
                         try { $this->confirmations->cancelPendingForEvent($id, $actorId); } catch (\Throwable $__e4) { }
+                    } elseif ($assigneeChanged || $reopenedForExecution) {
+                        $this->ensureExecutionConfirmationIfNeeded($id, $after, $actorId);
+                    }
+
+                    // Extra safety-net: when assignee changes, hide stale “Прийняв” activity
+                    // for previous assignee and for the actor if they are no longer the assignee.
+                    if ($assigneeChanged) {
+                        $staleNotifyUserIds = [];
+                        if ($ownerBeforeUid > 0 && $ownerBeforeUid !== $ownerAfterUid) {
+                            $staleNotifyUserIds[] = $ownerBeforeUid;
+                        }
+                        if ($actorId > 0 && $actorId !== $ownerAfterUid) {
+                            $staleNotifyUserIds[] = $actorId;
+                        }
+                        if ($staleNotifyUserIds !== []) {
+                            try { $this->confirmations->hideExecutionNotificationsForUsers($id, $staleNotifyUserIds); } catch (\Throwable $__e5) { }
+                        }
                     }
                 }
             } catch (\Throwable $__e) { }

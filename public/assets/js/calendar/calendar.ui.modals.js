@@ -3456,19 +3456,9 @@ function __renderEventHistory(host, items, currentEvent) {
       ) : '');
 if (infoContent) infoContent.innerHTML = html;
     try {
-      var __infoFooterMeta = (infoOverlay && typeof infoOverlay.querySelector === 'function') ? infoOverlay.querySelector('footer > span') : null;
+      var __infoFooterMeta = (infoOverlay && typeof infoOverlay.querySelector === 'function') ? infoOverlay.querySelector('#infoFooterMeta') : null;
       if (__infoFooterMeta) {
         __infoFooterMeta.innerHTML = __acceptedFooterHtml || '';
-        __infoFooterMeta.style.display = 'flex';
-        __infoFooterMeta.style.alignItems = 'center';
-        __infoFooterMeta.style.justifyContent = 'flex-start';
-        __infoFooterMeta.style.flex = '1 1 auto';
-        __infoFooterMeta.style.textAlign = 'left';
-        __infoFooterMeta.style.fontSize = '13px';
-        __infoFooterMeta.style.lineHeight = '1.35';
-        __infoFooterMeta.style.color = 'var(--muted, #64748b)';
-        __infoFooterMeta.style.minWidth = '0';
-        __infoFooterMeta.style.paddingRight = '12px';
       }
     } catch (_) { }
     try { __hydrateInfoOwnerText(infoContent); } catch (_) { }

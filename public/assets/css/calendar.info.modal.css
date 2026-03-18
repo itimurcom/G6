@@ -326,6 +326,69 @@ body.light #infoContent .info-seen-head,
   width: min(898px, 96vw);
 }
 
+
+/* P2.3: split info footer into independent left/right blocks so action buttons do not stretch */
+#infoOverlay .modal footer {
+  align-items: flex-start;
+  flex-wrap: nowrap;
+}
+
+#infoOverlay .modal .info-footer-meta {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-start;
+  text-align: left;
+  font-size: 13px;
+  line-height: 1.35;
+  color: var(--muted, #64748b);
+  padding-right: 12px;
+}
+
+#infoOverlay .modal .info-footer-actions {
+  flex: 0 0 auto;
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  align-items: flex-start;
+  align-self: flex-start;
+}
+
+#infoOverlay .modal .info-footer-meta .info-accepted-footer {
+  width: 100%;
+}
+
+#infoOverlay .modal .info-footer-meta .info-accepted-footer--details {
+  width: 100%;
+}
+
+#infoOverlay .modal .info-footer-meta .info-accepted-footer--details > summary {
+  cursor: pointer;
+  user-select: none;
+}
+
+#infoOverlay .modal .info-footer-meta .info-accepted-footer__list {
+  margin-top: 6px;
+}
+
+@media (max-width: 760px) {
+  #infoOverlay .modal footer {
+    flex-wrap: wrap;
+  }
+
+  #infoOverlay .modal .info-footer-meta {
+    flex: 1 1 100%;
+    padding-right: 0;
+  }
+
+  #infoOverlay .modal .info-footer-actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+}
+
 /* Event history block inside info modal */
 .info-history-wrap {
   margin-top: 14px;

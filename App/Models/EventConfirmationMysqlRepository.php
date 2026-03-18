@@ -151,6 +151,39 @@ final class EventConfirmationMysqlRepository
         return $st->fetchAll(PDO::FETCH_ASSOC) ?: [];
     }
 
+    /**
+     * Hide stale execution-confirm notifications for specific users.
+     * Used as a safety net after assignee changes so previous/actor users do not keep obsolete “Прийняв” activity items.
+     *
+     * @param array<int,mixed> $userIds
+     */
+    public function hideExecutionNotificationsForUsers(string $eventId, array $userIds): void
+    {
+        $eventId = trim($eventId);
+        if ($eventId === '') return;
+
+        $normalized = [];
+        foreach ($userIds as $rawUserId) {
+            $userId = (int)$rawUserId;
+            if ($userId > 0) {
+                $normalized[$userId] = true;
+            }
+        }
+        $userIds = array_keys($normalized);
+        if ($userIds === []) return;
+
+        $placeholders = implode(', ', array_fill(0, count($userIds), '?'));
+        $sql = "UPDATE user_notifications
+"
+             . "SET seen_at = NOW()
+"
+             . "WHERE kind = 'event_exec_confirm' AND event_id = ? AND seen_at IS NULL AND user_id IN (" . $placeholders . ")";
+        $st = $this->db->prepare($sql);
+        $params = array_merge([$eventId], $userIds);
+        $st->execute($params);
+    }
+
+
     public function cancelPendingForEvent(string $eventId, ?int $actorUserId = null): void
     {
         $eventId = trim($eventId);
