@@ -51,11 +51,12 @@ $__cabHasAvatar = !empty($u['has_avatar']) && !empty($u['avatar_url']);
     <?php if (!empty($is_admin)): ?>
     <span class="lg" data-tab="users">Користувачі</span>
     <?php endif; ?>
+    <span class="lg" data-tab="files">Файли</span>
     <span class="lg" data-tab="journal">Журнал</span>
   </nav>
 </header>
 
-<div tabs="cabinet-wrap">
+<div class="cabinet-wrap" tabs="cabinet-wrap">
 
 
 <?php
@@ -426,6 +427,111 @@ $__toastErr = \App\Core\Session::flash('toast_error');
       </div>
   </section>    
 <?php endif; ?>
+
+
+    <section class="cabinet-tab cabinet-tab--files" data-tab="files">
+      <div class='sub-title'>Файли</div>
+
+      <div class="cab-files" id="cabFilesRoot" data-is-admin="<?= !empty($is_admin) ? 1 : 0 ?>" data-default-scope="<?= !empty($is_admin) ? 'all' : 'mine' ?>" data-csrf="<?= htmlspecialchars(\App\Security\Csrf::token(), ENT_QUOTES) ?>">
+        <div class="cab-files__toolbar">
+          <div class="cab-files__scopeWrap">
+            <div class="cab-files__scopeTitle">Область видимості</div>
+            <?php if (!empty($is_admin)): ?>
+            <div class="cab-files__scopeSwitch" role="group" aria-label="Область видимості файлів">
+              <button type="button" class="cab-files__scopeBtn is-active" data-scope="all">Всі файли</button>
+              <button type="button" class="cab-files__scopeBtn" data-scope="mine">Мої файли</button>
+            </div>
+            <?php else: ?>
+            <div class="cab-files__scopeBadge">Мої файли</div>
+            <?php endif; ?>
+          </div>
+
+          <div class="cab-files__filters">
+            <label class="cab-files__field cab-files__field--search">
+              <span>Пошук</span>
+              <input id="cabFilesSearch" type="search" class="input" placeholder="Назва файла, подія, користувач, коментар">
+            </label>
+
+            <label class="cab-files__field">
+              <span>Тип</span>
+              <select id="cabFilesType" class="input">
+                <option value="all">Усі типи</option>
+                <option value="image">Зображення</option>
+                <option value="pdf">PDF</option>
+                <option value="spreadsheet">Таблиці</option>
+                <option value="archive">Архіви</option>
+                <option value="other">Інші документи</option>
+              </select>
+            </label>
+
+            <label class="cab-files__field">
+              <span>Сортування</span>
+              <select id="cabFilesSort" class="input">
+                <option value="newest">Спочатку нові</option>
+                <option value="oldest">Спочатку старі</option>
+                <option value="name_asc">Назва A → Я</option>
+                <option value="name_desc">Назва Я → A</option>
+                <option value="size_desc">Розмір ↓</option>
+                <option value="size_asc">Розмір ↑</option>
+              </select>
+            </label>
+
+            <div class="cab-files__actionsBar">
+              <button id="cabFilesApply" class="btn" type="button">Знайти</button>
+              <button id="cabFilesRefresh" class="btn" type="button">Оновити</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="cab-files__meta">
+          <div class="cab-files__summary">
+            <span id="cabFilesScopeLabel" class="cab-files__summaryBadge"><?= !empty($is_admin) ? 'Всі файли' : 'Мої файли' ?></span>
+            <span id="cabFilesCounter">—</span>
+          </div>
+          <div id="cabFilesStatus" class="cab-files__status">Готово до завантаження списку.</div>
+        </div>
+
+        <div class="cab-files__tableWrap">
+          <table class="cab-table cab-files__table" id="cabFilesTable">
+            <thead>
+              <tr>
+                <th>Файл</th>
+                <th>Тип</th>
+                <th>Розмір</th>
+                <th>Користувач</th>
+                <th>Подія</th>
+                <th>Дата</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="cabFilesTbody">
+              <tr>
+                <td colspan="7" class="cab-files__empty">Список ще не завантажено.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <footer class="cab-files__pager">
+          <div id="cabFilesPageInfo" class="cab-files__pageInfo">Сторінка —</div>
+          <div class="cab-files__pagerActions">
+            <button id="cabFilesPrev" type="button" class="btn">◀ Новіші</button>
+            <button id="cabFilesNext" type="button" class="btn">Старіші ▶</button>
+          </div>
+        </footer>
+
+        <div class="cab-files__preview" id="cabFilesPreview" hidden>
+          <div class="cab-files__previewBackdrop" data-close="1"></div>
+          <div class="cab-files__previewDialog" role="dialog" aria-modal="true" aria-labelledby="cabFilesPreviewTitle">
+            <div class="cab-files__previewHead">
+              <div class="cab-files__previewTitle" id="cabFilesPreviewTitle">Попередній перегляд</div>
+              <button type="button" class="cab-files__previewClose" data-close="1" aria-label="Закрити">✕</button>
+            </div>
+            <div class="cab-files__previewBody" id="cabFilesPreviewBody"></div>
+          </div>
+        </div>
+      </div>
+    </section>
 
 
     <section class="cabinet-tab" id="audit-block" data-tab="journal">

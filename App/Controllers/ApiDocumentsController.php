@@ -174,6 +174,7 @@ final class ApiDocumentsController
             'uploaded_by_user_id' => (int)($row['uploaded_by_user_id'] ?? 0),
             'created_at' => (string)($row['created_at'] ?? ''),
             'uploader_display' => (string)($row['uploader']['display'] ?? ''),
+            'type_group' => (string)($row['type_group'] ?? ''),
         ];
     }
 
@@ -186,6 +187,58 @@ final class ApiDocumentsController
         }
     }
 
+    private function normalizeCabinetScope(string $scope, bool $isAdmin): string
+    {
+        $scope = strtolower(trim($scope));
+        if ($isAdmin && $scope === 'all') {
+            return 'all';
+        }
+        return 'mine';
+    }
+
+    private function normalizeCabinetType(string $type): string
+    {
+        $type = strtolower(trim($type));
+        return in_array($type, ['all', 'image', 'pdf', 'spreadsheet', 'archive', 'other'], true)
+            ? $type
+            : 'all';
+    }
+
+    private function normalizeCabinetSort(string $sort): string
+    {
+        $sort = strtolower(trim($sort));
+        return in_array($sort, ['newest', 'oldest', 'name_asc', 'name_desc', 'size_desc', 'size_asc'], true)
+            ? $sort
+            : 'newest';
+    }
+
+    private function canUserDirectlyAccessDocument(array $document, array $user): bool
+    {
+        $uid = (int)($user['id'] ?? 0);
+        if ($uid <= 0) {
+            return false;
+        }
+        if ($this->isAdmin($user)) {
+            return true;
+        }
+        return (int)($document['uploaded_by_user_id'] ?? 0) === $uid;
+    }
+
+    private function canUserAccessDocumentViaEvent(array $document): bool
+    {
+        $eventId = trim((string)($document['event_id'] ?? ''));
+        if ($eventId === '') {
+            return false;
+        }
+
+        try {
+            $event = $this->events->getById($eventId);
+        } catch (\Throwable $e) {
+            return false;
+        }
+
+        return is_array($event) && $this->canCurrentUserAccessEvent($event);
+    }
 
     private function loadAccessibleDocumentById(int $id, bool $binary = false): ?array
     {
@@ -221,50 +274,18 @@ final class ApiDocumentsController
             return null;
         }
 
-        $eventId = trim((string)($doc['event_id'] ?? ''));
-        if ($eventId === '') {
-            if ($binary) {
-                http_response_code(404);
-                echo 'Not Found';
-            } else {
-                $this->json(['ok' => false, 'error' => 'not_found'], 404);
-            }
-            return null;
+        $user = $this->currentUser();
+        if ($this->canUserDirectlyAccessDocument($doc, $user) || $this->canUserAccessDocumentViaEvent($doc)) {
+            return $doc;
         }
 
-        try {
-            $event = $this->events->getById($eventId);
-        } catch (\Throwable $e) {
-            if ($binary) {
-                http_response_code(500);
-                echo 'Internal Server Error';
-            } else {
-                $this->json(['ok' => false, 'error' => 'internal', 'message' => $e->getMessage()], 500);
-            }
-            return null;
+        if ($binary) {
+            http_response_code(403);
+            echo 'Forbidden';
+        } else {
+            $this->json(['ok' => false, 'error' => 'forbidden'], 403);
         }
-
-        if (!is_array($event)) {
-            if ($binary) {
-                http_response_code(404);
-                echo 'Not Found';
-            } else {
-                $this->json(['ok' => false, 'error' => 'not_found'], 404);
-            }
-            return null;
-        }
-
-        if (!$this->canCurrentUserAccessEvent($event)) {
-            if ($binary) {
-                http_response_code(403);
-                echo 'Forbidden';
-            } else {
-                $this->json(['ok' => false, 'error' => 'forbidden'], 403);
-            }
-            return null;
-        }
-
-        return $doc;
+        return null;
     }
 
     private function canDeleteDocument(array $document, array $user): bool
@@ -322,6 +343,44 @@ final class ApiDocumentsController
                 'items' => $items,
                 'total' => $total,
                 'include_deleted' => $includeDeleted,
+            ]);
+        } catch (\Throwable $e) {
+            $this->json(['ok' => false, 'error' => 'internal', 'message' => $e->getMessage()], 500);
+        }
+    }
+
+    public function cabinet(): void
+    {
+        $user = $this->currentUser();
+        $userId = (int)($user['id'] ?? 0);
+        if ($userId <= 0) {
+            $this->json(['ok' => false, 'error' => 'unauthorized'], 401);
+            return;
+        }
+
+        $isAdmin = $this->isAdmin($user);
+        $limit = max(1, min(200, (int)($_GET['limit'] ?? 50)));
+        $offset = max(0, (int)($_GET['offset'] ?? 0));
+        $q = trim((string)($_GET['q'] ?? ''));
+        $scope = $this->normalizeCabinetScope((string)($_GET['scope'] ?? ($isAdmin ? 'all' : 'mine')), $isAdmin);
+        $type = $this->normalizeCabinetType((string)($_GET['type'] ?? 'all'));
+        $sort = $this->normalizeCabinetSort((string)($_GET['sort'] ?? 'newest'));
+
+        try {
+            $items = $this->documents->listForCabinet($userId, $isAdmin, $limit, $offset, $q, $scope, $type, $sort);
+            $total = $this->documents->countForCabinet($userId, $isAdmin, $q, $scope, $type);
+            $this->json([
+                'ok' => true,
+                'items' => $items,
+                'total' => $total,
+                'limit' => $limit,
+                'offset' => $offset,
+                'q' => $q,
+                'scope' => $scope,
+                'type' => $type,
+                'sort' => $sort,
+                'is_admin' => $isAdmin,
+                'scope_options' => $isAdmin ? ['mine', 'all'] : ['mine'],
             ]);
         } catch (\Throwable $e) {
             $this->json(['ok' => false, 'error' => 'internal', 'message' => $e->getMessage()], 500);

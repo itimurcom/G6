@@ -113,6 +113,7 @@ $router->post('/api/event-messages/delete', [\App\Controllers\ApiEventMessagesCo
 // ---- Documents API ----
 $router->get('/api/documents/list-by-event',   [\App\Controllers\ApiDocumentsController::class, 'listByEvent']);
 $router->get('/api/documents/list-by-message', [\App\Controllers\ApiDocumentsController::class, 'listByMessage']);
+$router->get('/api/documents/cabinet',         [\App\Controllers\ApiDocumentsController::class, 'cabinet']);
 $router->get('/api/documents/view',            [\App\Controllers\ApiDocumentsController::class, 'view']);
 $router->get('/api/documents/download',        [\App\Controllers\ApiDocumentsController::class, 'download']);
 $router->post('/api/documents/upload',         [\App\Controllers\ApiDocumentsController::class, 'upload']);

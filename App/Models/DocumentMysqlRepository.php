@@ -81,14 +81,9 @@ final class DocumentMysqlRepository
         $deletedSql = $includeDeleted
             ? ''
             : ' AND d.deleted_at IS NULL AND (d.message_id IS NULL OR m.deleted_at IS NULL)';
-        $sql = "SELECT d.*, e.title AS event_title,
-                       u.name AS uploader_name, u.login AS uploader_login,
-                       m.user_id AS message_user_id
-                FROM documents d
-                LEFT JOIN events e ON e.id COLLATE utf8mb4_unicode_ci = d.event_id
-                LEFT JOIN users u ON u.id = d.uploaded_by_user_id
-                LEFT JOIN event_messages m ON m.id = d.message_id
-                WHERE d.message_id = :message_id{$deletedSql}
+        $sql = $this->metadataSelectSql() .
+                $this->metadataFromSql() .
+               " WHERE d.message_id = :message_id{$deletedSql}
                 ORDER BY d.created_at ASC, d.id ASC";
         $st = $this->db->prepare($sql);
         $st->execute(['message_id' => $messageId]);
@@ -104,14 +99,9 @@ final class DocumentMysqlRepository
         $deletedSql = $includeDeleted
             ? ''
             : ' AND d.deleted_at IS NULL AND (d.message_id IS NULL OR m.deleted_at IS NULL)';
-        $sql = "SELECT d.*, e.title AS event_title,
-                       u.name AS uploader_name, u.login AS uploader_login,
-                       m.user_id AS message_user_id
-                FROM documents d
-                LEFT JOIN events e ON e.id COLLATE utf8mb4_unicode_ci = d.event_id
-                LEFT JOIN users u ON u.id = d.uploaded_by_user_id
-                LEFT JOIN event_messages m ON m.id = d.message_id
-                WHERE d.event_id = :event_id{$deletedSql}
+        $sql = $this->metadataSelectSql() .
+                $this->metadataFromSql() .
+               " WHERE d.event_id = :event_id{$deletedSql}
                 ORDER BY d.created_at DESC, d.id DESC
                 LIMIT {$limit} OFFSET {$offset}";
         $st = $this->db->prepare($sql);
@@ -163,15 +153,12 @@ final class DocumentMysqlRepository
     public function getById(int $id, bool $includeDeleted = true): ?array
     {
         if ($id <= 0) return null;
-        $deletedSql = $includeDeleted ? '' : ' AND d.deleted_at IS NULL';
-        $sql = "SELECT d.*, e.title AS event_title,
-                       u.name AS uploader_name, u.login AS uploader_login,
-                       m.user_id AS message_user_id
-                FROM documents d
-                LEFT JOIN events e ON e.id COLLATE utf8mb4_unicode_ci = d.event_id
-                LEFT JOIN users u ON u.id = d.uploaded_by_user_id
-                LEFT JOIN event_messages m ON m.id = d.message_id
-                WHERE d.id = :id{$deletedSql}
+        $deletedSql = $includeDeleted
+            ? ''
+            : ' AND d.deleted_at IS NULL AND (d.message_id IS NULL OR m.deleted_at IS NULL)';
+        $sql = $this->metadataSelectSql() .
+                $this->metadataFromSql() .
+               " WHERE d.id = :id{$deletedSql}
                 LIMIT 1";
         $st = $this->db->prepare($sql);
         $st->execute(['id' => $id]);
@@ -183,15 +170,12 @@ final class DocumentMysqlRepository
     public function getDecryptedBlobById(int $id, bool $includeDeleted = false): ?array
     {
         if ($id <= 0) return null;
-        $deletedSql = $includeDeleted ? '' : ' AND d.deleted_at IS NULL';
-        $sql = "SELECT d.*, e.title AS event_title,
-                       u.name AS uploader_name, u.login AS uploader_login,
-                       m.user_id AS message_user_id
-                FROM documents d
-                LEFT JOIN events e ON e.id COLLATE utf8mb4_unicode_ci = d.event_id
-                LEFT JOIN users u ON u.id = d.uploaded_by_user_id
-                LEFT JOIN event_messages m ON m.id = d.message_id
-                WHERE d.id = :id{$deletedSql}
+        $deletedSql = $includeDeleted
+            ? ''
+            : ' AND d.deleted_at IS NULL AND (d.message_id IS NULL OR m.deleted_at IS NULL)';
+        $sql = $this->binarySelectSql() .
+                $this->metadataFromSql() .
+               " WHERE d.id = :id{$deletedSql}
                 LIMIT 1";
         $st = $this->db->prepare($sql);
         $st->execute(['id' => $id]);
@@ -270,18 +254,9 @@ final class DocumentMysqlRepository
             $params['event_type'] = $eventType;
         }
 
-        $sql = "SELECT d.*, e.title AS event_title,
-                       e.start_date AS event_date,
-                       e.time AS event_time,
-                       e.type AS event_type,
-                       u.name AS uploader_name, u.login AS uploader_login,
-                       m.user_id AS message_user_id,
-                       m.message_text AS message_text
-                FROM documents d
-                LEFT JOIN events e ON e.id COLLATE utf8mb4_unicode_ci = d.event_id
-                LEFT JOIN users u ON u.id = d.uploaded_by_user_id
-                LEFT JOIN event_messages m ON m.id = d.message_id
-                WHERE d.deleted_at IS NULL
+        $sql = $this->metadataSelectSql() .
+                $this->metadataFromSql() .
+               " WHERE d.deleted_at IS NULL
                   AND (d.message_id IS NULL OR m.deleted_at IS NULL)
                   AND {$searchSql}{$typeSql}
                 ORDER BY d.created_at DESC, d.id DESC
@@ -289,6 +264,49 @@ final class DocumentMysqlRepository
         $st = $this->db->prepare($sql);
         $st->execute($params);
         return array_map([$this, 'mapRow'], $st->fetchAll(PDO::FETCH_ASSOC) ?: []);
+    }
+
+    public function listForCabinet(
+        int $viewerUserId,
+        bool $isAdmin,
+        int $limit = 200,
+        int $offset = 0,
+        string $q = '',
+        string $scope = 'mine',
+        string $type = 'all',
+        string $sort = 'newest'
+    ): array {
+        $limit = max(1, min(500, $limit));
+        $offset = max(0, $offset);
+        $params = [];
+        $where = $this->buildCabinetWhereSql($viewerUserId, $isAdmin, $q, $scope, $type, $params);
+        $order = $this->buildCabinetOrderSql($sort);
+
+        $sql = $this->metadataSelectSql() .
+                $this->metadataFromSql() .
+                $where .
+                $order .
+               " LIMIT {$limit} OFFSET {$offset}";
+        $st = $this->db->prepare($sql);
+        $st->execute($params);
+        return array_map([$this, 'mapRow'], $st->fetchAll(PDO::FETCH_ASSOC) ?: []);
+    }
+
+    public function countForCabinet(
+        int $viewerUserId,
+        bool $isAdmin,
+        string $q = '',
+        string $scope = 'mine',
+        string $type = 'all'
+    ): int {
+        $params = [];
+        $where = $this->buildCabinetWhereSql($viewerUserId, $isAdmin, $q, $scope, $type, $params);
+        $sql = 'SELECT COUNT(*)' .
+               $this->metadataFromSql() .
+               $where;
+        $st = $this->db->prepare($sql);
+        $st->execute($params);
+        return (int)$st->fetchColumn();
     }
 
     /** @param array<string> $columns @param array<string> $tokens @param array<string,mixed> $params */
@@ -357,29 +375,218 @@ final class DocumentMysqlRepository
         return $tokens;
     }
 
-    public function listForCabinet(int $viewerUserId, bool $isAdmin, int $limit = 200, int $offset = 0): array
+    private function metadataSelectSql(): string
     {
-        $limit = max(1, min(500, $limit));
-        $offset = max(0, $offset);
-        $where = 'WHERE d.deleted_at IS NULL';
-        $params = [];
-        if (!$isAdmin) {
-            $where .= ' AND d.uploaded_by_user_id = :viewer';
-            $params['viewer'] = $viewerUserId;
-        }
-        $sql = "SELECT d.*, e.title AS event_title,
+        return "SELECT d.id, d.event_id, d.message_id, d.uploaded_by_user_id,
+                       d.original_name, d.mime_type, d.file_size, d.is_image, d.sha256,
+                       d.created_at, d.deleted_at, d.deleted_by_user_id,
+                       e.title AS event_title,
+                       e.start_date AS event_date,
+                       e.time AS event_time,
+                       e.type AS event_type,
                        u.name AS uploader_name, u.login AS uploader_login,
-                       m.user_id AS message_user_id
-                FROM documents d
+                       m.user_id AS message_user_id,
+                       m.message_text AS message_text";
+    }
+
+    private function binarySelectSql(): string
+    {
+        return "SELECT d.id, d.event_id, d.message_id, d.uploaded_by_user_id,
+                       d.original_name, d.mime_type, d.file_size, d.is_image, d.sha256,
+                       d.cipher, d.key_version, d.iv, d.auth_tag, d.file_blob,
+                       d.created_at, d.deleted_at, d.deleted_by_user_id,
+                       e.title AS event_title,
+                       e.start_date AS event_date,
+                       e.time AS event_time,
+                       e.type AS event_type,
+                       u.name AS uploader_name, u.login AS uploader_login,
+                       m.user_id AS message_user_id,
+                       m.message_text AS message_text";
+    }
+
+    private function metadataFromSql(): string
+    {
+        return ' FROM documents d
                 LEFT JOIN events e ON e.id COLLATE utf8mb4_unicode_ci = d.event_id
                 LEFT JOIN users u ON u.id = d.uploaded_by_user_id
-                LEFT JOIN event_messages m ON m.id = d.message_id
-                {$where}
-                ORDER BY d.created_at DESC, d.id DESC
-                LIMIT {$limit} OFFSET {$offset}";
-        $st = $this->db->prepare($sql);
-        $st->execute($params);
-        return array_map([$this, 'mapRow'], $st->fetchAll(PDO::FETCH_ASSOC) ?: []);
+                LEFT JOIN event_messages m ON m.id = d.message_id';
+    }
+
+    /** @param array<string,mixed> $params */
+    private function buildCabinetWhereSql(
+        int $viewerUserId,
+        bool $isAdmin,
+        string $q,
+        string $scope,
+        string $type,
+        array &$params
+    ): string {
+        $where = ' WHERE d.deleted_at IS NULL AND (d.message_id IS NULL OR m.deleted_at IS NULL)';
+
+        $scope = $this->normalizeCabinetScope($scope, $isAdmin);
+        if ($scope !== 'all') {
+            $where .= ' AND d.uploaded_by_user_id = :viewer';
+            $params['viewer'] = max(0, $viewerUserId);
+        }
+
+        $q = trim($q);
+        if ($q !== '') {
+            $tokens = $this->tokenizeSearchQuery($q);
+            $where .= ' AND ' . $this->buildLikeOrSqlMulti(
+                ['d.original_name', 'e.title', 'm.message_text', 'u.name', 'u.login', 'd.mime_type', 'd.event_id'],
+                $tokens,
+                'cabq',
+                $params
+            );
+        }
+
+        $typeWhere = $this->buildCabinetTypeWhereSql($this->normalizeCabinetType($type));
+        if ($typeWhere !== '') {
+            $where .= ' AND ' . $typeWhere;
+        }
+
+        return $where;
+    }
+
+    private function buildCabinetOrderSql(string $sort): string
+    {
+        return match ($this->normalizeCabinetSort($sort)) {
+            'oldest' => ' ORDER BY d.created_at ASC, d.id ASC',
+            'name_asc' => ' ORDER BY d.original_name ASC, d.id ASC',
+            'name_desc' => ' ORDER BY d.original_name DESC, d.id DESC',
+            'size_desc' => ' ORDER BY d.file_size DESC, d.id DESC',
+            'size_asc' => ' ORDER BY d.file_size ASC, d.id ASC',
+            default => ' ORDER BY d.created_at DESC, d.id DESC',
+        };
+    }
+
+    private function normalizeCabinetScope(string $scope, bool $isAdmin): string
+    {
+        $scope = strtolower(trim($scope));
+        if ($isAdmin && $scope === 'all') {
+            return 'all';
+        }
+        return 'mine';
+    }
+
+    private function normalizeCabinetType(string $type): string
+    {
+        $type = strtolower(trim($type));
+        return in_array($type, ['all', 'image', 'pdf', 'spreadsheet', 'archive', 'other'], true)
+            ? $type
+            : 'all';
+    }
+
+    private function normalizeCabinetSort(string $sort): string
+    {
+        $sort = strtolower(trim($sort));
+        return in_array($sort, ['newest', 'oldest', 'name_asc', 'name_desc', 'size_desc', 'size_asc'], true)
+            ? $sort
+            : 'newest';
+    }
+
+    private function buildCabinetTypeWhereSql(string $type): string
+    {
+        $pdf = $this->sqlPredicatePdf();
+        $spreadsheet = $this->sqlPredicateSpreadsheet();
+        $archive = $this->sqlPredicateArchive();
+
+        return match ($type) {
+            'image' => 'd.is_image = 1',
+            'pdf' => $pdf,
+            'spreadsheet' => $spreadsheet,
+            'archive' => $archive,
+            'other' => '(d.is_image = 0 AND NOT (' . $pdf . ' OR ' . $spreadsheet . ' OR ' . $archive . '))',
+            default => '',
+        };
+    }
+
+    private function sqlPredicatePdf(): string
+    {
+        return "(LOWER(d.mime_type) = 'application/pdf' OR LOWER(d.original_name) LIKE '%.pdf')";
+    }
+
+    private function sqlPredicateSpreadsheet(): string
+    {
+        return "(
+            LOWER(d.mime_type) IN (
+                'application/vnd.ms-excel',
+                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                'text/csv',
+                'application/csv',
+                'application/vnd.oasis.opendocument.spreadsheet'
+            )
+            OR LOWER(d.original_name) LIKE '%.xls'
+            OR LOWER(d.original_name) LIKE '%.xlsx'
+            OR LOWER(d.original_name) LIKE '%.csv'
+            OR LOWER(d.original_name) LIKE '%.ods'
+        )";
+    }
+
+    private function sqlPredicateArchive(): string
+    {
+        return "(
+            LOWER(d.mime_type) IN (
+                'application/zip',
+                'application/x-zip-compressed',
+                'application/x-7z-compressed',
+                'application/x-rar-compressed',
+                'application/vnd.rar',
+                'application/gzip',
+                'application/x-gzip',
+                'application/x-tar'
+            )
+            OR LOWER(d.original_name) LIKE '%.zip'
+            OR LOWER(d.original_name) LIKE '%.7z'
+            OR LOWER(d.original_name) LIKE '%.rar'
+            OR LOWER(d.original_name) LIKE '%.tar'
+            OR LOWER(d.original_name) LIKE '%.gz'
+            OR LOWER(d.original_name) LIKE '%.tgz'
+        )";
+    }
+
+    private function detectTypeGroup(array $row): string
+    {
+        if (!empty($row['is_image'])) {
+            return 'image';
+        }
+
+        $mime = strtolower(trim((string)($row['mime_type'] ?? '')));
+        $name = strtolower(trim((string)($row['original_name'] ?? '')));
+
+        $isPdf = $mime === 'application/pdf' || str_ends_with($name, '.pdf');
+        if ($isPdf) {
+            return 'pdf';
+        }
+
+        $spreadsheetMimes = [
+            'application/vnd.ms-excel',
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'text/csv',
+            'application/csv',
+            'application/vnd.oasis.opendocument.spreadsheet',
+        ];
+        if (in_array($mime, $spreadsheetMimes, true)
+            || preg_match('/\.(xls|xlsx|csv|ods)$/', $name)) {
+            return 'spreadsheet';
+        }
+
+        $archiveMimes = [
+            'application/zip',
+            'application/x-zip-compressed',
+            'application/x-7z-compressed',
+            'application/x-rar-compressed',
+            'application/vnd.rar',
+            'application/gzip',
+            'application/x-gzip',
+            'application/x-tar',
+        ];
+        if (in_array($mime, $archiveMimes, true)
+            || preg_match('/\.(zip|7z|rar|tar|gz|tgz)$/', $name)) {
+            return 'archive';
+        }
+
+        return 'other';
     }
 
     private function mapRow(array $row): array
@@ -388,6 +595,7 @@ final class DocumentMysqlRepository
         $uploaderLogin = trim((string)($row['uploader_login'] ?? ''));
         $uploaderDisplay = $uploaderName !== '' ? $uploaderName : ($uploaderLogin !== '' ? $uploaderLogin : ('User #' . (int)($row['uploaded_by_user_id'] ?? 0)));
         $id = (int)($row['id'] ?? 0);
+        $typeGroup = $this->detectTypeGroup($row);
         return [
             'id' => $id,
             'event_id' => (string)($row['event_id'] ?? ''),
@@ -408,6 +616,7 @@ final class DocumentMysqlRepository
             'event_time' => (string)($row['event_time'] ?? ''),
             'event_type' => (string)($row['event_type'] ?? ''),
             'message_preview' => (string)($row['message_text'] ?? ''),
+            'type_group' => $typeGroup,
             'uploader' => [
                 'id' => (int)($row['uploaded_by_user_id'] ?? 0),
                 'name' => $uploaderName,
