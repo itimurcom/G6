@@ -739,6 +739,45 @@
         overlay.setAttribute('inert', '');
     }
 
+    function eventInfoInitials(value) {
+        var src = String(value || '').trim();
+        if (!src) return '??';
+        var parts = src.split(/\s+/).filter(Boolean);
+        if (!parts.length) return '??';
+        var first = Array.from(parts[0])[0] || '';
+        var second = parts.length > 1 ? (Array.from(parts[1])[0] || '') : (Array.from(parts[0])[1] || '');
+        return (first + second).toUpperCase() || '??';
+    }
+
+    function eventInfoDocPreviewPayloadFromNode(node) {
+        if (!node) return null;
+        return {
+            id: parseInt(node.getAttribute('data-doc-id') || '0', 10) || 0,
+            original_name: String(node.getAttribute('data-doc-name') || 'file'),
+            type_group: String(node.getAttribute('data-type-group') || 'other'),
+            mime_type: String(node.getAttribute('data-mime') || 'application/octet-stream'),
+            view_url: String(node.getAttribute('data-view-url') || '#'),
+            download_url: String(node.getAttribute('data-download-url') || '#')
+        };
+    }
+
+    function markEventViewed(eventId) {
+        var id = String(eventId || '').trim();
+        if (!id) return Promise.resolve(null);
+        return fetch('/api/notify/viewed', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify({ event_id: id, _csrf: csrfToken() })
+        }).then(function (response) {
+            if (!response.ok) throw new Error('HTTP ' + response.status);
+            return response.json();
+        });
+    }
+
     function ensureEventOverlayHandlers() {
         var overlay = document.getElementById('infoOverlay');
         if (!overlay) return null;
@@ -760,8 +799,34 @@
             });
         }
         overlay.addEventListener('click', function (event) {
-            if (event.target === overlay) {
+            var target = event.target;
+            if (!target) return;
+            if (target === overlay) {
                 closeEventOverlay();
+                return;
+            }
+            var previewNode = target.closest ? target.closest('[data-cab-doc-action="preview"]') : null;
+            if (previewNode) {
+                event.preventDefault();
+                var payload = eventInfoDocPreviewPayloadFromNode(previewNode);
+                if (payload) openPreview(payload);
+                return;
+            }
+            var markViewedNode = target.closest ? target.closest('[data-cab-action="mark-viewed"]') : null;
+            if (markViewedNode) {
+                event.preventDefault();
+                var eventId = String(markViewedNode.getAttribute('data-event-id') || '');
+                markViewedNode.disabled = true;
+                markEventViewed(eventId)
+                    .then(function () {
+                        loadEventSeenBlock(eventId, String(overlay.getAttribute('data-cab-preview-key') || '0'));
+                    })
+                    .catch(function () {
+                        toast('Не вдалося позначити подію як переглянуту.', 'error', 2200);
+                    })
+                    .finally(function () {
+                        markViewedNode.disabled = false;
+                    });
             }
         });
         document.addEventListener('keydown', function (event) {
@@ -772,76 +837,548 @@
         return overlay;
     }
 
-    function renderEventOverlay(eventRow) {
-        var overlay = ensureEventOverlayHandlers();
-        if (!overlay || !eventRow) return;
-        var modal = overlay.querySelector('.modal');
-        var titleEl = document.getElementById('infoTitle');
-        var contentEl = document.getElementById('infoContent');
+    function eventInfoTypeLabel(typeValue) {
+        var type = String(typeValue || '').trim().toLowerCase();
+        if (type === 'mi') return 'ТЛГ: МИ';
+        if (type === 'nas') return 'ТЛГ: НАС';
+        if (type === 'evt') return 'Захід';
+        return 'Інше';
+    }
+
+    function eventInfoFormatIso(value) {
+        var raw = String(value || '').trim();
+        if (!raw) return '—';
+        var m = raw.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+        if (m) return m[3] + '.' + m[2] + '.' + m[1];
+        return raw;
+    }
+
+    function eventInfoWeekdayShort(value) {
+        var raw = String(value || '').trim();
+        var m = raw.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+        if (!m) return '';
+        try {
+            return new Intl.DateTimeFormat('uk-UA', { weekday: 'short' }).format(new Date(Date.UTC(parseInt(m[1], 10), parseInt(m[2], 10) - 1, parseInt(m[3], 10))));
+        } catch (_) {
+            return '';
+        }
+    }
+
+    function eventInfoOwnerDisplay(eventRow) {
+        var owner = String((eventRow && eventRow.owner) || '').trim();
+        return owner || '—';
+    }
+
+    function eventInfoDocIcon(doc) {
+        return previewKind(doc) === 'image' ? '🖼' : '📎';
+    }
+
+    function eventInfoActionSvg(name) {
+        switch (String(name || '')) {
+            case 'preview':
+                return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Zm9.5 3a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+            case 'download':
+                return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4.5v10m0 0 4-4m-4 4-4-4M5 18.5h14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+            default:
+                return '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="7" fill="none" stroke="currentColor" stroke-width="1.8"/></svg>';
+        }
+    }
+
+    function eventInfoDocDatasetAttrs(doc) {
+        doc = doc || {};
+        return ''
+            + ' data-doc-id="' + escapeHtml(String(doc.id || 0)) + '"'
+            + ' data-doc-name="' + escapeHtml(String(doc.original_name || 'file')) + '"'
+            + ' data-type-group="' + escapeHtml(String(doc.type_group || 'other')) + '"'
+            + ' data-mime="' + escapeHtml(String(doc.mime_type || 'application/octet-stream')) + '"'
+            + ' data-view-url="' + escapeHtml(String(doc.view_url || '#')) + '"'
+            + ' data-download-url="' + escapeHtml(String(doc.download_url || '#')) + '"';
+    }
+
+    function eventInfoFormatCountSuffix(value) {
+        var n = parseInt(value || 0, 10) || 0;
+        if (n === 1) return 'відмітка';
+        if (n >= 2 && n <= 4) return 'відмітки';
+        return 'відміток';
+    }
+
+    function buildAcceptedFooterHtml(eventRow) {
+        eventRow = eventRow || {};
+        try {
+            var acceptedAtRaw = eventRow.accepted_at != null ? String(eventRow.accepted_at).trim() : '';
+            var acceptedMarks = Array.isArray(eventRow.accepted_marks) ? eventRow.accepted_marks : [];
+            var acceptedCount = parseInt(eventRow.accepted_marks_count != null ? eventRow.accepted_marks_count : (acceptedMarks.length || (acceptedAtRaw ? 1 : 0)), 10) || 0;
+            if (acceptedAtRaw === '' && acceptedCount <= 0) return '';
+
+            function formatOne(mark) {
+                mark = mark || {};
+                var markAtRaw = mark.accepted_at != null ? String(mark.accepted_at).trim() : '';
+                if (!markAtRaw) return '';
+                var markAtText = formatDateTime(markAtRaw);
+                var markByText = mark.accepted_by_name ? String(mark.accepted_by_name) : '';
+                if (!markByText && mark.accepted_by_user_id) {
+                    markByText = 'User #' + String(mark.accepted_by_user_id);
+                }
+                var parts = [];
+                if (markByText) parts.push(escapeHtml(markByText));
+                parts.push(escapeHtml(markAtText));
+                return parts.join(' — ');
+            }
+
+            if (acceptedMarks.length <= 1) {
+                var singleMark = acceptedMarks.length === 1 ? acceptedMarks[0] : {
+                    accepted_at: acceptedAtRaw,
+                    accepted_by_name: eventRow.accepted_by_name || '',
+                    accepted_by_user_id: eventRow.accepted_by_user_id || 0
+                };
+                var singleText = formatOne(singleMark);
+                if (!singleText) return '';
+                return '<div class="info-accepted-footer"><strong>Прийнято на виконання:</strong> ' + singleText + '</div>';
+            }
+
+            var itemsHtml = acceptedMarks.map(function (mark, idx) {
+                var line = formatOne(mark);
+                if (!line) return '';
+                return '<div class="info-accepted-footer__item">' + escapeHtml(String(idx + 1) + '.') + ' ' + line + '</div>';
+            }).filter(Boolean).join('');
+            var countText = String(acceptedCount) + ' ' + eventInfoFormatCountSuffix(acceptedCount);
+            return ''
+                + '<details class="info-accepted-footer info-accepted-footer--details">'
+                +   '<summary><strong>Прийнято на виконання:</strong> ' + escapeHtml(countText) + '</summary>'
+                +   '<div class="info-accepted-footer__list">' + itemsHtml + '</div>'
+                + '</details>';
+        } catch (_) {
+            return '';
+        }
+    }
+
+    function buildEventInfoHtml(eventRow) {
+        eventRow = eventRow || {};
+        var dateISO = String(eventRow.start_date || '').trim();
+        var dateHtml = eventInfoFormatIso(dateISO);
+        var weekday = eventInfoWeekdayShort(dateISO);
+        var timeText = String(eventRow.time || '').trim();
+        var dateTimeHtml = dateHtml + (weekday ? (' (' + escapeHtml(weekday) + ')') : '') + (timeText ? (' (' + escapeHtml(timeText) + ')') : '');
+        var createdHtml = eventRow.created_at ? escapeHtml(formatDateTime(eventRow.created_at)) : '—';
+        var descRaw = typeof eventRow.description === 'string' ? eventRow.description : '';
+        var descHtml = descRaw && String(descRaw).trim() !== '' ? escapeHtml(descRaw) : '—';
+        var endBlock = '';
+        if (eventRow.end_date) {
+            endBlock = '<div class="info-row info-row--full"><div class="info-item"><strong>Дата завершення:</strong> ' + escapeHtml(eventInfoFormatIso(eventRow.end_date)) + '</div></div>';
+        }
+        var docsRow = '';
+        if ((eventRow.incoming_no && String(eventRow.incoming_no).trim() !== '') || (eventRow.outgoing_no && String(eventRow.outgoing_no).trim() !== '')) {
+            docsRow = ''
+                + '<div class="info-row info-row--docs">'
+                +   '<div class="info-item"><strong>Вхідний №:</strong> ' + escapeHtml(String(eventRow.incoming_no || '—')) + '</div>'
+                +   '<div class="info-item"><strong>Вихідний №:</strong> ' + escapeHtml(String(eventRow.outgoing_no || '—')) + '</div>'
+                + '</div>';
+        }
+        return ''
+            + '<div class="info-title">' + escapeHtml(String(eventRow.title || '')) + '</div>'
+            + '<div class="info-grid">'
+            +   '<div class="info-row">'
+            +     '<div class="info-item"><strong>Дата:</strong> ' + dateTimeHtml + '</div>'
+            +     '<div class="info-item"><strong>Відповідальний:</strong> ' + escapeHtml(eventInfoOwnerDisplay(eventRow)) + '</div>'
+            +   '</div>'
+            +   endBlock
+            +   '<div class="info-row info-row--meta3">'
+            +     '<div class="info-item"><strong>Створено:</strong> ' + createdHtml + '</div>'
+            +     '<div class="info-item"><strong>Власник:</strong> ' + escapeHtml(String(eventRow.author_name || eventRow.user_name || eventRow.user_login || ('User #' + String(eventRow.user_id || '—')))) + '</div>'
+            +   '</div>'
+            +   '<div class="info-row info-row--full">'
+            +     '<div class="info-meta3 info-meta3--full">'
+            +       '<div class="info-item"><strong>Тип:</strong> ' + escapeHtml(eventInfoTypeLabel(eventRow.type)) + '</div>'
+            +       '<div class="info-item"><strong>Терміновість:</strong> ' + (eventRow.urgent ? 'так' : 'ні') + '</div>'
+            +       '<div class="info-item"><strong>Виконана:</strong> ' + (eventRow.done ? '<span class="info-done info-done--yes">так</span>' : '<span class="info-done">ні</span>') + '</div>'
+            +     '</div>'
+            +   '</div>'
+            +   docsRow
+            +   '<div class="info-row info-row--full">'
+            +     '<div class="info-desc-body container auto">' + descHtml + '</div>'
+            +   '</div>'
+            + '</div>'
+            + '<div class="info-seen-divider"></div>'
+            + '<div id="cabInfoSeenBlock" class="info-seen-block"><div class="muted">Завантаження переглядів…</div></div>'
+            + '<details class="info-thread-wrap" id="cabInfoThreadWrap">'
+            +   '<summary class="info-thread-head">'
+            +     '<span class="info-thread-head__title"><strong>Коментарі <span id="cabInfoThreadCount" class="info-thread-count"></span></strong><span class="info-thread-head__caret" aria-hidden="true">▸</span></span>'
+            +   '</summary>'
+            +   '<div class="info-thread-body">'
+            +     '<div id="cabInfoThreadList" class="info-thread-list"><div class="info-thread-loading">Завантаження коментарів…</div></div>'
+            +   '</div>'
+            + '</details>'
+            + '<details class="info-files-wrap" id="cabInfoFilesWrap">'
+            +   '<summary class="info-files-head"><strong>Файли <span id="cabInfoFilesCount" class="info-files-count"></span></strong></summary>'
+            +   '<div class="info-files-body">'
+            +     '<div id="cabInfoFilesList" class="info-files-list"><div class="info-files-loading">Завантаження файлів…</div></div>'
+            +   '</div>'
+            + '</details>'
+            + (isAdmin ? ('<details class="info-history-wrap" id="cabInfoHistoryWrap"><summary class="info-history-head"><strong>Історія змін</strong></summary><div id="cabInfoHistoryList" class="info-history-list"><div class="info-history-loading">Завантаження історії…</div></div></details>') : '');
+    }
+
+    function setEventInfoFooter(eventRow) {
         var footerMetaEl = document.getElementById('infoFooterMeta');
+        if (!footerMetaEl) return;
+        footerMetaEl.innerHTML = buildAcceptedFooterHtml(eventRow);
+    }
+
+    function setEventInfoActions(eventRow) {
         var editBtn = document.getElementById('editEvBtn');
         var pdfLink = document.getElementById('infoPdfLink');
-        var headerBadges = document.getElementById('infoHeaderBadges');
-        var typeClass = eventTypeClass(eventRow.type);
-        if (modal && modal.classList) {
-            modal.classList.remove('type-mi', 'type-nas', 'type-evt', 'type-other');
-            modal.classList.add(typeClass);
-        }
-        if (titleEl) {
-            titleEl.textContent = String(eventRow.title || 'Деталі події');
-        }
-        if (headerBadges) {
-            headerBadges.hidden = true;
-            headerBadges.innerHTML = '';
-        }
         if (editBtn) {
             editBtn.hidden = true;
             editBtn.setAttribute('aria-hidden', 'true');
             editBtn.tabIndex = -1;
         }
         if (pdfLink) {
-            pdfLink.hidden = true;
-            pdfLink.setAttribute('aria-hidden', 'true');
-            pdfLink.tabIndex = -1;
+            var eventId = String((eventRow && eventRow.id) || '');
+            pdfLink.hidden = !eventId;
+            pdfLink.setAttribute('aria-hidden', eventId ? 'false' : 'true');
+            pdfLink.tabIndex = eventId ? 0 : -1;
+            pdfLink.href = eventId ? ('/print/event?id=' + encodeURIComponent(eventId)) : '#';
         }
-        if (footerMetaEl) {
-            var footerBits = [];
-            if (eventRow.id) footerBits.push('Подія #' + escapeHtml(String(eventRow.id)));
-            if (eventRow.start_date) footerBits.push('Дата: ' + escapeHtml(String(eventRow.start_date)));
-            footerMetaEl.innerHTML = footerBits.join(' · ');
+    }
+
+    function renderSeenBlock(targetEl, payload, eventId) {
+        if (!targetEl) return;
+        payload = payload || {};
+        var seen = Array.isArray(payload.seen) ? payload.seen : [];
+        var unseen = Array.isArray(payload.unseen) ? payload.unseen : [];
+        var html = '';
+        var overlay = document.getElementById('infoOverlay');
+        var meId = parseInt((overlay && overlay.getAttribute('data-current-user-id')) || '0', 10) || 0;
+        var meInSeen = false;
+        if (meId > 0) {
+            for (var si = 0; si < seen.length; si++) {
+                if (parseInt(((seen[si] || {}).user_id) || 0, 10) === meId) { meInSeen = true; break; }
+            }
         }
+        var canMarkViewed = (!meInSeen && meId > 0 && String(eventId || '').trim() !== '');
+
+        html += '<div class="info-seen-grid">';
+        html += '<section class="info-seen-col info-seen-col--seen">';
+        html += '<div class="info-seen-head"><strong>Переглянули:</strong>'
+            + (canMarkViewed
+                ? ('<button type="button" class="notif-iconbtn notif-iconbtn--sm info-markviewed" data-cab-action="mark-viewed" data-event-id="' + escapeHtml(String(eventId || '')) + '" title="Переглянуто" aria-label="Позначити як переглянуте"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"></path></svg></button>')
+                : '')
+            + '</div>';
+        if (!seen.length) {
+            html += '<div class="muted">Поки ніхто не переглянув</div>';
+        } else {
+            html += '<div class="info-seen-list">';
+            for (var i = 0; i < seen.length; i++) {
+                var it = seen[i] || {};
+                var label = escapeHtml(String(it.label || ('#' + (it.user_id || ''))));
+                var t = it.seen_at ? escapeHtml(String(it.seen_at)) : '';
+                html += '<span class="info-seen-chip"><span>' + label + '</span>' + (t ? ('<time>' + t + '</time>') : '') + '</span>';
+            }
+            html += '</div>';
+        }
+        html += '</section>';
+        html += '<section class="info-seen-col info-seen-col--unseen">';
+        html += '<div class="info-seen-head"><strong>Не переглянули:</strong></div>';
+        if (!unseen.length) {
+            html += '<div class="muted">Усі переглянули</div>';
+        } else {
+            html += '<div class="info-seen-list">';
+            for (var j = 0; j < unseen.length; j++) {
+                var u = unseen[j] || {};
+                var ul = escapeHtml(String(u.label || ('#' + (u.user_id || ''))));
+                html += '<span class="info-seen-chip"><span>' + ul + '</span></span>';
+            }
+            html += '</div>';
+        }
+        html += '</section>';
+        html += '</div>';
+        targetEl.innerHTML = html;
+    }
+
+    function loadEventSeenBlock(eventId, requestKey) {
+        var host = document.getElementById('cabInfoSeenBlock');
+        var overlay = document.getElementById('infoOverlay');
+        if (!host || !overlay) return;
+        fetch('/api/notify/seen-by-event?event_id=' + encodeURIComponent(String(eventId || '')), {
+            method: 'GET',
+            credentials: 'same-origin',
+            headers: { 'Accept': 'application/json' }
+        })
+            .then(function (response) {
+                if (!response.ok) throw new Error('HTTP ' + response.status);
+                return response.json();
+            })
+            .then(function (payload) {
+                if (String(overlay.getAttribute('data-cab-preview-key') || '') !== String(requestKey || '')) return;
+                if (!payload || payload.ok !== true) {
+                    host.innerHTML = '<div class="muted">Не вдалося завантажити статус перегляду.</div>';
+                    return;
+                }
+                renderSeenBlock(host, payload, eventId);
+            })
+            .catch(function () {
+                if (String(overlay.getAttribute('data-cab-preview-key') || '') !== String(requestKey || '')) return;
+                host.innerHTML = '<div class="muted">Не вдалося завантажити статус перегляду.</div>';
+            });
+    }
+
+    function eventInfoGroupDocsByMessageId(docs) {
+        var map = {};
+        docs = Array.isArray(docs) ? docs : [];
+        for (var i = 0; i < docs.length; i++) {
+            var doc = docs[i] || {};
+            var messageId = parseInt(doc.message_id || 0, 10) || 0;
+            if (messageId <= 0) continue;
+            if (!map[messageId]) map[messageId] = [];
+            map[messageId].push(doc);
+        }
+        return map;
+    }
+
+    function eventInfoRenderAttachments(docs) {
+        docs = Array.isArray(docs) ? docs : [];
+        if (!docs.length) return '';
+        var html = '<div class="info-thread-attachments">';
+        for (var i = 0; i < docs.length; i++) {
+            var d = docs[i] || {};
+            var attrs = eventInfoDocDatasetAttrs(d);
+            var previewable = canPreview(d);
+            html += ''
+                + '<div class="info-thread-attachment" data-doc-id="' + escapeHtml(String(d.id || 0)) + '">'
+                +   '<span class="info-thread-attachment__icon" aria-hidden="true">' + escapeHtml(eventInfoDocIcon(d)) + '</span>'
+                +   (previewable
+                    ? '<button type="button" class="info-thread-attachment__name info-thread-attachment__name--button" data-cab-doc-action="preview"' + attrs + '>' + escapeHtml(String(d.original_name || 'file')) + '</button>'
+                    : '<a class="info-thread-attachment__name" href="' + escapeHtml(String(d.view_url || '#')) + '" target="_blank" rel="noopener">' + escapeHtml(String(d.original_name || 'file')) + '</a>')
+                +   '<span class="info-thread-attachment__size">' + escapeHtml(formatSize(d.file_size || 0)) + '</span>'
+                +   '<span class="info-thread-attachment__actions">'
+                +     (previewable
+                    ? '<button type="button" class="info-thread-icon-action info-thread-icon-action--preview" data-cab-doc-action="preview"' + attrs + ' title="Переглянути файл" aria-label="Переглянути файл">' + eventInfoActionSvg('preview') + '</button>'
+                    : '<a class="info-thread-icon-action info-thread-icon-action--preview" href="' + escapeHtml(String(d.view_url || '#')) + '" target="_blank" rel="noopener" title="Переглянути файл" aria-label="Переглянути файл">' + eventInfoActionSvg('preview') + '</a>')
+                +     '<a class="info-thread-icon-action info-thread-icon-action--download" href="' + escapeHtml(String(d.download_url || '#')) + '" target="_blank" rel="noopener" title="Завантажити файл" aria-label="Завантажити файл">' + eventInfoActionSvg('download') + '</a>'
+                +   '</span>'
+                + '</div>';
+        }
+        html += '</div>';
+        return html;
+    }
+
+    function eventInfoAvatarHtml(author) {
+        author = author || {};
+        var display = String(author.display || author.name || author.login || ('User #' + String(author.id || 0)));
+        if (author.avatar_url) {
+            return '<img src="' + escapeHtml(String(author.avatar_url)) + '" alt="' + escapeHtml(display) + '">';
+        }
+        return '<span>' + escapeHtml(eventInfoInitials(display)) + '</span>';
+    }
+
+    function eventInfoRenderMessages(messages, docs) {
+        var host = document.getElementById('cabInfoThreadList');
+        var countEl = document.getElementById('cabInfoThreadCount');
+        if (!host) return;
+        messages = Array.isArray(messages) ? messages : [];
+        docs = Array.isArray(docs) ? docs : [];
+        if (countEl) countEl.textContent = messages.length ? String(messages.length) : '';
+        if (!messages.length) {
+            host.innerHTML = '<div class="info-thread-empty"><div class="info-thread-empty__title">Поки немає коментарів</div><div class="info-thread-empty__text">Коментарі до цієї події з’являться тут.</div></div>';
+            return;
+        }
+        var docsByMessage = eventInfoGroupDocsByMessageId(docs);
+        var html = '';
+        for (var i = 0; i < messages.length; i++) {
+            var item = messages[i] || {};
+            var author = item.author || {};
+            var display = String(author.display || author.name || author.login || ('User #' + String(item.user_id || 0)));
+            var avatarClass = 'info-thread-message__avatar' + (author.avatar_url ? ' has-image' : '');
+            var itemDocs = docsByMessage[parseInt(item.id || 0, 10) || 0] || [];
+            html += ''
+                + '<article class="info-thread-message" data-message-id="' + escapeHtml(String(item.id || 0)) + '">'
+                +   '<div class="' + avatarClass + '">' + eventInfoAvatarHtml(author) + '</div>'
+                +   '<div class="info-thread-message__body">'
+                +     '<div class="info-thread-message__meta">'
+                +       '<span class="info-thread-message__author">' + escapeHtml(display) + '</span>'
+                +       '<time class="info-thread-message__time" datetime="' + escapeHtml(String(item.created_at || '')) + '">' + escapeHtml(formatDateTime(item.created_at || '')) + '</time>'
+                +       (item.edited_at ? '<span class="info-thread-message__edited">відредаговано</span>' : '')
+                +     '</div>'
+                +     '<div class="info-thread-message__text">' + escapeHtml(String(item.message_text || '')) + '</div>'
+                +     eventInfoRenderAttachments(itemDocs)
+                +   '</div>'
+                + '</article>';
+        }
+        host.innerHTML = html;
+    }
+
+    function eventInfoRenderFiles(docs) {
+        var host = document.getElementById('cabInfoFilesList');
+        var countEl = document.getElementById('cabInfoFilesCount');
+        if (!host) return;
+        docs = Array.isArray(docs) ? docs : [];
+        if (countEl) countEl.textContent = docs.length ? String(docs.length) : '';
+        if (!docs.length) {
+            host.innerHTML = '<div class="info-files-empty"><div class="info-files-empty__title">Поки немає файлів</div><div class="info-files-empty__text">Файли до цієї події з’являться тут після завантаження у коментарях.</div></div>';
+            return;
+        }
+        var html = '';
+        for (var i = 0; i < docs.length; i++) {
+            var doc = docs[i] || {};
+            var previewable = canPreview(doc);
+            var attrs = eventInfoDocDatasetAttrs(doc);
+            var uploader = String((((doc || {}).uploader || {}).display) || '—');
+            var commentLabel = (parseInt(doc.message_id || 0, 10) || 0) > 0 ? ('Коментар #' + String(doc.message_id || 0)) : 'Без коментаря';
+            html += ''
+                + '<article class="info-files-item" data-doc-id="' + escapeHtml(String(doc.id || 0)) + '">'
+                +   '<div class="info-files-item__icon" aria-hidden="true">' + escapeHtml(eventInfoDocIcon(doc)) + '</div>'
+                +   '<div class="info-files-item__body">'
+                +     '<div class="info-files-item__top">'
+                +       (previewable
+                    ? '<button type="button" class="info-files-item__name info-files-item__name--button" data-cab-doc-action="preview"' + attrs + '>' + escapeHtml(String(doc.original_name || 'file')) + '</button>'
+                    : '<a class="info-files-item__name" href="' + escapeHtml(String(doc.view_url || '#')) + '" target="_blank" rel="noopener">' + escapeHtml(String(doc.original_name || 'file')) + '</a>')
+                +       '<span class="info-files-item__size">' + escapeHtml(formatSize(doc.file_size || 0)) + '</span>'
+                +     '</div>'
+                +     '<div class="info-files-item__meta">'
+                +       '<span>Завантажив: ' + escapeHtml(uploader) + '</span>'
+                +       '<time datetime="' + escapeHtml(String(doc.created_at || '')) + '">' + escapeHtml(formatDateTime(doc.created_at || '')) + '</time>'
+                +       '<span>' + escapeHtml(commentLabel) + '</span>'
+                +     '</div>'
+                +   '</div>'
+                +   '<div class="info-files-item__actions">'
+                +     (previewable
+                    ? '<button type="button" class="info-thread-icon-action info-thread-icon-action--preview" data-cab-doc-action="preview"' + attrs + ' title="Переглянути файл" aria-label="Переглянути файл">' + eventInfoActionSvg('preview') + '</button>'
+                    : '<a class="info-thread-icon-action info-thread-icon-action--preview" href="' + escapeHtml(String(doc.view_url || '#')) + '" target="_blank" rel="noopener" title="Переглянути файл" aria-label="Переглянути файл">' + eventInfoActionSvg('preview') + '</a>')
+                +     '<a class="info-thread-icon-action info-thread-icon-action--download" href="' + escapeHtml(String(doc.download_url || '#')) + '" target="_blank" rel="noopener" title="Завантажити файл" aria-label="Завантажити файл">' + eventInfoActionSvg('download') + '</a>'
+                +   '</div>'
+                + '</article>';
+        }
+        host.innerHTML = html;
+    }
+
+    function eventInfoHistoryLine(item) {
+        item = item || {};
+        var actor = String(item.user_name || item.target_login || item.target_name || 'Система');
+        var action = String(item.action || '').replace(/[_\.]+/g, ' ').trim();
+        if (!action) action = 'оновлення';
+        return actor + ' — ' + action;
+    }
+
+    function eventInfoRenderHistory(items) {
+        var host = document.getElementById('cabInfoHistoryList');
+        if (!host) return;
+        items = Array.isArray(items) ? items.slice() : [];
+        items = items.filter(function (it) {
+            return it && String(it.entity_type || '') === 'event';
+        });
+        if (!items.length) {
+            host.innerHTML = '<div class="info-history-empty">Історія змін поки відсутня.</div>';
+            return;
+        }
+        items.reverse();
+        var html = '';
+        for (var i = 0; i < items.length; i++) {
+            var it = items[i] || {};
+            html += '<div class="info-history-item"><div class="info-history-line"><span class="info-history-ts">' + escapeHtml(formatDateTime(it.ts || '')) + '</span><span class="info-history-text">' + escapeHtml(eventInfoHistoryLine(it)) + '</span></div></div>';
+        }
+        host.innerHTML = html;
+    }
+
+    function loadEventCollections(eventId, requestKey) {
+        var overlay = document.getElementById('infoOverlay');
+        if (!overlay) return;
+        var threadHost = document.getElementById('cabInfoThreadList');
+        var filesHost = document.getElementById('cabInfoFilesList');
+        if (threadHost) threadHost.innerHTML = '<div class="info-thread-loading">Завантаження коментарів…</div>';
+        if (filesHost) filesHost.innerHTML = '<div class="info-files-loading">Завантаження файлів…</div>';
+        Promise.all([
+            fetch('/api/event-messages/list?event_id=' + encodeURIComponent(String(eventId || '')), { method: 'GET', credentials: 'same-origin', headers: { 'Accept': 'application/json' } }).then(function (response) {
+                if (!response.ok) throw new Error('HTTP ' + response.status);
+                return response.json();
+            }),
+            fetch('/api/documents/list-by-event?event_id=' + encodeURIComponent(String(eventId || '')), { method: 'GET', credentials: 'same-origin', headers: { 'Accept': 'application/json' } }).then(function (response) {
+                if (!response.ok) throw new Error('HTTP ' + response.status);
+                return response.json();
+            })
+        ])
+            .then(function (results) {
+                if (String(overlay.getAttribute('data-cab-preview-key') || '') !== String(requestKey || '')) return;
+                var messagesPayload = results[0] || {};
+                var docsPayload = results[1] || {};
+                var messages = messagesPayload && messagesPayload.ok ? (messagesPayload.items || []) : [];
+                var docs = docsPayload && docsPayload.ok ? (docsPayload.items || []) : [];
+                eventInfoRenderMessages(messages, docs);
+                eventInfoRenderFiles(docs);
+            })
+            .catch(function () {
+                if (String(overlay.getAttribute('data-cab-preview-key') || '') !== String(requestKey || '')) return;
+                if (threadHost) threadHost.innerHTML = '<div class="info-thread-empty"><div class="info-thread-empty__title">Не вдалося завантажити коментарі</div><div class="info-thread-empty__text">Спробуй оновити перегляд події ще раз.</div></div>';
+                if (filesHost) filesHost.innerHTML = '<div class="info-files-empty"><div class="info-files-empty__title">Не вдалося завантажити файли</div><div class="info-files-empty__text">Спробуй відкрити подію ще раз.</div></div>';
+            });
+    }
+
+    function loadEventHistoryBlock(eventId, requestKey) {
+        if (!isAdmin) return;
+        var overlay = document.getElementById('infoOverlay');
+        var host = document.getElementById('cabInfoHistoryList');
+        if (!overlay || !host) return;
+        host.innerHTML = '<div class="info-history-loading">Завантаження історії…</div>';
+        var qs = new URLSearchParams();
+        qs.set('scope', 'all');
+        qs.set('limit', '100');
+        qs.set('entity_type', 'event');
+        qs.set('entity_id', String(eventId || ''));
+        fetch('/api/audit/list?' + qs.toString(), {
+            method: 'GET',
+            credentials: 'same-origin',
+            headers: { 'Accept': 'application/json' }
+        })
+            .then(function (response) {
+                if (!response.ok) throw new Error('HTTP ' + response.status);
+                return response.json();
+            })
+            .then(function (payload) {
+                if (String(overlay.getAttribute('data-cab-preview-key') || '') !== String(requestKey || '')) return;
+                if (!payload || payload.ok !== true) {
+                    host.innerHTML = '<div class="info-history-error">Історія: недоступно</div>';
+                    return;
+                }
+                eventInfoRenderHistory(payload.items || []);
+            })
+            .catch(function () {
+                if (String(overlay.getAttribute('data-cab-preview-key') || '') !== String(requestKey || '')) return;
+                host.innerHTML = '<div class="info-history-error">Історія: помилка завантаження</div>';
+            });
+    }
+
+    function renderEventOverlay(eventRow) {
+        var overlay = ensureEventOverlayHandlers();
+        if (!overlay || !eventRow) return;
+        var modal = overlay.querySelector('.modal');
+        var titleEl = document.getElementById('infoTitle');
+        var contentEl = document.getElementById('infoContent');
+        var headerBadges = document.getElementById('infoHeaderBadges');
+        var typeClass = eventTypeClass(eventRow.type);
+        var requestKey = String((parseInt(overlay.getAttribute('data-cab-preview-key') || '0', 10) || 0) + 1);
+        overlay.setAttribute('data-cab-preview-key', requestKey);
+        overlay.setAttribute('data-cab-event-id', String(eventRow.id || ''));
+
+        if (modal && modal.classList) {
+            modal.classList.remove('type-mi', 'type-nas', 'type-evt', 'type-other');
+            modal.classList.add(typeClass);
+        }
+        if (titleEl) {
+            titleEl.textContent = 'Деталі події';
+        }
+        if (headerBadges) {
+            headerBadges.hidden = true;
+            headerBadges.innerHTML = '';
+        }
+        setEventInfoActions(eventRow);
+        setEventInfoFooter(eventRow);
         if (contentEl) {
-            var doneText = (eventRow.done === true || String(eventRow.done) === '1') ? 'так' : 'ні';
-            var urgentText = (eventRow.urgent === true || String(eventRow.urgent) === '1') ? 'так' : 'ні';
-            var parts = [];
-            parts.push('<div class="row">');
-            parts.push('<div><strong>Дата:</strong> ' + escapeHtml(String(eventRow.start_date || '—')) + '</div>');
-            if (eventRow.end_date) {
-                parts.push('<div><strong>Дата завершення:</strong> ' + escapeHtml(String(eventRow.end_date || '—')) + '</div>');
-            }
-            parts.push('<div><strong>Час:</strong> ' + escapeHtml(String(eventRow.time || '—')) + '</div>');
-            parts.push('</div>');
-            parts.push('<div class="row">');
-            parts.push('<div><strong>Тип:</strong> ' + escapeHtml(String(eventRow.type || '—').toUpperCase()) + '</div>');
-            parts.push('<div><strong>Виконана:</strong> ' + doneText + '</div>');
-            parts.push('</div>');
-            parts.push('<div><strong>Назва:</strong> ' + escapeHtml(String(eventRow.title || '—')) + '</div>');
-            parts.push('<div><strong>Відповідальний:</strong> ' + escapeHtml(String(eventRow.owner || '—')) + '</div>');
-            parts.push('<div><strong>Терміновість:</strong> ' + urgentText + '</div>');
-            if (eventRow.incoming_no) {
-                parts.push('<div><strong>Вхідний №:</strong> ' + escapeHtml(String(eventRow.incoming_no)) + '</div>');
-            }
-            if (eventRow.outgoing_no) {
-                parts.push('<div><strong>Вихідний №:</strong> ' + escapeHtml(String(eventRow.outgoing_no)) + '</div>');
-            }
-            if (eventRow.description) {
-                parts.push('<div><strong>Опис:</strong><br><div class="container auto">' + escapeHtml(String(eventRow.description || '')) + '</div></div>');
-            }
-            contentEl.innerHTML = parts.join('');
+            contentEl.innerHTML = buildEventInfoHtml(eventRow);
         }
         overlay.classList.add('show');
         overlay.setAttribute('aria-hidden', 'false');
         overlay.removeAttribute('inert');
+        loadEventSeenBlock(eventRow.id, requestKey);
+        loadEventCollections(eventRow.id, requestKey);
+        loadEventHistoryBlock(eventRow.id, requestKey);
     }
 
     function openEventPreview(eventId) {
