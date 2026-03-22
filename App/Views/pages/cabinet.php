@@ -546,7 +546,6 @@ $__toastErr = \App\Core\Session::flash('toast_error');
       </div>
     </section>
 
-
     <section class="cabinet-tab" id="audit-block" data-tab="journal">
       <div class='sub-title'>Журнал дій</div>
       <header class="audit-toolbar">
@@ -578,3 +577,5 @@ $__toastErr = \App\Core\Session::flash('toast_error');
       </footer>
     </section>
     </div>
+
+<?php include __DIR__ . "/../layouts/modals/infoEvent.php"; ?>

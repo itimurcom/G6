@@ -687,24 +687,74 @@ body.cab-modal-open{
   font-weight: 700;
 }
 
-.cab-files__typeBadge{
+.cab-files__eventLink{
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--accent);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  text-align: left;
+}
+
+.cab-files__eventLink:hover{
+  color: color-mix(in srgb, var(--accent) 84%, white);
+  text-decoration: underline;
+}
+
+.cab-files__eventLink:focus-visible{
+  outline: 2px solid color-mix(in srgb, var(--accent) 45%, transparent);
+  outline-offset: 3px;
+  border-radius: 6px;
+}
+
+.cab-files__typeCell{
+  width: 76px;
+  text-align: center;
+}
+
+.cab-files__typeIcon{
+  --cab-files-type-color: #475569;
+  --cab-files-type-fg: #6b7280;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 96px;
-  padding: 6px 10px;
-  border-radius: 999px;
-  font-size: var(--fs-meta);
-  font-weight: 800;
-  border: 1px solid var(--cabinet-border);
-  background: color-mix(in srgb, var(--cabinet-btn-bg) 82%, transparent);
+  width: 42px;
+  height: 42px;
+  border-radius: 14px;
+  border: 1px solid color-mix(in srgb, var(--cab-files-type-color) 32%, var(--cabinet-border));
+  background: color-mix(in srgb, var(--cab-files-type-color) 15%, var(--cabinet-btn-bg));
+  color: var(--cab-files-type-fg);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.04);
 }
 
-.cab-files__typeBadge.is-image{ background: color-mix(in srgb, #059669 16%, var(--cabinet-btn-bg)); }
-.cab-files__typeBadge.is-pdf{ background: color-mix(in srgb, #dc2626 14%, var(--cabinet-btn-bg)); }
-.cab-files__typeBadge.is-spreadsheet{ background: color-mix(in srgb, #2563eb 14%, var(--cabinet-btn-bg)); }
-.cab-files__typeBadge.is-archive{ background: color-mix(in srgb, #7c3aed 14%, var(--cabinet-btn-bg)); }
-.cab-files__typeBadge.is-other{ background: color-mix(in srgb, #475569 14%, var(--cabinet-btn-bg)); }
+.cab-files__typeIcon svg{
+  width: 21px;
+  height: 21px;
+  display: block;
+}
+
+[data-theme="dark"] .cab-files__typeIcon,
+.theme-dark .cab-files__typeIcon,
+.dark .cab-files__typeIcon{
+  --cab-files-type-fg: #ffffff;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]):not(.theme-light):not(.light) .cab-files__typeIcon{
+    --cab-files-type-fg: #ffffff;
+  }
+}
+
+.cab-files__typeIcon.is-image{ --cab-files-type-color: #059669; }
+.cab-files__typeIcon.is-pdf{ --cab-files-type-color: #dc2626; }
+.cab-files__typeIcon.is-spreadsheet{ --cab-files-type-color: #2563eb; }
+.cab-files__typeIcon.is-archive{ --cab-files-type-color: #7c3aed; }
+.cab-files__typeIcon.is-other{ --cab-files-type-color: #475569; }
 
 .cab-files__rowActions{
   display: flex;

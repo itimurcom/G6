@@ -697,6 +697,177 @@
         }
     }
 
+    function typeIconMarkup(group) {
+        var label = typeLabel(group);
+        var icon = '';
+        switch (String(group || '')) {
+            case 'image':
+                icon = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 6.5A1.5 1.5 0 0 1 6.5 5h11A1.5 1.5 0 0 1 19 6.5v11a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 5 17.5v-11Z" fill="none" stroke="currentColor" stroke-width="1.7"/><circle cx="9" cy="9" r="1.4" fill="currentColor"/><path d="m7 16 3.2-3.2a1 1 0 0 1 1.4 0l1.8 1.8 1.4-1.4a1 1 0 0 1 1.4 0L17 14" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+                break;
+            case 'pdf':
+                icon = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3.75h6.5L18.25 8.5V19A1.25 1.25 0 0 1 17 20.25H7A1.25 1.25 0 0 1 5.75 19V5A1.25 1.25 0 0 1 7 3.75Z" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M13.5 3.75V8.5h4.75" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M8 15h1.4a1.3 1.3 0 1 0 0-2.6H8V17m4-4.6V17h1.1a1.8 1.8 0 0 0 0-3.6H12Zm5 0h-2v4.6" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+                break;
+            case 'spreadsheet':
+                icon = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3.75h6.5L18.25 8.5V19A1.25 1.25 0 0 1 17 20.25H7A1.25 1.25 0 0 1 5.75 19V5A1.25 1.25 0 0 1 7 3.75Z" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M13.5 3.75V8.5h4.75" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M8.25 11.5h7.5M8.25 15h7.5M10.75 10.25V17.5M13.25 10.25V17.5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>';
+                break;
+            case 'archive':
+                icon = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4.75h10A1.25 1.25 0 0 1 18.25 6v2A1.25 1.25 0 0 1 17 9.25H7A1.25 1.25 0 0 1 5.75 8V6A1.25 1.25 0 0 1 7 4.75Zm0 4.5h10A1.25 1.25 0 0 1 18.25 10.5V18A1.25 1.25 0 0 1 17 19.25H7A1.25 1.25 0 0 1 5.75 18v-7.5A1.25 1.25 0 0 1 7 9.25Z" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M10 13h4m-3-6h2m-1 6v3" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>';
+                break;
+            default:
+                icon = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3.75h6.5L18.25 8.5V19A1.25 1.25 0 0 1 17 20.25H7A1.25 1.25 0 0 1 5.75 19V5A1.25 1.25 0 0 1 7 3.75Z" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M13.5 3.75V8.5h4.75" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M8.5 13.25h7M8.5 16.25h5.5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>';
+                break;
+        }
+        return '<span class="cab-files__typeIcon is-' + escapeHtml(String(group || 'other')) + '" title="' + escapeHtml(label) + '" aria-label="' + escapeHtml(label) + '">' + icon + '</span>';
+    }
+
+    function eventTypeClass(typeValue) {
+        var type = String(typeValue || '').trim().toLowerCase();
+        if (type === 'mi') return 'type-mi';
+        if (type === 'nas') return 'type-nas';
+        if (type === 'evt') return 'type-evt';
+        return 'type-other';
+    }
+
+    function closeEventOverlay() {
+        var overlay = document.getElementById('infoOverlay');
+        if (!overlay) return;
+        if (overlay.contains(document.activeElement)) {
+            try { document.activeElement.blur(); } catch (_) { /* no-op */ }
+        }
+        overlay.classList.remove('show');
+        overlay.setAttribute('aria-hidden', 'true');
+        overlay.setAttribute('inert', '');
+    }
+
+    function ensureEventOverlayHandlers() {
+        var overlay = document.getElementById('infoOverlay');
+        if (!overlay) return null;
+        if (overlay.dataset && overlay.dataset.cabinetFilesBound === '1') return overlay;
+        try { if (overlay.dataset) overlay.dataset.cabinetFilesBound = '1'; } catch (_) { /* no-op */ }
+
+        var closeBtn = document.getElementById('infoClose');
+        var okBtn = document.getElementById('infoOk');
+        if (closeBtn) {
+            closeBtn.addEventListener('click', function (event) {
+                event.preventDefault();
+                closeEventOverlay();
+            });
+        }
+        if (okBtn) {
+            okBtn.addEventListener('click', function (event) {
+                event.preventDefault();
+                closeEventOverlay();
+            });
+        }
+        overlay.addEventListener('click', function (event) {
+            if (event.target === overlay) {
+                closeEventOverlay();
+            }
+        });
+        document.addEventListener('keydown', function (event) {
+            if (event.key === 'Escape' && overlay.classList.contains('show')) {
+                closeEventOverlay();
+            }
+        });
+        return overlay;
+    }
+
+    function renderEventOverlay(eventRow) {
+        var overlay = ensureEventOverlayHandlers();
+        if (!overlay || !eventRow) return;
+        var modal = overlay.querySelector('.modal');
+        var titleEl = document.getElementById('infoTitle');
+        var contentEl = document.getElementById('infoContent');
+        var footerMetaEl = document.getElementById('infoFooterMeta');
+        var editBtn = document.getElementById('editEvBtn');
+        var pdfLink = document.getElementById('infoPdfLink');
+        var headerBadges = document.getElementById('infoHeaderBadges');
+        var typeClass = eventTypeClass(eventRow.type);
+        if (modal && modal.classList) {
+            modal.classList.remove('type-mi', 'type-nas', 'type-evt', 'type-other');
+            modal.classList.add(typeClass);
+        }
+        if (titleEl) {
+            titleEl.textContent = String(eventRow.title || 'Деталі події');
+        }
+        if (headerBadges) {
+            headerBadges.hidden = true;
+            headerBadges.innerHTML = '';
+        }
+        if (editBtn) {
+            editBtn.hidden = true;
+            editBtn.setAttribute('aria-hidden', 'true');
+            editBtn.tabIndex = -1;
+        }
+        if (pdfLink) {
+            pdfLink.hidden = true;
+            pdfLink.setAttribute('aria-hidden', 'true');
+            pdfLink.tabIndex = -1;
+        }
+        if (footerMetaEl) {
+            var footerBits = [];
+            if (eventRow.id) footerBits.push('Подія #' + escapeHtml(String(eventRow.id)));
+            if (eventRow.start_date) footerBits.push('Дата: ' + escapeHtml(String(eventRow.start_date)));
+            footerMetaEl.innerHTML = footerBits.join(' · ');
+        }
+        if (contentEl) {
+            var doneText = (eventRow.done === true || String(eventRow.done) === '1') ? 'так' : 'ні';
+            var urgentText = (eventRow.urgent === true || String(eventRow.urgent) === '1') ? 'так' : 'ні';
+            var parts = [];
+            parts.push('<div class="row">');
+            parts.push('<div><strong>Дата:</strong> ' + escapeHtml(String(eventRow.start_date || '—')) + '</div>');
+            if (eventRow.end_date) {
+                parts.push('<div><strong>Дата завершення:</strong> ' + escapeHtml(String(eventRow.end_date || '—')) + '</div>');
+            }
+            parts.push('<div><strong>Час:</strong> ' + escapeHtml(String(eventRow.time || '—')) + '</div>');
+            parts.push('</div>');
+            parts.push('<div class="row">');
+            parts.push('<div><strong>Тип:</strong> ' + escapeHtml(String(eventRow.type || '—').toUpperCase()) + '</div>');
+            parts.push('<div><strong>Виконана:</strong> ' + doneText + '</div>');
+            parts.push('</div>');
+            parts.push('<div><strong>Назва:</strong> ' + escapeHtml(String(eventRow.title || '—')) + '</div>');
+            parts.push('<div><strong>Відповідальний:</strong> ' + escapeHtml(String(eventRow.owner || '—')) + '</div>');
+            parts.push('<div><strong>Терміновість:</strong> ' + urgentText + '</div>');
+            if (eventRow.incoming_no) {
+                parts.push('<div><strong>Вхідний №:</strong> ' + escapeHtml(String(eventRow.incoming_no)) + '</div>');
+            }
+            if (eventRow.outgoing_no) {
+                parts.push('<div><strong>Вихідний №:</strong> ' + escapeHtml(String(eventRow.outgoing_no)) + '</div>');
+            }
+            if (eventRow.description) {
+                parts.push('<div><strong>Опис:</strong><br><div class="container auto">' + escapeHtml(String(eventRow.description || '')) + '</div></div>');
+            }
+            contentEl.innerHTML = parts.join('');
+        }
+        overlay.classList.add('show');
+        overlay.setAttribute('aria-hidden', 'false');
+        overlay.removeAttribute('inert');
+    }
+
+    function openEventPreview(eventId) {
+        var id = String(eventId || '').trim();
+        if (!id) return;
+        setStatus('Завантаження події…', 'loading');
+        fetch('/api/events/get?id=' + encodeURIComponent(id), { method: 'GET', credentials: 'same-origin', headers: { 'Accept': 'application/json' } })
+            .then(function (response) {
+                if (!response.ok) {
+                    throw new Error('HTTP ' + response.status);
+                }
+                return response.json();
+            })
+            .then(function (payload) {
+                if (!payload || !payload.ok || !payload.event) {
+                    throw new Error('event_not_found');
+                }
+                renderEventOverlay(payload.event);
+                setStatus('Подію відкрито.', 'success');
+            })
+            .catch(function () {
+                toast('Не вдалося відкрити перегляд події.', 'error', 2200);
+                setStatus('Помилка відкриття події.', 'error');
+            });
+    }
+
     function previewKind(item) {
         if (!item) return '';
         var group = String(item.type_group || '');
@@ -770,7 +941,11 @@
             var eventTitle = String(item.event_title || item.event_id || '—');
             var eventMeta = item.event_id ? '<div class="cab-files__eventId">' + escapeHtml(String(item.event_id)) + '</div>' : '';
             var typeGroup = String(item.type_group || 'other');
-            var typeBadge = '<span class="cab-files__typeBadge is-' + escapeHtml(typeGroup) + '">' + escapeHtml(typeLabel(typeGroup)) + '</span>';
+            var typeIcon = typeIconMarkup(typeGroup);
+            var eventCell = '—';
+            if (item.event_id) {
+                eventCell = '<button type="button" class="cab-files__eventLink" data-action="open-event" data-event-id="' + escapeHtml(String(item.event_id)) + '">' + escapeHtml(eventTitle) + '</button>' + eventMeta;
+            }
             var actions = '';
             actions += '<button type="button" class="cab-action-link cab-action-link--button" data-action="preview" data-id="' + String(item.id || 0) + '" data-view-url="' + escapeHtml(String(item.view_url || '#')) + '" data-download-url="' + escapeHtml(String(item.download_url || '#')) + '" data-type-group="' + escapeHtml(typeGroup) + '" data-mime="' + escapeHtml(String(item.mime_type || 'application/octet-stream')) + '" data-name="' + escapeHtml(title) + '">Перегляд</button>';
             actions += '<span class="cab-action-sep">•</span>';
@@ -784,10 +959,10 @@
                         '<div class="cab-files__name">' + escapeHtml(title) + '</div>' +
                         '<div class="cab-files__mime">' + escapeHtml(String(item.mime_type || 'application/octet-stream')) + '</div>' +
                     '</td>' +
-                    '<td>' + typeBadge + '</td>' +
+                    '<td class="cab-files__typeCell">' + typeIcon + '</td>' +
                     '<td>' + escapeHtml(formatSize(item.file_size || 0)) + '</td>' +
                     '<td>' + escapeHtml(uploader) + '</td>' +
-                    '<td><div class="cab-files__eventTitle">' + escapeHtml(eventTitle) + '</div>' + eventMeta + '</td>' +
+                    '<td><div class="cab-files__eventTitle">' + eventCell + '</div></td>' +
                     '<td>' + escapeHtml(formatDateTime(item.created_at || '')) + '</td>' +
                     '<td><div class="cab-files__rowActions">' + actions + '</div></td>' +
                 '</tr>';
@@ -1088,6 +1263,10 @@
             if (!id) return;
             if (action === 'delete') {
                 deleteDocument(id, target.getAttribute('data-name') || '');
+                return;
+            }
+            if (action === 'open-event') {
+                openEventPreview(target.getAttribute('data-event-id') || '');
                 return;
             }
             if (action === 'preview') {
