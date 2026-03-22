@@ -599,10 +599,13 @@
     var prevBtn = document.getElementById('cabFilesPrev');
     var nextBtn = document.getElementById('cabFilesNext');
     var pageInfo = document.getElementById('cabFilesPageInfo');
-    var scopeLabel = document.getElementById('cabFilesScopeLabel');
     var preview = document.getElementById('cabFilesPreview');
     var previewBody = document.getElementById('cabFilesPreviewBody');
     var previewTitle = document.getElementById('cabFilesPreviewTitle');
+    var previewMeta = document.getElementById('cabFilesPreviewMeta');
+    var previewDownload = document.getElementById('cabFilesPreviewDownload');
+    var previewFullscreen = document.getElementById('cabFilesPreviewFullscreen');
+    var previewCloseBtn = document.getElementById('cabFilesPreviewClose');
     var scopeButtons = root.querySelectorAll('[data-scope]');
 
     var isAdmin = String(root.getAttribute('data-is-admin') || '0') === '1';
@@ -617,7 +620,16 @@
         scope: defaultScope,
         loaded: false,
         inFlight: false,
-        endpointMissing: false
+        endpointMissing: false,
+        preview: {
+            open: false,
+            fullscreen: false,
+            requestKey: 0,
+            item: null,
+            kind: '',
+            textLoading: false,
+            textContent: ''
+        }
     };
 
     function csrfToken() {
@@ -685,11 +697,18 @@
         }
     }
 
-    function canPreview(item) {
-        if (!item) return false;
+    function previewKind(item) {
+        if (!item) return '';
         var group = String(item.type_group || '');
         var mime = String(item.mime_type || '').toLowerCase();
-        return group === 'image' || group === 'pdf' || mime.indexOf('text/') === 0;
+        if (group === 'image') return 'image';
+        if (group === 'pdf') return 'pdf';
+        if (mime.indexOf('text/') === 0) return 'text';
+        return '';
+    }
+
+    function canPreview(item) {
+        return previewKind(item) !== '';
     }
 
     function setStatus(text, kind) {
@@ -702,10 +721,8 @@
         state.scope = (!isAdmin ? 'mine' : (scope === 'mine' ? 'mine' : 'all'));
         Array.prototype.forEach.call(scopeButtons, function (btn) {
             btn.classList.toggle('is-active', String(btn.getAttribute('data-scope')) === state.scope);
+            btn.setAttribute('aria-pressed', String(String(btn.getAttribute('data-scope')) === state.scope));
         });
-        if (scopeLabel) {
-            scopeLabel.textContent = scopeTitle(state.scope);
-        }
     }
 
     function updatePager() {
@@ -755,12 +772,11 @@
             var typeGroup = String(item.type_group || 'other');
             var typeBadge = '<span class="cab-files__typeBadge is-' + escapeHtml(typeGroup) + '">' + escapeHtml(typeLabel(typeGroup)) + '</span>';
             var actions = '';
-            if (canPreview(item)) {
-                actions += '<button type="button" class="cab-files__action" data-action="preview" data-id="' + String(item.id || 0) + '">Попередній</button>';
-            }
-            actions += '<a class="cab-files__action" href="' + escapeHtml(String(item.view_url || '#')) + '" target="_blank" rel="noopener">Перегляд</a>';
-            actions += '<a class="cab-files__action" href="' + escapeHtml(String(item.download_url || '#')) + '">Скачати</a>';
-            actions += '<button type="button" class="cab-files__action is-danger" data-action="delete" data-id="' + String(item.id || 0) + '" data-name="' + escapeHtml(title) + '">Видалити</button>';
+            actions += '<button type="button" class="cab-action-link cab-action-link--button" data-action="preview" data-id="' + String(item.id || 0) + '" data-view-url="' + escapeHtml(String(item.view_url || '#')) + '" data-download-url="' + escapeHtml(String(item.download_url || '#')) + '" data-type-group="' + escapeHtml(typeGroup) + '" data-mime="' + escapeHtml(String(item.mime_type || 'application/octet-stream')) + '" data-name="' + escapeHtml(title) + '">Перегляд</button>';
+            actions += '<span class="cab-action-sep">•</span>';
+            actions += '<a class="cab-action-link" href="' + escapeHtml(String(item.download_url || '#')) + '">Скачати</a>';
+            actions += '<span class="cab-action-sep">•</span>';
+            actions += '<button type="button" class="cab-action-link cab-action-link--button cab-action-link--danger" data-action="delete" data-id="' + String(item.id || 0) + '" data-name="' + escapeHtml(title) + '">Видалити</button>';
 
             return '' +
                 '<tr data-id="' + String(item.id || 0) + '">' +
@@ -779,32 +795,134 @@
         tbody.innerHTML = html;
     }
 
+    function renderPreview() {
+        if (!preview) return;
+        var previewState = state.preview || {};
+        var item = previewState.item || null;
+        var kind = String(previewState.kind || '');
+        var title = item ? String(item.original_name || 'Перегляд файла') : 'Перегляд файла';
+        var mime = item ? String(item.mime_type || '') : '';
+        if (previewTitle) previewTitle.textContent = title;
+        if (previewMeta) previewMeta.textContent = item ? (typeLabel(item.type_group || '') + (mime ? ' · ' + mime : '')) : '';
+        if (previewDownload) {
+            previewDownload.href = item ? String(item.download_url || '#') : '#';
+            previewDownload.setAttribute('aria-disabled', item && item.download_url ? 'false' : 'true');
+        }
+        if (previewFullscreen) {
+            previewFullscreen.hidden = !previewState.open;
+            previewFullscreen.setAttribute('aria-pressed', previewState.fullscreen ? 'true' : 'false');
+            previewFullscreen.title = previewState.fullscreen ? 'Вийти з повноекранного режиму' : 'На весь екран';
+            previewFullscreen.setAttribute('aria-label', previewState.fullscreen ? 'Вийти з повноекранного режиму' : 'На весь екран');
+        }
+        if (previewBody) {
+            if (!previewState.open || !item) {
+                previewBody.innerHTML = '';
+            } else if (kind === 'image') {
+                previewBody.innerHTML = '<img class="info-thread-preview__image" src="' + escapeHtml(String(item.view_url || '#')) + '" alt="' + escapeHtml(title) + '">';
+            } else if (kind === 'pdf') {
+                previewBody.innerHTML = '<iframe class="info-thread-preview__frame" src="' + escapeHtml(String(item.view_url || '#')) + '" title="' + escapeHtml(title) + '"></iframe>';
+            } else if (kind === 'text') {
+                previewBody.innerHTML = previewState.textLoading
+                    ? '<div class="info-thread-preview__fallback">Завантаження текстового перегляду…</div>'
+                    : '<pre class="info-thread-preview__text">' + escapeHtml(previewState.textContent || '') + '</pre>';
+            } else {
+                previewBody.innerHTML = '<div class="info-thread-preview__fallback">Для цього типу файла вбудований перегляд недоступний.</div>';
+            }
+        }
+        preview.hidden = !previewState.open;
+        preview.classList.toggle('is-open', !!previewState.open);
+        preview.classList.toggle('is-fullscreen', !!previewState.fullscreen);
+        preview.setAttribute('aria-hidden', previewState.open ? 'false' : 'true');
+        document.body.classList.toggle('is-cab-files-preview-open', !!previewState.open);
+    }
+
+    function setPreviewFullscreen(enabled) {
+        state.preview.fullscreen = !!enabled;
+        renderPreview();
+    }
+
+    function togglePreviewFullscreen() {
+        if (!preview || !state.preview || !state.preview.open) return;
+        var dialog = preview.querySelector('.info-thread-preview__dialog');
+        var fullscreenTarget = document.fullscreenElement || null;
+        if (!dialog) return;
+        if (fullscreenTarget === dialog) {
+            if (document.exitFullscreen) {
+                document.exitFullscreen().catch(function () {
+                    setPreviewFullscreen(false);
+                });
+            } else {
+                setPreviewFullscreen(false);
+            }
+            return;
+        }
+        if (dialog.requestFullscreen) {
+            dialog.requestFullscreen().then(function () {
+                setPreviewFullscreen(true);
+            }).catch(function () {
+                setPreviewFullscreen(!state.preview.fullscreen);
+            });
+            return;
+        }
+        setPreviewFullscreen(!state.preview.fullscreen);
+    }
+
     function openPreview(item) {
-        if (!preview || !previewBody || !item) {
-            if (item && item.view_url) window.open(item.view_url, '_blank', 'noopener');
+        if (!item) return;
+        var kind = previewKind(item);
+        if (!kind) {
+            if (item.view_url) window.open(String(item.view_url), '_blank', 'noopener');
             return;
         }
-        var title = String(item.original_name || 'Попередній перегляд');
-        var group = String(item.type_group || 'other');
-        var mime = String(item.mime_type || '').toLowerCase();
-        previewTitle.textContent = title;
-        if (group === 'image') {
-            previewBody.innerHTML = '<img class="cab-files__previewImage" src="' + escapeHtml(String(item.view_url || '#')) + '" alt="' + escapeHtml(title) + '">';
-        } else if (group === 'pdf' || mime.indexOf('text/') === 0) {
-            previewBody.innerHTML = '<iframe class="cab-files__previewFrame" src="' + escapeHtml(String(item.view_url || '#')) + '" title="' + escapeHtml(title) + '"></iframe>';
-        } else {
-            window.open(item.view_url, '_blank', 'noopener');
-            return;
+        state.preview.open = true;
+        state.preview.item = item;
+        state.preview.kind = kind;
+        state.preview.textLoading = kind === 'text';
+        state.preview.textContent = '';
+        state.preview.fullscreen = false;
+        state.preview.requestKey = (parseInt(state.preview.requestKey || 0, 10) || 0) + 1;
+        var requestKey = state.preview.requestKey;
+        renderPreview();
+        if (kind === 'text') {
+            fetch(String(item.view_url || '#'), { credentials: 'same-origin' })
+                .then(function (response) {
+                    if (!response.ok) throw new Error('HTTP ' + response.status);
+                    return response.text();
+                })
+                .then(function (textValue) {
+                    if ((parseInt(state.preview.requestKey || 0, 10) || 0) !== requestKey) return;
+                    state.preview.textContent = String(textValue || '');
+                    state.preview.textLoading = false;
+                    renderPreview();
+                })
+                .catch(function () {
+                    if ((parseInt(state.preview.requestKey || 0, 10) || 0) !== requestKey) return;
+                    state.preview.textContent = 'Не вдалося завантажити текстовий перегляд.';
+                    state.preview.textLoading = false;
+                    renderPreview();
+                });
         }
-        preview.hidden = false;
-        document.body.classList.add('is-cab-files-preview-open');
+        setTimeout(function () {
+            if (previewCloseBtn) {
+                try { previewCloseBtn.focus(); } catch (e) { /* no-op */ }
+            }
+        }, 0);
     }
 
     function closePreview() {
         if (!preview) return;
-        preview.hidden = true;
-        if (previewBody) previewBody.innerHTML = '';
-        document.body.classList.remove('is-cab-files-preview-open');
+        var dialog = preview.querySelector('.info-thread-preview__dialog');
+        if ((document.fullscreenElement || null) === dialog && document.exitFullscreen) {
+            try { document.exitFullscreen(); } catch (e) { /* no-op */ }
+        }
+        state.preview.open = false;
+        state.preview.fullscreen = false;
+        state.preview.item = null;
+        state.preview.kind = '';
+        state.preview.textLoading = false;
+        state.preview.textContent = '';
+        state.preview.requestKey = (parseInt(state.preview.requestKey || 0, 10) || 0) + 1;
+        renderPreview();
     }
 
     function buildUrl() {
@@ -973,22 +1091,14 @@
                 return;
             }
             if (action === 'preview') {
-                var itemLink = tr ? tr.querySelector('a[href*="/api/documents/view?id="]') : null;
-                var row = null;
-                if (tr) {
-                    row = {
-                        id: id,
-                        original_name: (tr.querySelector('.cab-files__name') || {}).textContent || '',
-                        type_group: (tr.querySelector('.cab-files__typeBadge') || {}).className || '',
-                        mime_type: (tr.querySelector('.cab-files__mime') || {}).textContent || '',
-                        view_url: itemLink ? itemLink.getAttribute('href') : '/api/documents/view?id=' + id
-                    };
-                    if (row.type_group.indexOf('is-image') !== -1) row.type_group = 'image';
-                    else if (row.type_group.indexOf('is-pdf') !== -1) row.type_group = 'pdf';
-                    else if (row.type_group.indexOf('is-spreadsheet') !== -1) row.type_group = 'spreadsheet';
-                    else if (row.type_group.indexOf('is-archive') !== -1) row.type_group = 'archive';
-                    else row.type_group = 'other';
-                }
+                var row = {
+                    id: id,
+                    original_name: target.getAttribute('data-name') || ((tr && tr.querySelector('.cab-files__name')) ? tr.querySelector('.cab-files__name').textContent : ''),
+                    type_group: target.getAttribute('data-type-group') || 'other',
+                    mime_type: target.getAttribute('data-mime') || ((tr && tr.querySelector('.cab-files__mime')) ? tr.querySelector('.cab-files__mime').textContent : ''),
+                    view_url: target.getAttribute('data-view-url') || '/api/documents/view?id=' + id,
+                    download_url: target.getAttribute('data-download-url') || '/api/documents/download?id=' + id
+                };
                 openPreview(row);
             }
         });
@@ -996,14 +1106,27 @@
     if (preview) {
         preview.addEventListener('click', function (event) {
             var target = event.target;
-            if (target && target.getAttribute('data-close') === '1') {
+            if (!target) return;
+            var actionEl = target.closest ? target.closest('[data-preview-action]') : null;
+            var action = actionEl ? String(actionEl.getAttribute('data-preview-action') || '') : '';
+            if (action === 'close-preview') {
+                event.preventDefault();
                 closePreview();
+                return;
+            }
+            if (action === 'toggle-preview-fullscreen') {
+                event.preventDefault();
+                togglePreviewFullscreen();
             }
         });
         document.addEventListener('keydown', function (event) {
             if (event.key === 'Escape' && !preview.hidden) {
                 closePreview();
             }
+        });
+        document.addEventListener('fullscreenchange', function () {
+            var dialog = preview.querySelector('.info-thread-preview__dialog');
+            setPreviewFullscreen((document.fullscreenElement || null) === dialog);
         });
     }
 

@@ -438,8 +438,9 @@ $__toastErr = \App\Core\Session::flash('toast_error');
             <div class="cab-files__scopeTitle">Область видимості</div>
             <?php if (!empty($is_admin)): ?>
             <div class="cab-files__scopeSwitch" role="group" aria-label="Область видимості файлів">
-              <button type="button" class="cab-files__scopeBtn is-active" data-scope="all">Всі файли</button>
-              <button type="button" class="cab-files__scopeBtn" data-scope="mine">Мої файли</button>
+              <button type="button" class="cab-files__scopeBtn cab-files__scopeLink is-active" data-scope="all">Всі файли</button>
+              <span class="cab-action-sep">•</span>
+              <button type="button" class="cab-files__scopeBtn cab-files__scopeLink" data-scope="mine">Мої файли</button>
             </div>
             <?php else: ?>
             <div class="cab-files__scopeBadge">Мої файли</div>
@@ -485,7 +486,6 @@ $__toastErr = \App\Core\Session::flash('toast_error');
 
         <div class="cab-files__meta">
           <div class="cab-files__summary">
-            <span id="cabFilesScopeLabel" class="cab-files__summaryBadge"><?= !empty($is_admin) ? 'Всі файли' : 'Мої файли' ?></span>
             <span id="cabFilesCounter">—</span>
           </div>
           <div id="cabFilesStatus" class="cab-files__status">Готово до завантаження списку.</div>
@@ -520,14 +520,27 @@ $__toastErr = \App\Core\Session::flash('toast_error');
           </div>
         </footer>
 
-        <div class="cab-files__preview" id="cabFilesPreview" hidden>
-          <div class="cab-files__previewBackdrop" data-close="1"></div>
-          <div class="cab-files__previewDialog" role="dialog" aria-modal="true" aria-labelledby="cabFilesPreviewTitle">
-            <div class="cab-files__previewHead">
-              <div class="cab-files__previewTitle" id="cabFilesPreviewTitle">Попередній перегляд</div>
-              <button type="button" class="cab-files__previewClose" data-close="1" aria-label="Закрити">✕</button>
+        <div id="cabFilesPreview" class="info-thread-preview" hidden aria-hidden="true">
+          <div class="info-thread-preview__backdrop" data-preview-action="close-preview"></div>
+          <div class="info-thread-preview__dialog" role="dialog" aria-modal="true" aria-label="Перегляд файла">
+            <div class="info-thread-preview__head">
+              <div class="info-thread-preview__title-wrap">
+                <div id="cabFilesPreviewTitle" class="info-thread-preview__title">Перегляд файла</div>
+                <div id="cabFilesPreviewMeta" class="info-thread-preview__meta"></div>
+              </div>
+              <div class="info-thread-preview__actions">
+                <button type="button" id="cabFilesPreviewFullscreen" class="info-thread-icon-action info-thread-icon-action--neutral" data-preview-action="toggle-preview-fullscreen" title="На весь екран" aria-label="На весь екран" hidden>
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 4.5H4.5V8M16 4.5h3.5V8M8 19.5H4.5V16M16 19.5h3.5V16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </button>
+                <a id="cabFilesPreviewDownload" class="info-thread-icon-action info-thread-icon-action--download" href="#" target="_blank" rel="noopener" title="Завантажити файл" aria-label="Завантажити файл">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4.5v10m0 0 4-4m-4 4-4-4M5 18.5h14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </a>
+                <button type="button" id="cabFilesPreviewClose" class="info-thread-icon-action info-thread-icon-action--neutral" data-preview-action="close-preview" title="Закрити перегляд" aria-label="Закрити перегляд">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+                </button>
+              </div>
             </div>
-            <div class="cab-files__previewBody" id="cabFilesPreviewBody"></div>
+            <div id="cabFilesPreviewBody" class="info-thread-preview__body"></div>
           </div>
         </div>
       </div>

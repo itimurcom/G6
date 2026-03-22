@@ -31,6 +31,7 @@ class CabinetController extends Controller
             'extra_css' => [
                 '/assets/css/calendar.css',
                 '/assets/css/cabinet.css',
+                '/assets/css/calendar.info.modal.css',
                 '/assets/css/audit.css',
             ],
             'extra_js'  => [

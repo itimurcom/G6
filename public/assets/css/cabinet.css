@@ -332,6 +332,15 @@
 .cab-action-link:hover{
   color: var(--accent);
 }
+.cab-action-link--button{
+  appearance: none;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+}
+
 .cab-action-sep{
   display: inline-block;
   margin: 0 8px;
@@ -542,8 +551,7 @@ body.cab-modal-open{
   flex-wrap: wrap;
 }
 
-.cab-files__scopeBtn,
-.cab-files__action{
+.cab-files__scopeBtn{
   appearance: none;
   border: 1px solid var(--cabinet-border);
   background: var(--cabinet-btn-bg);
@@ -618,6 +626,10 @@ body.cab-modal-open{
   flex-wrap: wrap;
   font-size: var(--fs-ui);
   font-weight: 700;
+}
+
+.cab-files__summary #cabFilesCounter{
+  font-weight: 800;
 }
 
 .cab-files__status{
@@ -696,13 +708,21 @@ body.cab-modal-open{
 
 .cab-files__rowActions{
   display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
+  align-items: center;
   justify-content: flex-end;
+  flex-wrap: wrap;
 }
 
-.cab-files__action.is-danger{
-  border-color: color-mix(in srgb, #dc2626 50%, var(--cabinet-border));
+.cab-files__rowActions .cab-action-link{
+  white-space: nowrap;
+}
+
+.cab-action-link--danger{
+  color: color-mix(in oklab, #dc2626 78%, var(--cabinet-text));
+}
+
+.cab-action-link--danger:hover{
+  color: #dc2626;
 }
 
 .cab-files__pager{
@@ -796,6 +816,34 @@ body.cab-modal-open{
   object-fit: contain;
 }
 
+.cab-files__previewFallback{
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 24px;
+  border: 1px dashed var(--cabinet-border);
+  border-radius: 14px;
+  background: var(--cabinet-card-bg);
+}
+
+.cab-files__previewNote{
+  font-size: var(--fs-ui);
+  font-weight: 800;
+  margin-bottom: 12px;
+}
+
+.cab-files__previewMeta{
+  display: grid;
+  gap: 8px;
+  color: var(--cabinet-muted);
+  margin-bottom: 16px;
+}
+
+.cab-files__previewActions{
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
 body.is-cab-files-preview-open{
   overflow: hidden;
 }
@@ -839,4 +887,54 @@ body.is-cab-files-preview-open{
     height: calc(100vh - 16px);
     margin: 8px auto;
   }
+}
+
+
+/* P7: align cabinet files preview theme variables with comments preview in calendar */
+#cabFilesPreview {
+  --info-surface-0: color-mix(in srgb, var(--bg) 94%, var(--fg) 6%);
+  --info-surface-1: color-mix(in srgb, var(--bg) 90%, var(--fg) 10%);
+  --info-surface-2: color-mix(in srgb, var(--bg) 86%, var(--fg) 14%);
+  --info-surface-3: color-mix(in srgb, var(--bg) 80%, var(--fg) 20%);
+  --info-border-soft: color-mix(in srgb, var(--border) 82%, transparent);
+  --info-border-strong: color-mix(in srgb, var(--border) 70%, var(--fg) 30%);
+  --info-shadow-soft: 0 12px 28px color-mix(in srgb, #020617 18%, transparent);
+  --info-shadow-card: 0 10px 22px color-mix(in srgb, #020617 14%, transparent);
+  --info-link: color-mix(in srgb, var(--accent) 76%, #ffffff 24%);
+  --info-preview-backdrop: rgba(2, 6, 23, .76);
+  --info-preview-dialog: color-mix(in srgb, var(--bg) 96%, var(--fg) 4%);
+  --info-preview-body: color-mix(in srgb, var(--bg) 88%, var(--fg) 12%);
+  --info-preview-frame: #ffffff;
+  --info-preview-text-bg: color-mix(in srgb, var(--bg) 94%, var(--fg) 6%);
+  --info-preview-text-fg: var(--fg);
+  --info-btn-neutral-bg: color-mix(in srgb, var(--bg) 88%, var(--fg) 12%);
+  --info-btn-neutral-fg: var(--fg);
+  --info-btn-neutral-border: color-mix(in srgb, var(--border) 82%, transparent);
+  --info-btn-green-bg: #16a34a;
+  --info-btn-green-border: #15803d;
+  --info-btn-blue-bg: var(--accent);
+  --info-btn-blue-border: color-mix(in srgb, var(--accent) 72%, var(--border) 28%);
+  --info-btn-red-bg: #ef4444;
+  --info-btn-red-border: #dc2626;
+}
+
+:root[data-theme="light"] #cabFilesPreview {
+  --info-surface-0: #ffffff;
+  --info-surface-1: color-mix(in srgb, var(--bg) 98%, var(--fg) 2%);
+  --info-surface-2: color-mix(in srgb, var(--bg) 95%, var(--fg) 5%);
+  --info-surface-3: color-mix(in srgb, var(--bg) 92%, var(--fg) 8%);
+  --info-border-soft: rgba(148, 163, 184, .32);
+  --info-border-strong: rgba(148, 163, 184, .44);
+  --info-shadow-soft: 0 16px 34px rgba(15, 23, 42, .12);
+  --info-shadow-card: 0 10px 24px rgba(15, 23, 42, .08);
+  --info-link: color-mix(in srgb, var(--accent) 74%, var(--fg) 26%);
+  --info-preview-backdrop: rgba(15, 23, 42, .48);
+  --info-preview-dialog: #ffffff;
+  --info-preview-body: color-mix(in srgb, var(--bg) 96%, var(--fg) 4%);
+  --info-preview-frame: #ffffff;
+  --info-preview-text-bg: #ffffff;
+  --info-preview-text-fg: #0f172a;
+  --info-btn-neutral-bg: #ffffff;
+  --info-btn-neutral-fg: #0f172a;
+  --info-btn-neutral-border: rgba(148, 163, 184, .48);
 }
